@@ -23,6 +23,19 @@ window.addEventListener("DOMContentLoaded", () => {
   if (savedUser) currentUser = JSON.parse(savedUser);
   applyRbacUI();
   loadInitialOrMockData();
+
+  // ========================================================
+  // KODE AUTO REFRESH (Jalan setiap 60.000 milidetik / 60 detik)
+  // ========================================================
+  setInterval(() => {
+    // Hanya lakukan auto-refresh jika user sedang membuka tab "Dashboard"
+    // (Agar tidak mengganggu orang yang sedang asyik scan barang)
+    const overviewTab = document.getElementById("tab-overview");
+    if (overviewTab && !overviewTab.classList.contains("hidden")) {
+      loadInitialOrMockData();
+    }
+  }, 20000);
+  // Angka 60000 bisa Anda ganti jadi 30000 jika ingin 30 detik.
 });
 
 // =========================================================================
