@@ -1,7 +1,8 @@
 // =========================================================================
 // !!! PENTING: PASTE LINK URL GOOGLE APPS SCRIPT ANDA DI SINI !!!
 // =========================================================================
-const API_URL = "1QmoWnuL92kAq86Mb7hGl0G3uZ7Xk_Q14F8EvTPB3HjjOY4YM5Et9UH2z";
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbwzjcbbXsU6_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
 
 let currentUser = null;
 let appData = {
