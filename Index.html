@@ -1,0 +1,1280 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Sistem Informasi Inventory (SIM-INVENTORY)</title>
+
+    <!-- Library & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#ecfdf5",
+                100: "#d1fae5",
+                200: "#a7f3d0",
+                500: "#10b981",
+                600: "#059669",
+                700: "#047857",
+                800: "#065f46",
+                900: "#064e3b",
+              },
+            },
+            fontFamily: {
+              sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- Memanggil File CSS Terpisah -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body
+    class="antialiased min-h-screen flex flex-col md:flex-row relative overflow-x-hidden"
+  >
+    <!-- ==================== SIDEBAR ==================== -->
+    <div
+      id="sidebarBackdrop"
+      onclick="closeSidebar()"
+      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 opacity-0 pointer-events-none transition-opacity duration-300"
+    ></div>
+    <aside
+      id="mainSidebar"
+      class="fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-100 flex flex-col justify-between p-6 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl"
+    >
+      <div>
+        <div class="flex items-center justify-between mb-8 px-2">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-2xl bg-brand-500 flex items-center justify-center text-white text-xl shadow-lg shadow-brand-500/25"
+            >
+              <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+            <div>
+              <h1
+                class="font-extrabold text-base tracking-tight text-slate-800 leading-tight"
+              >
+                SIM-INVENTORY
+              </h1>
+              <p
+                class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase"
+              >
+                Visual Warehouse
+              </p>
+            </div>
+          </div>
+          <button
+            onclick="closeSidebar()"
+            class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors"
+          >
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+
+        <div class="space-y-6">
+          <div>
+            <p
+              class="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2"
+            >
+              Main Menu
+            </p>
+            <nav class="space-y-1" id="navLinks">
+              <button
+                onclick="
+                  switchTab('overview');
+                  closeSidebar();
+                "
+                id="btn-tab-overview"
+                class="nav-item w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all duration-200 bg-brand-50 text-brand-600"
+              >
+                <i class="fa-solid fa-chart-pie text-sm"></i
+                ><span>Dashboard Control</span>
+              </button>
+              <button
+                onclick="
+                  switchTab('masuk');
+                  closeSidebar();
+                "
+                id="btn-tab-masuk"
+                class="nav-item role-prod role-admin hidden w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
+              >
+                <i class="fa-solid fa-dolly text-sm"></i
+                ><span>Barang Masuk</span>
+              </button>
+              <button
+                onclick="
+                  switchTab('keluar');
+                  closeSidebar();
+                "
+                id="btn-tab-keluar"
+                class="nav-item role-wh role-admin hidden w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
+              >
+                <i class="fa-solid fa-truck-ramp-box text-sm"></i
+                ><span>Barang Keluar</span>
+              </button>
+              <button
+                onclick="
+                  switchTab('order');
+                  closeSidebar();
+                "
+                id="btn-tab-order"
+                class="nav-item role-wh role-admin hidden w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
+              >
+                <i class="fa-solid fa-clipboard-list text-sm"></i
+                ><span>List Order</span>
+              </button>
+              <button
+                onclick="
+                  switchTab('scan');
+                  closeSidebar();
+                "
+                id="btn-tab-scan"
+                class="nav-item role-wh role-admin hidden w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
+              >
+                <i class="fa-solid fa-barcode text-sm"></i
+                ><span>Scan Massal</span>
+              </button>
+            </nav>
+          </div>
+          <div class="role-admin hidden">
+            <p
+              class="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2"
+            >
+              Master Data
+            </p>
+            <nav class="space-y-1">
+              <button
+                onclick="
+                  switchTab('barang');
+                  closeSidebar();
+                "
+                id="btn-tab-barang"
+                class="nav-item w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
+              >
+                <i class="fa-solid fa-cubes text-sm"></i
+                ><span>Master Barang</span>
+              </button>
+              <button
+                onclick="
+                  switchTab('customer');
+                  closeSidebar();
+                "
+                id="btn-tab-customer"
+                class="nav-item w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
+              >
+                <i class="fa-solid fa-building text-sm"></i
+                ><span>Master Customer</span>
+              </button>
+              <button
+                onclick="
+                  switchTab('users');
+                  closeSidebar();
+                "
+                id="btn-tab-users"
+                class="nav-item w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
+              >
+                <i class="fa-solid fa-users-gear text-sm"></i
+                ><span>Kelola Pengguna</span>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+      <div class="pt-4 border-t border-slate-100">
+        <div
+          id="userProfileCard"
+          class="hidden items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100"
+        >
+          <div class="flex items-center gap-3 overflow-hidden">
+            <div
+              class="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm shrink-0"
+            >
+              <span id="avatarLetter">U</span>
+            </div>
+            <div class="truncate">
+              <p
+                id="userNameDisplay"
+                class="text-xs font-bold text-slate-800 truncate"
+              >
+                Username
+              </p>
+              <span
+                id="userRoleBadge"
+                class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800"
+                >Role</span
+              >
+            </div>
+          </div>
+          <button
+            onclick="logoutAction()"
+            title="Keluar Akun"
+            class="text-slate-400 hover:text-rose-500 p-1.5 transition-colors"
+          >
+            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+          </button>
+        </div>
+        <div
+          id="guestLoginPrompt"
+          class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 text-center"
+        >
+          <p class="text-[11px] text-emerald-800 font-medium mb-2.5">
+            Mode Publik (Monitoring)
+          </p>
+          <button
+            onclick="openLoginModal()"
+            class="w-full py-2 px-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs transition-colors shadow-sm shadow-brand-500/20"
+          >
+            <i class="fa-solid fa-right-to-bracket mr-1.5"></i> Masuk Akun
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==================== HEADER ==================== -->
+    <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
+      <header
+        class="bg-white/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-8 py-3.5 border-b border-slate-100 flex items-center justify-between gap-4"
+      >
+        <div class="flex items-center gap-3 sm:gap-4">
+          <button
+            onclick="toggleSidebar()"
+            class="w-10 h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-slate-700 flex items-center justify-center transition-colors"
+          >
+            <i class="fa-solid fa-bars-staggered text-sm"></i>
+          </button>
+          <div>
+            <h2
+              id="greetingTitle"
+              class="text-base sm:text-lg font-bold text-slate-800 tracking-tight"
+            >
+              Halo, Selamat Datang!
+            </h2>
+            <p
+              class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5"
+            >
+              <span
+                class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
+              ></span
+              ><span>Live Inventory & Production Andon</span>
+            </p>
+          </div>
+        </div>
+        <div class="hidden lg:flex items-center flex-1 max-w-md mx-4">
+          <div class="w-full relative">
+            <i
+              class="fa-solid fa-magnifying-glass absolute left-3.5 top-2.5 text-slate-400 text-xs"
+            ></i
+            ><input
+              type="text"
+              id="globalSearchInput"
+              oninput="handleGlobalSearch(this.value)"
+              placeholder="Cari Part Number, Customer, Rel..."
+              class="w-full bg-slate-50 border border-slate-200 rounded-full pl-9 pr-4 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
+            />
+          </div>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div
+            class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-100 text-slate-600 text-[11px] font-semibold"
+          >
+            <i class="fa-regular fa-clock text-brand-600"></i
+            ><span id="liveClock">--:--:--</span>
+          </div>
+          <button
+            onclick="toggleBrowserFullscreen()"
+            class="w-9 h-9 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-slate-600 flex items-center justify-center transition-colors"
+          >
+            <i class="fa-solid fa-expand text-xs" id="fullscreenIcon"></i>
+          </button>
+          <button
+            onclick="refreshAllData()"
+            class="w-9 h-9 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-slate-600 flex items-center justify-center transition-colors"
+          >
+            <i class="fa-solid fa-rotate text-xs" id="syncSpinner"></i>
+          </button>
+          <button
+            id="quickNavLoginBtn"
+            onclick="openLoginModal()"
+            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-sm shadow-brand-500/30"
+          >
+            <i class="fa-solid fa-lock text-[11px]"></i
+            ><span class="hidden sm:inline">Masuk</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="p-4 sm:p-8 space-y-6 flex-1">
+        <!-- ==================== TABS ==================== -->
+        <!-- TAB OVERVIEW (DASHBOARD) -->
+        <section id="tab-overview" class="tab-pane block space-y-6">
+          <div
+            class="bg-white p-5 sm:p-7 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md"
+          >
+            <div
+              class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3 mb-5"
+            >
+              <div>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"
+                  ></span>
+                  <h3
+                    class="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight"
+                  >
+                    Papan Kontrol Seat Assy
+                  </h3>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">
+                  Monitoring live pemenuhan delivery, ketersediaan stok, dan
+                  alokasi rel per customer.
+                </p>
+              </div>
+              <div class="flex items-center gap-2 text-[11px] font-bold">
+                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600"
+                  >Total: <strong id="cntTotalSeatAssy">0</strong></span
+                >
+                <span
+                  class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 flex items-center gap-1"
+                  ><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> On
+                  Progress: <strong id="cntOnProgressSeatAssy">0</strong></span
+                >
+                <span
+                  class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"
+                  ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Selesai: <strong id="cntSelesaiSeatAssy">0</strong></span
+                >
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr
+                    class="bg-slate-50/80 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200"
+                  >
+                    <th
+                      rowspan="2"
+                      class="py-3 px-3 text-center border-r border-slate-200 w-12"
+                    >
+                      No
+                    </th>
+                    <th rowspan="2" class="py-3 px-3 border-r border-slate-200">
+                      Customer
+                    </th>
+                    <th
+                      rowspan="2"
+                      class="py-3 px-3 border-r border-slate-200 text-center"
+                    >
+                      No Rell
+                    </th>
+                    <th rowspan="2" class="py-3 px-3 border-r border-slate-200">
+                      Part Number
+                    </th>
+                    <th
+                      rowspan="2"
+                      class="py-3 px-3 border-r border-slate-200 text-center"
+                    >
+                      Stock
+                    </th>
+                    <th
+                      colspan="3"
+                      class="py-2 px-3 text-center border-r border-slate-200 bg-emerald-50/50 text-emerald-700"
+                    >
+                      Delivery
+                    </th>
+                    <th
+                      rowspan="2"
+                      class="py-3 px-3 border-r border-slate-200 text-center bg-indigo-50/40 text-indigo-700"
+                    >
+                      Assy In<br />Store FSG
+                    </th>
+                    <th
+                      rowspan="2"
+                      class="py-3 px-3 border-r border-slate-200 text-center bg-slate-100 text-slate-600"
+                    >
+                      [ +/- ]
+                    </th>
+                    <th rowspan="2" class="py-3 px-3 text-center">Status</th>
+                  </tr>
+                  <tr
+                    class="bg-slate-50/50 text-slate-400 font-bold uppercase tracking-wider text-[9px] border-b border-slate-200"
+                  >
+                    <th
+                      class="py-2 px-2.5 text-center border-r border-slate-200 text-slate-400"
+                    >
+                      Qty/Day
+                    </th>
+                    <th
+                      class="py-2 px-2.5 text-center border-r border-slate-200 text-slate-400"
+                    >
+                      Qty/Out
+                    </th>
+                    <th
+                      class="py-2 px-2.5 text-center border-r border-slate-200 bg-amber-50/50 text-amber-700"
+                    >
+                      Sisa Del
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="tblSeatAssyControlBody"
+                  class="divide-y divide-slate-100 font-medium"
+                >
+                  <tr>
+                    <td colspan="11" class="py-8 text-center text-slate-400">
+                      Memuat data papan kontrol seat assy...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB MASUK -->
+        <section id="tab-masuk" class="tab-pane hidden space-y-6">
+          <div
+            class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm max-w-3xl mx-auto"
+          >
+            <div
+              class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6"
+            >
+              <div>
+                <h3 class="text-base sm:text-lg font-bold text-slate-800">
+                  Penerimaan Barang Masuk
+                </h3>
+              </div>
+              <button
+                onclick="startSingleQrScanner('inPartNumber')"
+                class="px-3 py-1.5 rounded-2xl bg-emerald-50 text-brand-600 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <i class="fa-solid fa-qrcode text-sm"></i>
+                <span>Scan Kamera</span>
+              </button>
+            </div>
+            <form
+              id="formBarangMasuk"
+              onsubmit="handleFormBarangMasuk(event)"
+              class="space-y-4"
+            >
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-bold mb-1.5"
+                    >Pilih Part Number / SKU *</label
+                  ><select
+                    id="inPartNumber"
+                    required
+                    onchange="handleSelectBarangMasuk(this.value)"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                  >
+                    <option value="">-- Pilih Part Number --</option>
+                  </select>
+                </div>
+                <div
+                  class="bg-slate-50 p-4 rounded-2xl border border-slate-100 md:col-span-2 flex flex-wrap gap-4 text-xs"
+                >
+                  <div>
+                    <span class="text-slate-400">Nama:</span>
+                    <strong id="lblInNamaBarang" class="text-slate-800 ml-1"
+                      >-</strong
+                    >
+                  </div>
+                  <div>
+                    <span class="text-slate-400">Stok Saat Ini:</span>
+                    <strong id="lblInStokCurrent" class="text-slate-800 ml-1"
+                      >0</strong
+                    >
+                  </div>
+                  <div>
+                    <span class="text-slate-400">Std. Packing:</span>
+                    <strong id="lblInStdPack" class="text-brand-600 ml-1"
+                      >1</strong
+                    >
+                  </div>
+                  <div>
+                    <span class="text-slate-400">No. Rel:</span>
+                    <strong id="lblInNoRel" class="text-slate-800 ml-1"
+                      >-</strong
+                    >
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold mb-1.5"
+                    >Jumlah Box / Kemasan</label
+                  ><input
+                    type="number"
+                    id="inBoxCount"
+                    min="0"
+                    value="1"
+                    oninput="calculateInTotalQty()"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold mb-1.5"
+                    >Total Quantity (Pcs/Satuan) *</label
+                  ><input
+                    type="number"
+                    id="inTotalQty"
+                    min="1"
+                    required
+                    class="w-full bg-white border border-brand-500 rounded-2xl px-4 py-2.5 text-xs font-bold text-brand-700 focus:outline-none"
+                  />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-bold mb-1.5"
+                    >Catatan / Shift Produksi</label
+                  ><input
+                    type="text"
+                    id="inCatatan"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-medium focus:outline-none"
+                  />
+                </div>
+              </div>
+              <div class="pt-4 flex justify-end">
+                <button
+                  type="submit"
+                  class="px-5 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md flex items-center gap-2"
+                >
+                  <i class="fa-solid fa-arrow-down-to-bracket"></i>
+                  <span>Simpan Transaksi Masuk</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- TAB KELUAR -->
+        <section id="tab-keluar" class="tab-pane hidden space-y-6">
+          <div
+            class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm max-w-3xl mx-auto"
+          >
+            <div
+              class="flex items-center justify-between pb-4 border-b border-slate-100 mb-6"
+            >
+              <div>
+                <h3 class="text-base sm:text-lg font-bold text-slate-800">
+                  Pengeluaran Barang
+                </h3>
+              </div>
+              <button
+                onclick="startSingleQrScanner('outPartNumber')"
+                class="px-3 py-1.5 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs flex items-center gap-1.5 transition-colors"
+              >
+                <i class="fa-solid fa-qrcode text-sm"></i>
+                <span>Scan Kamera</span>
+              </button>
+            </div>
+            <form
+              id="formBarangKeluar"
+              onsubmit="handleFormBarangKeluar(event)"
+              class="space-y-4"
+            >
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold mb-1.5"
+                    >No. Referensi Order</label
+                  ><select
+                    id="outNoOrder"
+                    onchange="handleSelectOrderRef(this.value)"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                  >
+                    <option value="">-- Pengiriman Bebas --</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold mb-1.5"
+                    >Customer Tujuan *</label
+                  ><select
+                    id="outCustomer"
+                    required
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                  >
+                    <option value="">-- Pilih Customer --</option>
+                  </select>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-bold mb-1.5"
+                    >Part Number / SKU *</label
+                  ><select
+                    id="outPartNumber"
+                    required
+                    onchange="handleSelectBarangKeluar(this.value)"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                  >
+                    <option value="">-- Pilih Part Number --</option>
+                  </select>
+                </div>
+                <div
+                  class="bg-amber-50/80 p-4 rounded-2xl border border-amber-200/60 md:col-span-2 flex items-center justify-between text-xs"
+                >
+                  <div>
+                    <span class="text-amber-800 font-medium"
+                      >Stok Tersedia Saat Ini:</span
+                    ><span
+                      id="lblOutStokAvailable"
+                      class="font-extrabold text-sm text-amber-900 ml-2"
+                      >0</span
+                    >
+                  </div>
+                  <div>
+                    <span class="text-slate-500">Standar Pack:</span
+                    ><span
+                      id="lblOutStdPack"
+                      class="font-bold text-slate-700 ml-1"
+                      >1</span
+                    >
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold mb-1.5"
+                    >Quantity Pengeluaran *</label
+                  ><input
+                    type="number"
+                    id="outQty"
+                    min="1"
+                    required
+                    class="w-full bg-white border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold mb-1.5"
+                    >Catatan / Ekspedisi</label
+                  ><input
+                    type="text"
+                    id="outCatatan"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-medium focus:outline-none"
+                  />
+                </div>
+              </div>
+              <div class="pt-4 flex justify-between items-center">
+                <button
+                  type="button"
+                  onclick="previewSuratJalanCurrentForm()"
+                  class="px-4 py-2.5 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2"
+                >
+                  <i class="fa-solid fa-print"></i>
+                  <span>Surat Jalan</span></button
+                ><button
+                  type="submit"
+                  class="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2"
+                >
+                  <i class="fa-solid fa-truck-arrow-right"></i>
+                  <span>Keluarkan Barang</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- TAB ORDER -->
+        <section id="tab-order" class="tab-pane hidden space-y-6">
+          <div
+            class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-5"
+          >
+            <div
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div>
+                <h3 class="text-base sm:text-lg font-bold text-slate-800">
+                  Daftar Permintaan Order (PO)
+                </h3>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr
+                    class="text-slate-400 border-b border-slate-100 font-bold uppercase tracking-wider text-[10px]"
+                  >
+                    <th class="py-3 px-3">No. Order</th>
+                    <th class="py-3 px-3">Customer</th>
+                    <th class="py-3 px-3">Part Number</th>
+                    <th class="py-3 px-3">Qty Order</th>
+                    <th class="py-3 px-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="tblOrderBody"
+                  class="divide-y divide-slate-50 font-medium"
+                >
+                  <tr>
+                    <td colspan="5" class="py-6 text-center text-slate-400">
+                      Memuat data order...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB SCAN MASSAL -->
+        <section id="tab-scan" class="tab-pane hidden space-y-6">
+          <div
+            class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6"
+          >
+            <div
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div>
+                <h3 class="text-base sm:text-lg font-bold text-slate-800">
+                  Continuous Mass Barcode Scanner
+                </h3>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  onclick="toggleContinuousCamera()"
+                  class="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                >
+                  <i class="fa-solid fa-camera"></i>
+                  <span id="lblCamStatus">Buka Kamera HP / PC</span></button
+                ><button
+                  onclick="clearMassScanBuffer()"
+                  class="px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs"
+                >
+                  Reset Buffer
+                </button>
+              </div>
+            </div>
+            <div
+              id="massScannerWrapper"
+              class="hidden bg-slate-900 rounded-3xl p-4 text-center"
+            >
+              <div
+                id="interactiveScanner"
+                class="w-full max-w-sm mx-auto overflow-hidden rounded-2xl"
+              ></div>
+              <p class="text-xs text-slate-300 mt-2">
+                Arahkan kamera ke QR Code atau Barcode Part Number
+              </p>
+            </div>
+            <div
+              class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center gap-3"
+            >
+              <i class="fa-solid fa-barcode text-brand-600 text-lg"></i
+              ><input
+                type="text"
+                id="manualBarcodeInput"
+                onkeydown="handleMassBarcodeInput(event)"
+                placeholder="Scan dengan Barcode Scanner USB atau ketik Part Number lalu tekan ENTER..."
+                class="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
+            <div class="space-y-3">
+              <h4 class="font-bold text-xs text-slate-700">
+                Daftar Scan Sementara (<span id="massScanCount">0</span> Item)
+              </h4>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr
+                      class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px] rounded-xl"
+                    >
+                      <th class="py-2.5 px-3">#</th>
+                      <th class="py-2.5 px-3">Part Number</th>
+                      <th class="py-2.5 px-3">Nama Barang</th>
+                      <th class="py-2.5 px-3">Qty Scan</th>
+                      <th class="py-2.5 px-3">Stok Saat Ini</th>
+                      <th class="py-2.5 px-3 text-center">Hapus</th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    id="tblMassScanBody"
+                    class="divide-y divide-slate-100 font-medium"
+                  >
+                    <tr>
+                      <td colspan="6" class="py-6 text-center text-slate-400">
+                        Belum ada item yang di-scan.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div
+                class="pt-4 flex justify-between items-center gap-4 border-t border-slate-100"
+              >
+                <input
+                  type="text"
+                  id="massCatatan"
+                  placeholder="Catatan batch pengeluaran massal..."
+                  class="w-full sm:w-80 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+                /><button
+                  onclick="submitMassScanTransaction()"
+                  class="px-5 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2"
+                >
+                  <i class="fa-solid fa-cloud-arrow-up"></i>
+                  <span>Submit Transaksi Pengeluaran</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB BARANG, CUSTOMER, USERS -->
+        <section id="tab-barang" class="tab-pane hidden space-y-6">
+          <div
+            class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"
+          >
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-slate-800">Master Data Barang</h3>
+              <button
+                onclick="openModalBarang()"
+                class="role-admin hidden px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs shadow-sm"
+              >
+                <i class="fa-solid fa-plus"></i> Tambah Part Number
+              </button>
+            </div>
+            <table class="w-full text-xs mt-4">
+              <thead>
+                <tr
+                  class="text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b"
+                >
+                  <th class="py-2 text-left">Part Number</th>
+                  <th class="py-2 text-left">Nama</th>
+                  <th class="py-2 text-left">Stok</th>
+                  <th class="py-2 text-left">No. Rel</th>
+                </tr>
+              </thead>
+              <tbody id="tblMasterBarangBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <section id="tab-customer" class="tab-pane hidden space-y-6">
+          <div
+            class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"
+          >
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-slate-800">Master Customer</h3>
+              <button
+                onclick="openModalCustomer()"
+                class="role-admin hidden px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs shadow-sm"
+              >
+                <i class="fa-solid fa-plus"></i> Tambah Customer
+              </button>
+            </div>
+            <table class="w-full text-xs mt-4">
+              <thead>
+                <tr
+                  class="text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b"
+                >
+                  <th class="py-2 text-left">ID Customer</th>
+                  <th class="py-2 text-left">Nama Perusahaan</th>
+                  <th class="py-2 text-left">Alamat</th>
+                </tr>
+              </thead>
+              <tbody id="tblCustomerBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <section id="tab-users" class="tab-pane hidden space-y-6">
+          <div
+            class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"
+          >
+            <div class="flex justify-between items-center">
+              <h3 class="font-bold text-slate-800">Kelola Pengguna</h3>
+              <button
+                onclick="openModalUser()"
+                class="role-admin hidden px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs shadow-sm"
+              >
+                <i class="fa-solid fa-plus"></i> Tambah Pengguna
+              </button>
+            </div>
+            <table class="w-full text-xs mt-4">
+              <thead>
+                <tr
+                  class="text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b"
+                >
+                  <th class="py-2 text-left">Username</th>
+                  <th class="py-2 text-left">Role</th>
+                </tr>
+              </thead>
+              <tbody id="tblUsersBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <div
+      id="modalLogin"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+    >
+      <div
+        class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl relative"
+      >
+        <button
+          onclick="closeLoginModal()"
+          class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+        >
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <div class="text-center mb-6">
+          <h3 class="text-lg font-bold text-slate-900">Autentikasi Akun</h3>
+        </div>
+        <form
+          id="formLogin"
+          onsubmit="handleLoginSubmit(event)"
+          class="space-y-3.5"
+        >
+          <div>
+            <label class="block text-xs font-bold mb-1">Username</label
+            ><input
+              type="text"
+              id="loginUsername"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1">Password</label
+            ><input
+              type="password"
+              id="loginPassword"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs"
+            />
+          </div>
+          <div class="pt-2 flex gap-2">
+            <button
+              type="button"
+              onclick="closeLoginModal()"
+              class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs"
+            >
+              Batal</button
+            ><button
+              type="submit"
+              class="flex-1 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs"
+            >
+              Masuk
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      id="modalSingleScanner"
+      class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+    >
+      <div
+        class="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl relative text-center"
+      >
+        <button
+          onclick="stopSingleQrScanner()"
+          class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+        >
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <h4 class="font-bold text-sm text-slate-800 mb-1">
+          Scan Barcode / QR Code
+        </h4>
+        <p class="text-[11px] text-slate-400 mb-3">
+          Arahkan kamera ke label part number
+        </p>
+        <div
+          id="singleReaderViewport"
+          class="overflow-hidden rounded-2xl bg-black aspect-square"
+        ></div>
+        <button
+          onclick="stopSingleQrScanner()"
+          class="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold w-full transition-colors"
+        >
+          Tutup Kamera
+        </button>
+      </div>
+    </div>
+    <div
+      id="modalSuratJalan"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+    >
+      <div class="bg-white rounded-3xl p-6 w-full max-w-lg text-center">
+        <h3 class="font-bold mb-4">Fitur Print Surat Jalan</h3>
+        <button
+          onclick="closeModalSuratJalan()"
+          class="px-4 py-2 bg-slate-200 rounded-lg text-xs font-bold"
+        >
+          Tutup
+        </button>
+      </div>
+    </div>
+
+    <div
+      id="modalMasterBarang"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+    >
+      <div
+        class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl relative"
+      >
+        <button
+          onclick="closeModalBarang()"
+          class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+        >
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <h3 class="text-base font-bold text-slate-800 mb-4">
+          Form Data Part Number
+        </h3>
+        <form
+          id="formMasterBarang"
+          onsubmit="handleSaveBarang(event)"
+          class="space-y-3"
+        >
+          <div>
+            <label class="block text-xs font-bold mb-1">Part Number *</label
+            ><input
+              type="text"
+              id="mbPartNumber"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1">Nama Barang *</label
+            ><input
+              type="text"
+              id="mbNamaBarang"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-bold mb-1">Kategori</label
+              ><input
+                type="text"
+                id="mbKategori"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold mb-1">Satuan</label
+              ><input
+                type="text"
+                id="mbSatuan"
+                value="Pcs"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+              />
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-xs font-bold mb-1">Std Pack</label
+              ><input
+                type="number"
+                id="mbStdPack"
+                value="1"
+                class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-bold"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold mb-1">Stok Awal</label
+              ><input
+                type="number"
+                id="mbStok"
+                value="0"
+                class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-bold"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold mb-1">Stok Min</label
+              ><input
+                type="number"
+                id="mbStokMin"
+                value="10"
+                class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-bold"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1">No Rel Rak *</label
+            ><input
+              type="text"
+              id="mbNoRel"
+              required
+              class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-semibold"
+            />
+          </div>
+          <div class="pt-3 flex gap-2">
+            <button
+              type="button"
+              onclick="closeModalBarang()"
+              class="flex-1 py-2 rounded-xl border text-slate-600 text-xs font-bold"
+            >
+              Batal</button
+            ><button
+              type="submit"
+              class="flex-1 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold"
+            >
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      id="modalMasterCustomer"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+    >
+      <div
+        class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl relative"
+      >
+        <button
+          onclick="closeModalCustomer()"
+          class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+        >
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <h3 class="text-base font-bold text-slate-800 mb-4">
+          Form Data Customer
+        </h3>
+        <form
+          id="formMasterCustomer"
+          onsubmit="handleSaveCustomer(event)"
+          class="space-y-3"
+        >
+          <div>
+            <label class="block text-xs font-bold mb-1">ID Customer *</label
+            ><input
+              type="text"
+              id="mcId"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1">Nama Perusahaan *</label
+            ><input
+              type="text"
+              id="mcNama"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1">Kontak / Telepon</label
+            ><input
+              type="text"
+              id="mcKontak"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1">Alamat Pabrik</label
+            ><textarea
+              id="mcAlamat"
+              rows="2"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs"
+            ></textarea>
+          </div>
+          <div class="pt-3 flex gap-2">
+            <button
+              type="button"
+              onclick="closeModalCustomer()"
+              class="flex-1 py-2 rounded-xl border text-slate-600 text-xs font-bold"
+            >
+              Batal</button
+            ><button
+              type="submit"
+              class="flex-1 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold"
+            >
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div
+      id="modalMasterUser"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+    >
+      <div
+        class="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl relative"
+      >
+        <button
+          onclick="closeModalUser()"
+          class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+        >
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <h3 class="text-base font-bold text-slate-800 mb-4">
+          Registrasi Akun Baru
+        </h3>
+        <form
+          id="formMasterUser"
+          onsubmit="handleSaveUser(event)"
+          class="space-y-3"
+        >
+          <div>
+            <label class="block text-xs font-bold mb-1">Username *</label
+            ><input
+              type="text"
+              id="muUsername"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1">Password *</label
+            ><input
+              type="password"
+              id="muPassword"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold mb-1">Role Akses *</label
+            ><select
+              id="muRole"
+              required
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
+            >
+              <option value="Produksi">User Produksi (Masuk)</option>
+              <option value="Warehouse">User Warehouse (Keluar)</option>
+              <option value="Admin">Admin (Akses Penuh)</option>
+            </select>
+          </div>
+          <div class="pt-3 flex gap-2">
+            <button
+              type="button"
+              onclick="closeModalUser()"
+              class="flex-1 py-2 rounded-xl border text-slate-600 text-xs font-bold"
+            >
+              Batal</button
+            ><button
+              type="submit"
+              class="flex-1 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold"
+            >
+              Daftarkan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Memanggil File JavaScript Terpisah -->
+    <script src="script.js"></script>
+  </body>
+</html>
