@@ -27,14 +27,46 @@ window.addEventListener("DOMContentLoaded", () => {
   // ========================================================
   // KODE AUTO REFRESH (Jalan setiap 60.000 milidetik / 60 detik)
   // ========================================================
+  // AUTO REFRESH DIAM-DIAM (STEALTH MODE) SETIAP 60 DETIK
   setInterval(() => {
-    // Hanya lakukan auto-refresh jika user sedang membuka tab "Dashboard"
-    // (Agar tidak mengganggu orang yang sedang asyik scan barang)
     const overviewTab = document.getElementById("tab-overview");
     if (overviewTab && !overviewTab.classList.contains("hidden")) {
-      loadInitialOrMockData();
+      // Kirim fetch diam-diam tanpa memicu pop-up error di layar
+      fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "apiGetMasterData", payload: {} }),
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          if (res && res.success) {
+            appData.barang = res.barang || [];
+            appData.customer = res.customer || [];
+            appData.orders = res.orders || [];
+            buildSeatAssyControlDataset();
+            renderSeatAssyControlBoard();
+
+            // Efek putar ikon kecil di pojok kanan atas
+            const spinner = document.getElementById("syncSpinner");
+            if (spinner) {
+              spinner.classList.add(
+                "rotate-180",
+                "text-brand-500",
+                "transition-transform",
+                "duration-700",
+              );
+              setTimeout(
+                () => spinner.classList.remove("rotate-180", "text-brand-500"),
+                1000,
+              );
+            }
+          }
+        })
+        .catch((err) => {
+          // Jika gagal, sistem HANYA mencatat di console laptop, TIDAK MEMUNCULKAN POP-UP KE USER
+          console.log("Auto-refresh tertunda, koneksi sibuk.");
+        });
     }
-  }, 60000);
+  }, 60000); // 60 Detik
   // Angka 60000 bisa Anda ganti jadi 30000 jika ingin 30 detik.
 });
 
