@@ -34,7 +34,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (overviewTab && !overviewTab.classList.contains("hidden")) {
       loadInitialOrMockData();
     }
-  }, 40000);
+  }, 60000);
   // Angka 60000 bisa Anda ganti jadi 30000 jika ingin 30 detik.
 });
 
