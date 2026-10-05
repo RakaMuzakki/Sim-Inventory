@@ -1,5 +1,5 @@
 // =========================================================================
-// !!! PENTING: PASTE LINK URL GOOGLE APPS SCRIPT ANDA DI SINI !!!
+// KONFIGURASI API & STATE GLOBAL
 // =========================================================================
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwzjcbbXsU6_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
@@ -9,9 +9,12 @@ let appData = {
   barang: [],
   customer: [],
   orders: [],
+  masuk: [],
+  keluar: [],
   seatAssyControl: [],
   users: [],
 };
+
 let massScanBuffer = [];
 let massScannerInstance = null;
 let singleScannerInstance = null;
@@ -24,14 +27,10 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
-  // ========================================================
-  // KODE AUTO REFRESH (Jalan setiap 60.000 milidetik / 60 detik)
-  // ========================================================
-  // AUTO REFRESH DIAM-DIAM (STEALTH MODE) SETIAP 60 DETIK
+  // AUTO REFRESH DIAM-DIAM SETIAP 30 DETIK
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     if (overviewTab && !overviewTab.classList.contains("hidden")) {
-      // Kirim fetch diam-diam tanpa memicu pop-up error di layar
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({ action: "apiGetMasterData", payload: {} }),
@@ -42,10 +41,12 @@ window.addEventListener("DOMContentLoaded", () => {
             appData.barang = res.barang || [];
             appData.customer = res.customer || [];
             appData.orders = res.orders || [];
+            appData.masuk = res.masuk || [];
+            appData.keluar = res.keluar || [];
+
             buildSeatAssyControlDataset();
             renderSeatAssyControlBoard();
 
-            // Efek putar ikon kecil di pojok kanan atas
             const spinner = document.getElementById("syncSpinner");
             if (spinner) {
               spinner.classList.add(
@@ -61,35 +62,42 @@ window.addEventListener("DOMContentLoaded", () => {
             }
           }
         })
-        .catch((err) => {
-          // Jika gagal, sistem HANYA mencatat di console laptop, TIDAK MEMUNCULKAN POP-UP KE USER
-          console.log("Auto-refresh tertunda, koneksi sibuk.");
-        });
+        .catch(() => console.log("Auto-refresh background tertunda."));
     }
-  }, 20000); // 60 Detik
-  // Angka 60000 bisa Anda ganti jadi 30000 jika ingin 30 detik.
+  }, 30000);
 });
 
 // =========================================================================
-// KOMUNIKASI API (FETCH) KE GOOGLE APPS SCRIPT
+// KOMUNIKASI API (FETCH) DILENGKAPI AUTO-RETRY
 // =========================================================================
 async function sendToBackend(action, payload = {}) {
   if (API_URL === "PASTE_URL_WEB_APP_ANDA_DISINI" || !API_URL) {
     throw new Error(
-      "PENTING: Anda belum memasukkan API_URL dari Google Apps Script ke dalam kode script.js!",
+      "PENTING: Anda belum memasukkan API_URL dari Google Apps Script!",
     );
   }
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: action, payload: payload }),
-    });
-    return await response.json();
-  } catch (error) {
-    console.error("Fetch API Error:", error);
-    throw new Error(
-      "Gagal terhubung ke database server. Pastikan URL API sudah benar dan akses file diizinkan (Anyone/Siapa Saja).",
-    );
+
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: action, payload: payload }),
+      });
+      const textResult = await response.text();
+      try {
+        return JSON.parse(textResult);
+      } catch (jsonErr) {
+        throw new Error("Server Google sedang sibuk. Mengulangi koneksi...");
+      }
+    } catch (error) {
+      retries--;
+      if (retries === 0)
+        throw new Error(
+          "Gagal terhubung ke database server. Pastikan jaringan stabil.",
+        );
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
   }
 }
 
@@ -98,8 +106,9 @@ async function sendToBackend(action, payload = {}) {
 // =========================================================================
 function startLiveClock() {
   setInterval(() => {
-    document.getElementById("liveClock").innerText =
-      new Date().toLocaleTimeString("id-ID", { hour12: false });
+    const el = document.getElementById("liveClock");
+    if (el)
+      el.innerText = new Date().toLocaleTimeString("id-ID", { hour12: false });
   }, 1000);
 }
 
@@ -145,6 +154,7 @@ function switchTab(tabId) {
     activeNav.classList.add("bg-brand-50", "text-brand-600", "font-semibold");
     activeNav.classList.remove("text-slate-600");
   }
+
   if (tabId === "overview") renderSeatAssyControlBoard();
 }
 
@@ -153,6 +163,7 @@ function applyRbacUI() {
     gPrompt = document.getElementById("guestLoginPrompt"),
     qBtn = document.getElementById("quickNavLoginBtn"),
     gTitle = document.getElementById("greetingTitle");
+
   document
     .querySelectorAll(".role-admin, .role-prod, .role-wh")
     .forEach((el) => el.classList.add("hidden"));
@@ -191,12 +202,14 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// AMBIL DATA & RENDER TABEL
+// AMBIL DATA & RENDER TABEL (DASHBOARD LOGIC)
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
-  if (show) s.classList.add("animate-spin");
-  else s.classList.remove("animate-spin");
+  if (s) {
+    if (show) s.classList.add("animate-spin");
+    else s.classList.remove("animate-spin");
+  }
 }
 
 function refreshAllData() {
@@ -206,21 +219,6 @@ function refreshAllData() {
 
 function loadInitialOrMockData() {
   showSyncSpinner(true);
-
-  if (API_URL === "PASTE_URL_WEB_APP_ANDA_DISINI") {
-    Swal.fire({
-      toast: true,
-      position: "top-end",
-      icon: "warning",
-      title: "URL API belum disetting, menggunakan data lokal",
-      showConfirmButton: false,
-      timer: 4000,
-    });
-    useMockInitialData();
-    showSyncSpinner(false);
-    return;
-  }
-
   sendToBackend("apiGetMasterData")
     .then((res) => {
       showSyncSpinner(false);
@@ -228,6 +226,9 @@ function loadInitialOrMockData() {
         appData.barang = res.barang || [];
         appData.customer = res.customer || [];
         appData.orders = res.orders || [];
+        appData.masuk = res.masuk || [];
+        appData.keluar = res.keluar || [];
+
         buildSeatAssyControlDataset();
         refreshAllUI();
       } else {
@@ -241,123 +242,43 @@ function loadInitialOrMockData() {
     .catch((err) => {
       showSyncSpinner(false);
       Swal.fire("Koneksi Terputus", err.message, "error");
-      useMockInitialData();
     });
-}
-
-function useMockInitialData() {
-  appData.barang = [
-    {
-      Part_Number: "PN-ELC-001",
-      nama_barang: "Relay Box 12V Type A",
-      stok: 150,
-      standar_packing: 1,
-      No_Rel: "REL-A-01",
-    },
-    {
-      Part_Number: "PN-MCH-101",
-      nama_barang: "Bracket Mounting Iron",
-      stok: 350,
-      standar_packing: 1,
-      No_Rel: "REL-B-05",
-    },
-    {
-      Part_Number: "PN-PLT-303",
-      nama_barang: "Casing Front Cover Black",
-      stok: 45,
-      standar_packing: 1,
-      No_Rel: "REL-C-12",
-    },
-  ];
-  appData.customer = [
-    {
-      id_customer: "CUST-001",
-      nama_customer: "PT. Astra Agro Lestari",
-      alamat: "Cikarang",
-    },
-    {
-      id_customer: "CUST-002",
-      nama_customer: "PT. Toyota Motor Mfg",
-      alamat: "Karawang",
-    },
-    {
-      id_customer: "CUST-003",
-      nama_customer: "PT. Denso Indonesia",
-      alamat: "Cibitung",
-    },
-  ];
-  appData.orders = [
-    {
-      no_order: "ORD-1001",
-      id_customer: "CUST-001",
-      Part_Number: "PN-ELC-001",
-      qty_order: 25,
-      qty_delivery: 0,
-      status_order: "Diproses",
-    },
-    {
-      no_order: "ORD-1002",
-      id_customer: "CUST-002",
-      Part_Number: "PN-MCH-101",
-      qty_order: 50,
-      qty_delivery: 0,
-      status_order: "Diproses",
-    },
-    {
-      no_order: "ORD-1003",
-      id_customer: "CUST-003",
-      Part_Number: "PN-PLT-303",
-      qty_order: 100,
-      qty_delivery: 0,
-      status_order: "Diproses",
-    },
-  ];
-  buildSeatAssyControlDataset();
-  refreshAllUI();
 }
 
 function buildSeatAssyControlDataset() {
   const list = [];
 
-  // SEKARANG MEMUTAR DARI SEMUA MASTER BARANG (Bukan cuma yang ada di PO)
+  // MENGAMBIL SEMUA DAFTAR DARI MASTER BARANG
   appData.barang.forEach((itemBarang, index) => {
     const partNum = String(itemBarang.Part_Number).trim();
 
-    // Cari apakah ada order terkait untuk barang ini (jika ada)
-    const relatedOrders = appData.orders.filter(
-      (ord) => String(ord.Part_Number).trim() === partNum,
-    );
+    // Hitung akumulasi masuk dari histori transaksi
+    const totalMasuk = appData.masuk
+      .filter((m) => String(m.Part_Number).trim() === partNum)
+      .reduce((sum, m) => sum + (Number(m.qty) || 0), 0);
 
-    const qtyOrder = relatedOrders.reduce(
-      (sum, o) => sum + (Number(o.qty_order) || 0),
-      0,
-    );
-    const qtyDelivery = relatedOrders.reduce(
-      (sum, o) => sum + (Number(o.qty_delivery) || 0),
-      0,
-    );
-    const sisa = Math.max(0, qtyOrder - qtyDelivery);
-    const stock = Number(itemBarang.stok) || 0;
+    // Hitung akumulasi keluar dari histori transaksi
+    const totalKeluar = appData.keluar
+      .filter((k) => String(k.Part_Number).trim() === partNum)
+      .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
 
-    // Kalkulasi Assy dan Balance
-    const assy_fsg = Math.floor(stock * 0.4);
-    const variance = stock - qtyDelivery;
+    // Hitungan Real-time
+    const sisaBarang = Number(itemBarang.stok) || 0;
+    const stokAwal = sisaBarang - totalMasuk + totalKeluar;
+
+    const assy_fsg = Math.floor(sisaBarang * 0.4); // 40% rule
+    const variance = totalMasuk - totalKeluar; // Tanda Plus Minus
 
     list.push({
       no: index + 1,
-      no_order: relatedOrders.length > 0 ? relatedOrders[0].no_order : "-",
       Part_Number: partNum,
       nama_barang: itemBarang.nama_barang || "-",
-      stock: stock,
-      qty_order: qtyOrder,
-      qty_delivery: qtyDelivery,
-      sisa: sisa,
+      stok_awal: Math.max(0, stokAwal),
+      masuk: totalMasuk,
+      keluar: totalKeluar,
+      sisa: sisaBarang,
       assy_fsg: assy_fsg,
-      variance: variance,
-      No_Rel: itemBarang.No_Rel || "-",
-      customer:
-        relatedOrders.length > 0 ? relatedOrders[0].id_customer || "-" : "-",
-      status: stock > 0 ? "Tersedia" : "Habis",
+      variance: variance > 0 ? `+${variance}` : variance,
     });
   });
 
@@ -383,49 +304,66 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     dataset = dataset.filter(
       (d) =>
         d.Part_Number.toLowerCase().includes(kw) ||
-        d.customer.toLowerCase().includes(kw) ||
-        d.No_Rel.toLowerCase().includes(kw),
+        d.nama_barang.toLowerCase().includes(kw),
     );
   }
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
-  document.getElementById("cntOnProgressSeatAssy").innerText = dataset.filter(
-    (d) => d.status === "On Progress",
-  ).length;
-  document.getElementById("cntSelesaiSeatAssy").innerText = dataset.filter(
-    (d) => d.status === "Selesai",
-  ).length;
+  // Sembunyikan on progress dan selesai (karena sekarang membaca semua barang)
+  if (document.getElementById("cntOnProgressSeatAssy"))
+    document.getElementById("cntOnProgressSeatAssy").innerText = "-";
+  if (document.getElementById("cntSelesaiSeatAssy"))
+    document.getElementById("cntSelesaiSeatAssy").innerText = "-";
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
     return;
   }
 
+  // RENDER 7 KOLOM DASHBOARD
   tbody.innerHTML = dataset
     .map((row) => {
       const stockWarningClass =
-        row.stock < row.sisa
+        row.sisa <= 0
           ? "text-rose-600 bg-rose-50 px-2 py-0.5 rounded font-extrabold"
           : "text-slate-700 font-extrabold";
-      const varianceFormatted =
-        row.variance > 0 ? `+${row.variance}` : row.variance;
 
       return `<tr class="hover:bg-slate-50 transition-colors">
-        <td class="py-3 px-3 border-r border-slate-100 text-center font-bold text-slate-700">
-          <span class="px-2.5 py-1 rounded-full bg-slate-100 text-[11px] text-slate-700 border border-slate-200">${row.No_Rel}</span>
-        </td>
-        <td class="py-3 px-3 border-r border-slate-100">
+        <!-- 1. PART NUMBER -->
+        <td class="py-3 px-4 border-r border-slate-100">
           <div class="font-extrabold text-slate-900 tracking-tight">${row.Part_Number}</div>
           <div class="text-[11px] text-slate-400 truncate max-w-xs">${row.nama_barang}</div>
         </td>
-        <td class="py-3 px-3 border-r border-slate-100 text-center">
-          <span class="${stockWarningClass}">${row.stock}</span>
+        
+        <!-- 2. STOK BARANG AWAL -->
+        <td class="py-3 px-3 border-r border-slate-100 text-center font-semibold text-slate-600">
+          ${row.stok_awal}
         </td>
-        <td class="py-3 px-3 text-center border-r border-slate-100 font-semibold text-slate-600">${row.qty_order}</td>
-        <td class="py-3 px-3 text-center border-r border-slate-100 font-bold text-emerald-600">${row.qty_delivery}</td>
-        <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-amber-600">${row.sisa}</td>
-        <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-indigo-700">${row.assy_fsg}</td>
-        <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-slate-700">${varianceFormatted}</td>
+        
+        <!-- 3. BARANG MASUK -->
+        <td class="py-3 px-3 text-center border-r border-slate-100 font-bold text-emerald-600">
+          ${row.masuk}
+        </td>
+        
+        <!-- 4. BARANG KELUAR -->
+        <td class="py-3 px-3 text-center border-r border-slate-100 font-bold text-blue-600">
+          ${row.keluar}
+        </td>
+        
+        <!-- 5. SISA BARANG -->
+        <td class="py-3 px-3 text-center border-r border-slate-100">
+          <span class="${stockWarningClass}">${row.sisa}</span>
+        </td>
+        
+        <!-- 6. HASIL ASSY -->
+        <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-indigo-700">
+          ${row.assy_fsg}
+        </td>
+        
+        <!-- 7. [ +/- ] -->
+        <td class="py-3 px-3 text-center font-extrabold text-slate-700">
+          ${row.variance}
+        </td>
       </tr>`;
     })
     .join("");
@@ -435,11 +373,15 @@ function handleGlobalSearch(keyword) {
   renderSeatAssyControlBoard(keyword);
 }
 
+// =========================================================================
+// DROPDOWN & MASTER DATA TABLES
+// =========================================================================
 function populateDropdowns() {
   const inPartSelect = document.getElementById("inPartNumber"),
     outPartSelect = document.getElementById("outPartNumber"),
     outOrderSelect = document.getElementById("outNoOrder"),
     outCustSelect = document.getElementById("outCustomer");
+
   if (inPartSelect)
     inPartSelect.innerHTML =
       '<option value="">-- Pilih Part Number --</option>' +
@@ -584,24 +526,17 @@ function renderUsersTable() {
 // =========================================================================
 function handleFormBarangMasuk(e) {
   e.preventDefault();
-  if (!currentUser) {
-    openLoginModal();
-    return;
-  }
-
+  if (!currentUser) return openLoginModal();
   const payload = {
     partNumber: document.getElementById("inPartNumber").value,
     qty: document.getElementById("inTotalQty").value,
     catatan: document.getElementById("inCatatan").value,
     petugas: currentUser.username,
   };
-
   Swal.fire({
     title: "Menyimpan...",
     allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading();
-    },
+    didOpen: () => Swal.showLoading(),
   });
   sendToBackend("apiSaveTransaksiMasuk", payload)
     .then((res) => {
@@ -614,16 +549,12 @@ function handleFormBarangMasuk(e) {
         Swal.fire("Gagal", res.message, "error");
       }
     })
-    .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+    .catch((err) => Swal.fire("Error", err.message, "error"));
 }
 
 function handleFormBarangKeluar(e) {
   e.preventDefault();
-  if (!currentUser) {
-    openLoginModal();
-    return;
-  }
-
+  if (!currentUser) return openLoginModal();
   const payload = {
     noOrder: document.getElementById("outNoOrder").value,
     idCustomer: document.getElementById("outCustomer").value,
@@ -632,13 +563,10 @@ function handleFormBarangKeluar(e) {
     catatan: document.getElementById("outCatatan").value,
     petugas: currentUser.username,
   };
-
   Swal.fire({
     title: "Menyimpan...",
     allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading();
-    },
+    didOpen: () => Swal.showLoading(),
   });
   sendToBackend("apiSaveTransaksiKeluar", payload)
     .then((res) => {
@@ -651,43 +579,34 @@ function handleFormBarangKeluar(e) {
         Swal.fire("Gagal", res.message, "error");
       }
     })
-    .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+    .catch((err) => Swal.fire("Error", err.message, "error"));
 }
 
 function submitMassScanTransaction() {
-  if (!currentUser) {
-    openLoginModal();
-    return;
-  }
-  if (massScanBuffer.length === 0) {
-    Swal.fire("Kosong", "Silakan scan barcode terlebih dahulu!", "info");
-    return;
-  }
-
+  if (!currentUser) return openLoginModal();
+  if (massScanBuffer.length === 0)
+    return Swal.fire("Kosong", "Scan barcode dulu!", "info");
   const payload = {
     items: massScanBuffer,
     petugas: currentUser.username,
     catatanUmum: document.getElementById("massCatatan").value,
   };
-
   Swal.fire({
-    title: "Memproses Batch...",
+    title: "Memproses...",
     allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading();
-    },
+    didOpen: () => Swal.showLoading(),
   });
   sendToBackend("apiSubmitScanMassal", payload)
     .then((res) => {
       if (res.success) {
-        Swal.fire("Batch Berhasil", res.message, "success");
+        Swal.fire("Berhasil", res.message, "success");
         clearMassScanBuffer();
         refreshAllData();
       } else {
-        Swal.fire("Gagal Memproses", res.message, "error");
+        Swal.fire("Gagal", res.message, "error");
       }
     })
-    .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+    .catch((err) => Swal.fire("Error", err.message, "error"));
 }
 
 function handleSaveBarang(e) {
@@ -705,26 +624,21 @@ function handleSaveBarang(e) {
     },
     user: currentUser ? currentUser.username : "Admin",
   };
-
   Swal.fire({
-    title: "Menyimpan Part...",
+    title: "Menyimpan...",
     allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading();
-    },
+    didOpen: () => Swal.showLoading(),
   });
-  sendToBackend("apiSaveBarang", payload)
-    .then((res) => {
-      if (res.success) {
-        Swal.fire("Tersimpan", res.message, "success");
-        document.getElementById("formMasterBarang").reset();
-        closeModalBarang();
-        refreshAllData();
-      } else {
-        Swal.fire("Gagal Menyimpan", res.message, "error");
-      }
-    })
-    .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+  sendToBackend("apiSaveBarang", payload).then((res) => {
+    if (res.success) {
+      Swal.fire("Berhasil", res.message, "success");
+      document.getElementById("formMasterBarang").reset();
+      closeModalBarang();
+      refreshAllData();
+    } else {
+      Swal.fire("Gagal", res.message, "error");
+    }
+  });
 }
 
 function handleSaveCustomer(e) {
@@ -738,26 +652,21 @@ function handleSaveCustomer(e) {
     },
     user: currentUser ? currentUser.username : "Admin",
   };
-
   Swal.fire({
     title: "Menyimpan...",
     allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading();
-    },
+    didOpen: () => Swal.showLoading(),
   });
-  sendToBackend("apiSaveCustomer", payload)
-    .then((res) => {
-      if (res.success) {
-        Swal.fire("Tersimpan", res.message, "success");
-        document.getElementById("formMasterCustomer").reset();
-        closeModalCustomer();
-        refreshAllData();
-      } else {
-        Swal.fire("Gagal Menyimpan", res.message, "error");
-      }
-    })
-    .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+  sendToBackend("apiSaveCustomer", payload).then((res) => {
+    if (res.success) {
+      Swal.fire("Berhasil", res.message, "success");
+      document.getElementById("formMasterCustomer").reset();
+      closeModalCustomer();
+      refreshAllData();
+    } else {
+      Swal.fire("Gagal", res.message, "error");
+    }
+  });
 }
 
 function handleSaveUser(e) {
@@ -770,26 +679,21 @@ function handleSaveUser(e) {
     },
     adminUser: currentUser ? currentUser.username : "Admin",
   };
-
   Swal.fire({
-    title: "Mendaftarkan User...",
+    title: "Menyimpan...",
     allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading();
-    },
+    didOpen: () => Swal.showLoading(),
   });
-  sendToBackend("apiSaveUser", payload)
-    .then((res) => {
-      if (res.success) {
-        Swal.fire("Terdaftar", res.message, "success");
-        document.getElementById("formMasterUser").reset();
-        closeModalUser();
-        refreshAllData();
-      } else {
-        Swal.fire("Gagal Daftar", res.message, "error");
-      }
-    })
-    .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+  sendToBackend("apiSaveUser", payload).then((res) => {
+    if (res.success) {
+      Swal.fire("Berhasil", res.message, "success");
+      document.getElementById("formMasterUser").reset();
+      closeModalUser();
+      refreshAllData();
+    } else {
+      Swal.fire("Gagal", res.message, "error");
+    }
+  });
 }
 
 function handleLoginSubmit(e) {
@@ -798,47 +702,34 @@ function handleLoginSubmit(e) {
     username: document.getElementById("loginUsername").value.trim(),
     password: document.getElementById("loginPassword").value.trim(),
   };
-
   Swal.fire({
     title: "Autentikasi...",
     allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading();
-    },
+    didOpen: () => Swal.showLoading(),
   });
-  sendToBackend("apiLogin", payload)
-    .then((res) => {
-      if (res.success) {
-        currentUser = res.user;
-        sessionStorage.setItem(
-          "sim_inventory_user",
-          JSON.stringify(currentUser),
-        );
-        applyRbacUI();
-        closeLoginModal();
-        Swal.fire({
-          icon: "success",
-          title: "Login Berhasil!",
-          text: `Selamat datang ${currentUser.username}`,
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        if (currentUser.role === "Produksi") switchTab("masuk");
-        else if (currentUser.role === "Warehouse") switchTab("keluar");
-        else switchTab("overview");
-      } else {
-        Swal.fire(
-          "Gagal Masuk",
-          res.message || "Username atau password salah!",
-          "error",
-        );
-      }
-    })
-    .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+  sendToBackend("apiLogin", payload).then((res) => {
+    if (res.success) {
+      currentUser = res.user;
+      sessionStorage.setItem("sim_inventory_user", JSON.stringify(currentUser));
+      applyRbacUI();
+      closeLoginModal();
+      Swal.fire({
+        icon: "success",
+        title: "Berhasil!",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      if (currentUser.role === "Produksi") switchTab("masuk");
+      else if (currentUser.role === "Warehouse") switchTab("keluar");
+      else switchTab("overview");
+    } else {
+      Swal.fire("Gagal", res.message, "error");
+    }
+  });
 }
 
 // =========================================================================
-// CAMERA & SCANNER FUNCTIONS (BEKERJA DI GITHUB PAGES)
+// CAMERA & SCANNER FUNCTIONS
 // =========================================================================
 function handleMassBarcodeInput(e) {
   if (e.key === "Enter") {
@@ -855,15 +746,13 @@ function processScannedMassBarcode(scannedCode) {
   const found = appData.barang.find(
     (b) => b.Part_Number.toLowerCase() === scannedCode.toLowerCase(),
   );
-  if (!found) {
-    Swal.fire({
+  if (!found)
+    return Swal.fire({
       icon: "warning",
       title: "Part Tidak Dikenal",
       timer: 1500,
       showConfirmButton: false,
     });
-    return;
-  }
   const existing = massScanBuffer.find(
     (item) => item.Part_Number === found.Part_Number,
   );
@@ -875,17 +764,14 @@ function processScannedMassBarcode(scannedCode) {
       qty: 1,
       stok: found.stok,
     });
-
   document.getElementById("massScanCount").innerText = massScanBuffer.length;
   renderMassScanTable();
 }
 
 function renderMassScanTable() {
   const tbody = document.getElementById("tblMassScanBody");
-  if (massScanBuffer.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400">Belum ada item yang di-scan.</td></tr>`;
-    return;
-  }
+  if (massScanBuffer.length === 0)
+    return (tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400">Belum ada item di-scan.</td></tr>`);
   tbody.innerHTML = massScanBuffer
     .map(
       (item, idx) =>
@@ -918,17 +804,11 @@ function toggleContinuousCamera() {
       .start(
         { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          processScannedMassBarcode(decodedText);
-        },
+        (decodedText) => processScannedMassBarcode(decodedText),
         () => {},
       )
-      .catch((err) => {
-        Swal.fire(
-          "Error Kamera",
-          "Kamera gagal terbuka. Pastikan Anda telah memberikan izin kamera pada browser Anda.",
-          "error",
-        );
+      .catch(() => {
+        Swal.fire("Error", "Kamera gagal terbuka.", "error");
         wrapper.classList.add("hidden");
         lbl.innerText = "Buka Kamera HP / PC";
         massScannerInstance = null;
@@ -954,8 +834,8 @@ function startSingleQrScanner(targetInputId) {
       },
       () => {},
     )
-    .catch((err) => {
-      Swal.fire("Error Kamera", "Gagal mengakses kamera.", "error");
+    .catch(() => {
+      Swal.fire("Error", "Kamera gagal diakses.", "error");
       stopSingleQrScanner();
     });
 }
@@ -1011,11 +891,10 @@ function openLoginModal() {
 function closeLoginModal() {
   document.getElementById("modalLogin").classList.add("hidden");
 }
-
 function logoutAction() {
   Swal.fire({
     title: "Keluar",
-    text: "Keluar dari akun?",
+    text: "Yakin keluar?",
     showCancelButton: true,
   }).then((res) => {
     if (res.isConfirmed) {
