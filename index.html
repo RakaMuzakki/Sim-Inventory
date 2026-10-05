@@ -33,7 +33,7 @@
       };
     </script>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
       rel="stylesheet"
     />
     <link
@@ -46,7 +46,7 @@
   </head>
 
   <body
-    class="antialiased min-h-screen flex flex-col md:flex-row relative overflow-x-hidden"
+    class="antialiased min-h-screen flex flex-col md:flex-row relative overflow-x-hidden bg-slate-50"
   >
     <!-- SIDEBAR -->
     <div
@@ -248,7 +248,7 @@
     <!-- HEADER & MAIN CONTENT -->
     <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
       <header
-        class="bg-white/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-8 py-3.5 border-b border-slate-100 flex items-center justify-between gap-4"
+        class="bg-white/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-8 py-3.5 border-b border-slate-200 shadow-sm flex items-center justify-between gap-4"
       >
         <div class="flex items-center gap-3 sm:gap-4">
           <button
@@ -284,26 +284,26 @@
               id="globalSearchInput"
               oninput="handleGlobalSearch(this.value)"
               placeholder="Cari Part Number, Customer, Rel..."
-              class="w-full bg-slate-50 border border-slate-200 rounded-full pl-9 pr-4 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
+              class="w-full bg-slate-100 border border-slate-200 rounded-full pl-9 pr-4 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
             />
           </div>
         </div>
         <div class="flex items-center gap-2 sm:gap-3">
           <div
-            class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-100 text-slate-600 text-[11px] font-semibold"
+            class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-semibold"
           >
             <i class="fa-regular fa-clock text-brand-600"></i
             ><span id="liveClock">--:--:--</span>
           </div>
           <button
             onclick="toggleBrowserFullscreen()"
-            class="w-9 h-9 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-slate-600 flex items-center justify-center transition-colors"
+            class="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200/70 text-slate-600 flex items-center justify-center transition-colors"
           >
             <i class="fa-solid fa-expand text-xs" id="fullscreenIcon"></i>
           </button>
           <button
             onclick="refreshAllData()"
-            class="w-9 h-9 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-slate-600 flex items-center justify-center transition-colors"
+            class="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200/70 text-slate-600 flex items-center justify-center transition-colors"
           >
             <i class="fa-solid fa-rotate text-xs" id="syncSpinner"></i>
           </button>
@@ -322,10 +322,10 @@
         <!-- TAB OVERVIEW (DASHBOARD) -->
         <section id="tab-overview" class="tab-pane block space-y-6">
           <div
-            class="bg-white p-5 sm:p-7 rounded-3xl border border-slate-100 shadow-sm transition-all hover:shadow-md"
+            class="bg-white p-5 sm:p-7 rounded-lg border-2 border-slate-800 shadow-md transition-all"
           >
             <div
-              class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3 mb-5"
+              class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b-2 border-slate-800 gap-3 mb-5"
             >
               <div>
                 <div class="flex items-center gap-2">
@@ -333,28 +333,31 @@
                     class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"
                   ></span>
                   <h3
-                    class="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight"
+                    class="text-xl font-black text-slate-900 tracking-tight uppercase"
                   >
                     Papan Kontrol Seat Assy
                   </h3>
                 </div>
-                <p class="text-xs text-slate-400 mt-0.5">
+                <p
+                  class="text-xs text-slate-500 font-semibold mt-0.5 uppercase tracking-wide"
+                >
                   Monitoring live pemenuhan delivery, ketersediaan stok, dan
                   alokasi rel.
                 </p>
               </div>
               <div class="flex items-center gap-2 text-[11px] font-bold">
-                <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600"
+                <span
+                  class="px-3 py-1 rounded border-2 border-slate-800 text-slate-800 uppercase tracking-widest"
                   >Total Item: <strong id="cntTotalSeatAssy">0</strong></span
                 >
               </div>
             </div>
             <div class="overflow-x-auto">
+              <!-- TABEL GAYA PAPAN TULIS FISIK PABRIK -->
               <table
                 class="w-full text-xs border-collapse border-2 border-slate-800 bg-white"
               >
                 <thead>
-                  <!-- Baris Judul Utama -->
                   <tr
                     class="bg-slate-100 text-slate-800 font-black uppercase text-center border-b-2 border-slate-800"
                   >
@@ -401,7 +404,6 @@
                       [ +/- ]
                     </th>
                   </tr>
-                  <!-- Baris Sub-Judul Delivery -->
                   <tr
                     class="bg-slate-50 text-slate-700 font-bold uppercase text-[9px] text-center border-b-2 border-slate-800"
                   >
@@ -421,7 +423,7 @@
                   class="font-bold text-slate-800 text-center text-sm divide-y-2 divide-slate-800"
                 >
                   <tr>
-                    <td colspan="9" class="py-8 text-slate-400">
+                    <td colspan="9" class="py-8 text-slate-400 font-medium">
                       Memuat data papan kontrol...
                     </td>
                   </tr>
@@ -465,13 +467,13 @@
                     id="inPartNumber"
                     required
                     onchange="handleSelectBarangMasuk(this.value)"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
                   >
                     <option value="">-- Pilih Part Number --</option>
                   </select>
                 </div>
                 <div
-                  class="bg-slate-50 p-4 rounded-2xl border border-slate-100 md:col-span-2 flex flex-wrap gap-4 text-xs"
+                  class="bg-slate-50 p-4 rounded-xl border border-slate-100 md:col-span-2 flex flex-wrap gap-4 text-xs"
                 >
                   <div>
                     <span class="text-slate-400">Nama:</span
@@ -507,7 +509,7 @@
                     min="0"
                     value="1"
                     oninput="calculateInTotalQty()"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
                   />
                 </div>
                 <div>
@@ -518,7 +520,7 @@
                     id="inTotalQty"
                     min="1"
                     required
-                    class="w-full bg-white border border-brand-500 rounded-2xl px-4 py-2.5 text-xs font-bold text-brand-700 focus:outline-none"
+                    class="w-full bg-white border border-brand-500 rounded-xl px-4 py-2.5 text-xs font-bold text-brand-700 focus:outline-none"
                   />
                 </div>
                 <div class="md:col-span-2">
@@ -527,14 +529,14 @@
                   ><input
                     type="text"
                     id="inCatatan"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-medium focus:outline-none"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none"
                   />
                 </div>
               </div>
               <div class="pt-4 flex justify-end">
                 <button
                   type="submit"
-                  class="px-5 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md flex items-center gap-2"
+                  class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md flex items-center gap-2"
                 >
                   <i class="fa-solid fa-arrow-down-to-bracket"></i
                   ><span>Simpan Transaksi Masuk</span>
@@ -577,7 +579,7 @@
                   ><select
                     id="outNoOrder"
                     onchange="handleSelectOrderRef(this.value)"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
                   >
                     <option value="">-- Pengiriman Bebas --</option>
                   </select>
@@ -588,7 +590,7 @@
                   ><select
                     id="outCustomer"
                     required
-                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
                   >
                     <option value="">-- Pilih Customer --</option>
                   </select>
@@ -600,13 +602,13 @@
                     id="outPartNumber"
                     required
                     onchange="handleSelectBarangKeluar(this.value)"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:outline-none"
                   >
                     <option value="">-- Pilih Part Number --</option>
                   </select>
                 </div>
                 <div
-                  class="bg-amber-50/80 p-4 rounded-2xl border border-amber-200/60 md:col-span-2 flex items-center justify-between text-xs"
+                  class="bg-amber-50/80 p-4 rounded-xl border border-amber-200/60 md:col-span-2 flex items-center justify-between text-xs"
                 >
                   <div>
                     <span class="text-amber-800 font-medium"
@@ -634,7 +636,7 @@
                     id="outQty"
                     min="1"
                     required
-                    class="w-full bg-white border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none"
+                    class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -643,7 +645,7 @@
                   ><input
                     type="text"
                     id="outCatatan"
-                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs font-medium focus:outline-none"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none"
                   />
                 </div>
               </div>
@@ -651,13 +653,13 @@
                 <button
                   type="button"
                   onclick="previewSuratJalanCurrentForm()"
-                  class="px-4 py-2.5 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2"
+                  class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2"
                 >
                   <i class="fa-solid fa-print"></i
                   ><span>Surat Jalan</span></button
                 ><button
                   type="submit"
-                  class="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2"
+                  class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2"
                 >
                   <i class="fa-solid fa-truck-arrow-right"></i
                   ><span>Keluarkan Barang</span>
@@ -722,13 +724,13 @@
               <div class="flex items-center gap-2">
                 <button
                   onclick="toggleContinuousCamera()"
-                  class="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                  class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
                 >
                   <i class="fa-solid fa-camera"></i
                   ><span id="lblCamStatus">Buka Kamera HP / PC</span></button
                 ><button
                   onclick="clearMassScanBuffer()"
-                  class="px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs"
+                  class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs"
                 >
                   Reset Buffer
                 </button>
@@ -747,7 +749,7 @@
               </p>
             </div>
             <div
-              class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center gap-3"
+              class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center gap-3"
             >
               <i class="fa-solid fa-barcode text-brand-600 text-lg"></i
               ><input
@@ -798,7 +800,7 @@
                   class="w-full sm:w-80 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
                 /><button
                   onclick="submitMassScanTransaction()"
-                  class="px-5 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2"
+                  class="px-5 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2"
                 >
                   <i class="fa-solid fa-cloud-arrow-up"></i
                   ><span>Submit Transaksi Pengeluaran</span>
@@ -895,7 +897,7 @@
       </div>
     </main>
 
-    <!-- ==================== MODALS ==================== -->
+    <!-- MODALS -->
     <div
       id="modalLogin"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1260,6 +1262,6 @@
       </div>
     </div>
 
-    <script src="script.js?v=3"></script>
+    <script src="script.js?v=4"></script>
   </body>
 </html>

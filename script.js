@@ -299,6 +299,15 @@ function buildSeatAssyControlDataset() {
   appData.seatAssyControl = list;
 }
 
+function refreshAllUI() {
+  renderSeatAssyControlBoard();
+  populateDropdowns();
+  renderOrdersTable();
+  renderMasterBarangTable();
+  renderCustomerTable();
+  renderUsersTable();
+}
+
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
   if (!tbody) return;
