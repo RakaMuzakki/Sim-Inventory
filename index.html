@@ -345,43 +345,64 @@
               </div>
               <div class="flex items-center gap-2 text-[11px] font-bold">
                 <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600"
-                  >Total: <strong id="cntTotalSeatAssy">0</strong></span
-                >
-                <span
-                  class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 flex items-center gap-1"
-                  ><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> On
-                  Progress: <strong id="cntOnProgressSeatAssy">0</strong></span
-                >
-                <span
-                  class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 flex items-center gap-1"
-                  ><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Selesai: <strong id="cntSelesaiSeatAssy">0</strong></span
+                  >Total Item: <strong id="cntTotalSeatAssy">0</strong></span
                 >
               </div>
             </div>
             <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs border-collapse">
-  <thead>
-    <tr class="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
-      <th class="py-3 px-4 border-r border-slate-200">Part Number</th>
-      <th class="py-3 px-3 border-r border-slate-200 text-center">Stok Awal</th>
-      <th class="py-3 px-3 border-r border-slate-200 text-center text-emerald-700 bg-emerald-50/50">Barang Masuk</th>
-      <th class="py-3 px-3 border-r border-slate-200 text-center text-blue-700 bg-blue-50/50">Barang Keluar</th>
-      <th class="py-3 px-3 border-r border-slate-200 text-center text-amber-700 bg-amber-50/50">Sisa Barang</th>
-      <th class="py-3 px-3 border-r border-slate-200 text-center text-indigo-700 bg-indigo-50/50">Hasil Assy</th>
-      <th class="py-3 px-3 text-center bg-slate-100 text-slate-600">[ +/- ]</th>
-    </tr>
-  </thead>
-  <tbody id="tblSeatAssyControlBody" class="divide-y divide-slate-100 font-medium">
-    <tr>
-      <td colspan="7" class="py-8 text-center text-slate-400">
-        Memuat data papan kontrol seat assy...
-      </td>
-    </tr>
-  </tbody>
-</table>
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr
+                    class="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200"
+                  >
+                    <th class="py-3 px-4 border-r border-slate-200">
+                      Part Number
+                    </th>
+                    <th class="py-3 px-3 border-r border-slate-200 text-center">
+                      Stok Awal
+                    </th>
+                    <th
+                      class="py-3 px-3 border-r border-slate-200 text-center text-emerald-700 bg-emerald-50/50"
+                    >
+                      Barang Masuk
+                    </th>
+                    <th
+                      class="py-3 px-3 border-r border-slate-200 text-center text-blue-700 bg-blue-50/50"
+                    >
+                      Barang Keluar
+                    </th>
+                    <th
+                      class="py-3 px-3 border-r border-slate-200 text-center text-amber-700 bg-amber-50/50"
+                    >
+                      Sisa Barang
+                    </th>
+                    <th
+                      class="py-3 px-3 border-r border-slate-200 text-center text-indigo-700 bg-indigo-50/50"
+                    >
+                      Hasil Assy
+                    </th>
+                    <th
+                      class="py-3 px-3 text-center bg-slate-100 text-slate-600"
+                    >
+                      [ +/- ]
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="tblSeatAssyControlBody"
+                  class="divide-y divide-slate-100 font-medium"
+                >
+                  <tr>
+                    <td colspan="7" class="py-8 text-center text-slate-400">
+                      Memuat data papan kontrol seat assy...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
+
         <!-- TAB MASUK -->
         <section id="tab-masuk" class="tab-pane hidden space-y-6">
           <div
@@ -494,6 +515,7 @@
             </form>
           </div>
         </section>
+
         <!-- TAB KELUAR -->
         <section id="tab-keluar" class="tab-pane hidden space-y-6">
           <div
@@ -616,6 +638,7 @@
             </form>
           </div>
         </section>
+
         <!-- TAB ORDER -->
         <section id="tab-order" class="tab-pane hidden space-y-6">
           <div
@@ -654,6 +677,7 @@
             </div>
           </div>
         </section>
+
         <!-- TAB SCAN MASSAL -->
         <section id="tab-scan" class="tab-pane hidden space-y-6">
           <div
@@ -755,6 +779,7 @@
             </div>
           </div>
         </section>
+
         <!-- TAB BARANG, CUSTOMER, USERS -->
         <section id="tab-barang" class="tab-pane hidden space-y-6">
           <div
@@ -784,6 +809,7 @@
             </table>
           </div>
         </section>
+
         <section id="tab-customer" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"
@@ -811,6 +837,7 @@
             </table>
           </div>
         </section>
+
         <section id="tab-users" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"
@@ -839,6 +866,7 @@
         </section>
       </div>
     </main>
+
     <!-- ==================== MODALS ==================== -->
     <div
       id="modalLogin"
@@ -896,6 +924,7 @@
         </form>
       </div>
     </div>
+
     <div
       id="modalSingleScanner"
       class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -927,6 +956,7 @@
         </button>
       </div>
     </div>
+
     <div
       id="modalSuratJalan"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -941,6 +971,7 @@
         </button>
       </div>
     </div>
+
     <div
       id="modalMasterBarang"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1054,6 +1085,7 @@
         </form>
       </div>
     </div>
+
     <div
       id="modalMasterCustomer"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1126,6 +1158,7 @@
         </form>
       </div>
     </div>
+
     <div
       id="modalMasterUser"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1194,7 +1227,8 @@
         </form>
       </div>
     </div>
-    <!-- Memanggil File JavaScript Terpisah -->
-    <script src="script.js"></script>
+
+    <!-- Memanggil File JavaScript Terpisah dengan Trik Pemaksaan Cache -->
+    <script src="script.js?v=2"></script>
   </body>
 </html>
