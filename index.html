@@ -7,7 +7,6 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <title>Sistem Informasi Inventory (SIM-INVENTORY)</title>
-
     <!-- Library & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -43,10 +42,10 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-
     <!-- Memanggil File CSS Terpisah -->
     <link rel="stylesheet" href="style.css" />
   </head>
+
   <body
     class="antialiased min-h-screen flex flex-col md:flex-row relative overflow-x-hidden"
   >
@@ -88,7 +87,6 @@
             <i class="fa-solid fa-xmark text-sm"></i>
           </button>
         </div>
-
         <div class="space-y-6">
           <div>
             <p
@@ -247,7 +245,6 @@
         </div>
       </div>
     </aside>
-
     <!-- ==================== HEADER ==================== -->
     <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
       <header
@@ -320,7 +317,6 @@
           </button>
         </div>
       </header>
-
       <div class="p-4 sm:p-8 space-y-6 flex-1">
         <!-- ==================== TABS ==================== -->
         <!-- TAB OVERVIEW (DASHBOARD) -->
@@ -371,15 +367,6 @@
                   >
                     <th
                       rowspan="2"
-                      class="py-3 px-3 text-center border-r border-slate-200 w-12"
-                    >
-                      No
-                    </th>
-                    <th rowspan="2" class="py-3 px-3 border-r border-slate-200">
-                      Customer
-                    </th>
-                    <th
-                      rowspan="2"
                       class="py-3 px-3 border-r border-slate-200 text-center"
                     >
                       No Rell
@@ -411,7 +398,6 @@
                     >
                       [ +/- ]
                     </th>
-                    <th rowspan="2" class="py-3 px-3 text-center">Status</th>
                   </tr>
                   <tr
                     class="bg-slate-50/50 text-slate-400 font-bold uppercase tracking-wider text-[9px] border-b border-slate-200"
@@ -438,7 +424,7 @@
                   class="divide-y divide-slate-100 font-medium"
                 >
                   <tr>
-                    <td colspan="11" class="py-8 text-center text-slate-400">
+                    <td colspan="8" class="py-8 text-center text-slate-400">
                       Memuat data papan kontrol seat assy...
                     </td>
                   </tr>
@@ -447,7 +433,6 @@
             </div>
           </div>
         </section>
-
         <!-- TAB MASUK -->
         <section id="tab-masuk" class="tab-pane hidden space-y-6">
           <div
@@ -560,7 +545,6 @@
             </form>
           </div>
         </section>
-
         <!-- TAB KELUAR -->
         <section id="tab-keluar" class="tab-pane hidden space-y-6">
           <div
@@ -683,7 +667,6 @@
             </form>
           </div>
         </section>
-
         <!-- TAB ORDER -->
         <section id="tab-order" class="tab-pane hidden space-y-6">
           <div
@@ -722,7 +705,6 @@
             </div>
           </div>
         </section>
-
         <!-- TAB SCAN MASSAL -->
         <section id="tab-scan" class="tab-pane hidden space-y-6">
           <div
@@ -824,7 +806,6 @@
             </div>
           </div>
         </section>
-
         <!-- TAB BARANG, CUSTOMER, USERS -->
         <section id="tab-barang" class="tab-pane hidden space-y-6">
           <div
@@ -909,9 +890,7 @@
         </section>
       </div>
     </main>
-
     <!-- ==================== MODALS ==================== -->
-
     <div
       id="modalLogin"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -968,7 +947,6 @@
         </form>
       </div>
     </div>
-
     <div
       id="modalSingleScanner"
       class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1014,7 +992,6 @@
         </button>
       </div>
     </div>
-
     <div
       id="modalMasterBarang"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1128,7 +1105,6 @@
         </form>
       </div>
     </div>
-
     <div
       id="modalMasterCustomer"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1201,7 +1177,6 @@
         </form>
       </div>
     </div>
-
     <div
       id="modalMasterUser"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1270,7 +1245,6 @@
         </form>
       </div>
     </div>
-
     <!-- Memanggil File JavaScript Terpisah -->
     <script src="script.js"></script>
   </body>
