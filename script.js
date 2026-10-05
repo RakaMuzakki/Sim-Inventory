@@ -385,16 +385,12 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
   ).length;
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = dataset
-    .map((row, idx) => {
-      const badgeStatus =
-        row.status === "Selesai"
-          ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700"><i class="fa-solid fa-circle-check"></i> Selesai</span>`
-          : `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700"><i class="fa-solid fa-arrows-rotate animate-spin"></i> On Progress</span>`;
+    .map((row) => {
       const stockWarningClass =
         row.stock < row.sisa
           ? "text-rose-600 bg-rose-50 px-2 py-0.5 rounded font-extrabold"
@@ -403,28 +399,22 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         row.variance > 0 ? `+${row.variance}` : row.variance;
 
       return `<tr class="hover:bg-slate-50 transition-colors">
-      <td class="py-3 px-3 text-center border-r border-slate-100 font-semibold text-slate-500">${idx + 1}</td>
-      <td class="py-3 px-3 border-r border-slate-100">
-        <div class="font-bold text-slate-700">${row.customer}</div>
-        <div class="text-[10px] text-slate-400 mt-0.5">${row.no_order}</div>
-      </td>
-      <td class="py-3 px-3 border-r border-slate-100 text-center font-bold text-slate-700">
-        <span class="px-2.5 py-1 rounded-full bg-slate-100 text-[11px] text-slate-700 border border-slate-200">${row.No_Rel}</span>
-      </td>
-      <td class="py-3 px-3 border-r border-slate-100">
-        <div class="font-extrabold text-slate-900 tracking-tight">${row.Part_Number}</div>
-        <div class="text-[11px] text-slate-400 truncate max-w-xs">${row.nama_barang}</div>
-      </td>
-      <td class="py-3 px-3 border-r border-slate-100 text-center">
-        <span class="${stockWarningClass}">${row.stock}</span>
-      </td>
-      <td class="py-3 px-3 text-center border-r border-slate-100 font-semibold text-slate-600">${row.qty_order}</td>
-      <td class="py-3 px-3 text-center border-r border-slate-100 font-bold text-emerald-600">${row.qty_delivery}</td>
-      <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-amber-600">${row.sisa}</td>
-      <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-indigo-700">${row.assy_fsg}</td>
-      <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-slate-700">${varianceFormatted}</td>
-      <td class="py-3 px-3 text-center">${badgeStatus}</td>
-    </tr>`;
+        <td class="py-3 px-3 border-r border-slate-100 text-center font-bold text-slate-700">
+          <span class="px-2.5 py-1 rounded-full bg-slate-100 text-[11px] text-slate-700 border border-slate-200">${row.No_Rel}</span>
+        </td>
+        <td class="py-3 px-3 border-r border-slate-100">
+          <div class="font-extrabold text-slate-900 tracking-tight">${row.Part_Number}</div>
+          <div class="text-[11px] text-slate-400 truncate max-w-xs">${row.nama_barang}</div>
+        </td>
+        <td class="py-3 px-3 border-r border-slate-100 text-center">
+          <span class="${stockWarningClass}">${row.stock}</span>
+        </td>
+        <td class="py-3 px-3 text-center border-r border-slate-100 font-semibold text-slate-600">${row.qty_order}</td>
+        <td class="py-3 px-3 text-center border-r border-slate-100 font-bold text-emerald-600">${row.qty_delivery}</td>
+        <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-amber-600">${row.sisa}</td>
+        <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-indigo-700">${row.assy_fsg}</td>
+        <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-slate-700">${varianceFormatted}</td>
+      </tr>`;
     })
     .join("");
 }
