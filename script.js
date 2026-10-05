@@ -73,23 +73,43 @@ window.addEventListener("DOMContentLoaded", () => {
 // =========================================================================
 // KOMUNIKASI API (FETCH) KE GOOGLE APPS SCRIPT
 // =========================================================================
+// =========================================================================
+// KOMUNIKASI API (FETCH) KE GOOGLE APPS SCRIPT (DILENGKAPI AUTO-RETRY)
+// =========================================================================
 async function sendToBackend(action, payload = {}) {
-  if (API_URL === "PASTE_URL_WEB_APP_ANDA_DISINI" || !API_URL) {
+  if (API_URL === "1ZnOPjXr4ND6nA8Dmulq9Dcj-QTwywi1CVq6dgiiqScY" || !API_URL) {
     throw new Error(
-      "PENTING: Anda belum memasukkan API_URL dari Google Apps Script ke dalam kode script.js!",
+      "PENTING: Anda belum memasukkan API_URL dari Google Apps Script!",
     );
   }
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: action, payload: payload }),
-    });
-    return await response.json();
-  } catch (error) {
-    console.error("Fetch API Error:", error);
-    throw new Error(
-      "Gagal terhubung ke database server. Pastikan URL API sudah benar dan akses file diizinkan (Anyone/Siapa Saja).",
-    );
+
+  // Coba kirim data, berikan 3 kali kesempatan jika koneksi gagal/terputus
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: action, payload: payload }),
+      });
+
+      const textResult = await response.text();
+      try {
+        const jsonResult = JSON.parse(textResult);
+        return jsonResult;
+      } catch (jsonErr) {
+        throw new Error("Server Google sedang sibuk. Mengulangi koneksi...");
+      }
+    } catch (error) {
+      retries--;
+      if (retries === 0) {
+        console.error("Fetch API Error:", error);
+        throw new Error(
+          "Gagal terhubung ke database server. Pastikan jaringan stabil dan URL API benar.",
+        );
+      }
+      // Tunggu 1,5 detik sebelum mencoba ulang otomatis
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
   }
 }
 
