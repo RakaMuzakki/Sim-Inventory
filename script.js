@@ -248,51 +248,55 @@ function loadInitialOrMockData() {
 function buildSeatAssyControlDataset() {
   const list = [];
 
-  // MENGAMBIL SEMUA DAFTAR DARI MASTER BARANG
   appData.barang.forEach((itemBarang, index) => {
     const partNum = String(itemBarang.Part_Number).trim();
 
-    // Hitung akumulasi masuk dari histori transaksi
-    const totalMasuk = appData.masuk
-      .filter((m) => String(m.Part_Number).trim() === partNum)
-      .reduce((sum, m) => sum + (Number(m.qty) || 0), 0);
+    // Cek apakah barang ini punya target order (QTY/DAY)
+    const relatedOrders = appData.orders.filter(
+      (o) => String(o.Part_Number).trim() === partNum,
+    );
 
-    // Hitung akumulasi keluar dari histori transaksi
-    const totalKeluar = appData.keluar
+    // CUSTOMER: Ambil dari pesanan, jika tidak ada cek master barang
+    let custName = "-";
+    if (relatedOrders.length > 0) custName = relatedOrders[0].id_customer;
+    else if (itemBarang.id_customer) custName = itemBarang.id_customer;
+
+    // QTY/DAY = Total target pesanan
+    const qtyDay = relatedOrders.reduce(
+      (sum, o) => sum + (Number(o.qty_order) || 0),
+      0,
+    );
+
+    // QTY OUT = Total barang yang sudah di-scan keluar
+    const qtyOut = appData.keluar
       .filter((k) => String(k.Part_Number).trim() === partNum)
       .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
 
-    // Hitungan Real-time
-    const sisaBarang = Number(itemBarang.stok) || 0;
-    const stokAwal = sisaBarang - totalMasuk + totalKeluar;
+    // SISA DEL = Target - Keluar
+    const sisaDel = Math.max(0, qtyDay - qtyOut);
 
-    const assy_fsg = Math.floor(sisaBarang * 0.4);
-    const variance = totalMasuk - totalKeluar;
+    // STOCK = Stok fisik gudang saat ini (dibaca langsung dari master)
+    const currentStock = Number(itemBarang.stok) || 0;
+
+    // ASSY & VARIANCE
+    const assyFsg = Math.floor(currentStock * 0.4);
+    const variance = currentStock - qtyOut;
 
     list.push({
-      no: index + 1,
+      Customer: custName,
       No_Rel: itemBarang.No_Rel || "-",
       Part_Number: partNum,
       nama_barang: itemBarang.nama_barang || "-",
-      stok_awal: Math.max(0, stokAwal),
-      masuk: totalMasuk,
-      keluar: totalKeluar,
-      sisa: sisaBarang,
-      assy_fsg: assy_fsg,
-      variance: variance > 0 ? `+${variance}` : variance,
+      stock: currentStock,
+      qty_day: qtyDay,
+      qty_out: qtyOut,
+      sisa_del: sisaDel,
+      assy_fsg: assyFsg,
+      variance: variance,
     });
   });
 
   appData.seatAssyControl = list;
-}
-
-function refreshAllUI() {
-  renderSeatAssyControlBoard();
-  populateDropdowns();
-  renderOrdersTable();
-  renderMasterBarangTable();
-  renderCustomerTable();
-  renderUsersTable();
 }
 
 function renderSeatAssyControlBoard(filterKeyword = "") {
@@ -313,60 +317,29 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
     return;
   }
 
-  // RENDER 8 KOLOM DASHBOARD
   tbody.innerHTML = dataset
     .map((row) => {
-      const stockWarningClass =
-        row.sisa <= 0
-          ? "text-rose-600 bg-rose-50 px-2 py-0.5 rounded font-extrabold"
-          : "text-slate-700 font-extrabold";
+      // FUNGSI KHUSUS: Mengubah angka 0 menjadi "-" agar persis coretan spidol di papan tulis
+      const formatNum = (num) => (num === 0 ? "-" : num);
 
-      return `<tr class="hover:bg-slate-50 transition-colors">
-        <!-- 1. NO RELL -->
-        <td class="py-3 px-3 border-r border-slate-100 text-center">
-          <span class="px-2.5 py-1 rounded-full bg-slate-100 text-[11px] font-bold text-slate-700 border border-slate-200">${row.No_Rel}</span>
-        </td>
-
-        <!-- 2. PART NUMBER -->
-        <td class="py-3 px-4 border-r border-slate-100">
-          <div class="font-extrabold text-slate-900 tracking-tight">${row.Part_Number}</div>
-          <div class="text-[11px] text-slate-400 truncate max-w-xs">${row.nama_barang}</div>
-        </td>
-        
-        <!-- 3. STOK BARANG AWAL -->
-        <td class="py-3 px-3 border-r border-slate-100 text-center font-semibold text-slate-600">
-          ${row.stok_awal}
-        </td>
-        
-        <!-- 4. BARANG MASUK -->
-        <td class="py-3 px-3 text-center border-r border-slate-100 font-bold text-emerald-600">
-          ${row.masuk}
-        </td>
-        
-        <!-- 5. BARANG KELUAR -->
-        <td class="py-3 px-3 text-center border-r border-slate-100 font-bold text-blue-600">
-          ${row.keluar}
-        </td>
-        
-        <!-- 6. SISA BARANG -->
-        <td class="py-3 px-3 text-center border-r border-slate-100">
-          <span class="${stockWarningClass}">${row.sisa}</span>
-        </td>
-        
-        <!-- 7. HASIL ASSY -->
-        <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-indigo-700">
-          ${row.assy_fsg}
-        </td>
-        
-        <!-- 8. [ +/- ] -->
-        <td class="py-3 px-3 text-center font-extrabold text-slate-700">
-          ${row.variance}
-        </td>
-      </tr>`;
+      return `<tr class="hover:bg-blue-50 transition-colors">
+      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-extrabold text-slate-500 break-words">${row.Customer}</td>
+      <td class="py-2 px-1 border-2 border-slate-800 font-extrabold text-slate-800 bg-slate-100">${row.No_Rel}</td>
+      <td class="py-2 px-3 border-2 border-slate-800 text-left">
+        <div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div>
+        <div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5">${row.nama_barang}</div>
+      </td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-800 text-base bg-blue-50/30">${formatNum(row.stock)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.qty_day)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.qty_out)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.sisa_del)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.assy_fsg)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${row.variance > 0 ? "+" + row.variance : row.variance}</td>
+    </tr>`;
     })
     .join("");
 }
