@@ -318,25 +318,35 @@ function useMockInitialData() {
 
 function buildSeatAssyControlDataset() {
   const list = [];
-  appData.orders.forEach((ord, index) => {
-    const itemBarang =
-      appData.barang.find((b) => b.Part_Number === ord.Part_Number) || {};
-    const itemCust =
-      appData.customer.find((c) => c.id_customer === ord.id_customer) || {};
 
-    const qtyOrder = Number(ord.qty_order) || 0;
-    const qtyDelivery = Number(ord.qty_delivery) || 0;
+  // SEKARANG MEMUTAR DARI SEMUA MASTER BARANG (Bukan cuma yang ada di PO)
+  appData.barang.forEach((itemBarang, index) => {
+    const partNum = String(itemBarang.Part_Number).trim();
+
+    // Cari apakah ada order terkait untuk barang ini (jika ada)
+    const relatedOrders = appData.orders.filter(
+      (ord) => String(ord.Part_Number).trim() === partNum,
+    );
+
+    const qtyOrder = relatedOrders.reduce(
+      (sum, o) => sum + (Number(o.qty_order) || 0),
+      0,
+    );
+    const qtyDelivery = relatedOrders.reduce(
+      (sum, o) => sum + (Number(o.qty_delivery) || 0),
+      0,
+    );
     const sisa = Math.max(0, qtyOrder - qtyDelivery);
     const stock = Number(itemBarang.stok) || 0;
 
-    // Kalkulasi ASSY IN STORE FSG dan VARIANS
+    // Kalkulasi Assy dan Balance
     const assy_fsg = Math.floor(stock * 0.4);
     const variance = stock - qtyDelivery;
 
     list.push({
       no: index + 1,
-      no_order: ord.no_order,
-      Part_Number: ord.Part_Number,
+      no_order: relatedOrders.length > 0 ? relatedOrders[0].no_order : "-",
+      Part_Number: partNum,
       nama_barang: itemBarang.nama_barang || "-",
       stock: stock,
       qty_order: qtyOrder,
@@ -345,10 +355,12 @@ function buildSeatAssyControlDataset() {
       assy_fsg: assy_fsg,
       variance: variance,
       No_Rel: itemBarang.No_Rel || "-",
-      customer: itemCust.nama_customer || ord.id_customer,
-      status: sisa === 0 ? "Selesai" : "On Progress",
+      customer:
+        relatedOrders.length > 0 ? relatedOrders[0].id_customer || "-" : "-",
+      status: stock > 0 ? "Tersedia" : "Habis",
     });
   });
+
   appData.seatAssyControl = list;
 }
 
