@@ -66,7 +66,7 @@ window.addEventListener("DOMContentLoaded", () => {
           console.log("Auto-refresh tertunda, koneksi sibuk.");
         });
     }
-  }, 60000); // 60 Detik
+  }, 20000); // 60 Detik
   // Angka 60000 bisa Anda ganti jadi 30000 jika ingin 30 detik.
 });
 
