@@ -42,14 +42,13 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- Memanggil File CSS Terpisah -->
     <link rel="stylesheet" href="style.css" />
   </head>
 
   <body
     class="antialiased min-h-screen flex flex-col md:flex-row relative overflow-x-hidden"
   >
-    <!-- ==================== SIDEBAR ==================== -->
+    <!-- SIDEBAR -->
     <div
       id="sidebarBackdrop"
       onclick="closeSidebar()"
@@ -245,7 +244,8 @@
         </div>
       </div>
     </aside>
-    <!-- ==================== HEADER ==================== -->
+
+    <!-- HEADER & MAIN CONTENT -->
     <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
       <header
         class="bg-white/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-8 py-3.5 border-b border-slate-100 flex items-center justify-between gap-4"
@@ -317,8 +317,8 @@
           </button>
         </div>
       </header>
+
       <div class="p-4 sm:p-8 space-y-6 flex-1">
-        <!-- ==================== TABS ==================== -->
         <!-- TAB OVERVIEW (DASHBOARD) -->
         <section id="tab-overview" class="tab-pane block space-y-6">
           <div
@@ -340,7 +340,7 @@
                 </div>
                 <p class="text-xs text-slate-400 mt-0.5">
                   Monitoring live pemenuhan delivery, ketersediaan stok, dan
-                  alokasi rel per customer.
+                  alokasi rel.
                 </p>
               </div>
               <div class="flex items-center gap-2 text-[11px] font-bold">
@@ -396,7 +396,7 @@
                   class="divide-y divide-slate-100 font-medium"
                 >
                   <tr>
-                    <td colspan="7" class="py-8 text-center text-slate-400">
+                    <td colspan="8" class="py-8 text-center text-slate-400">
                       Memuat data papan kontrol seat assy...
                     </td>
                   </tr>
@@ -423,8 +423,8 @@
                 onclick="startSingleQrScanner('inPartNumber')"
                 class="px-3 py-1.5 rounded-2xl bg-emerald-50 text-brand-600 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1.5 transition-colors"
               >
-                <i class="fa-solid fa-qrcode text-sm"></i>
-                <span>Scan Kamera</span>
+                <i class="fa-solid fa-qrcode text-sm"></i
+                ><span>Scan Kamera</span>
               </button>
             </div>
             <form
@@ -449,26 +449,26 @@
                   class="bg-slate-50 p-4 rounded-2xl border border-slate-100 md:col-span-2 flex flex-wrap gap-4 text-xs"
                 >
                   <div>
-                    <span class="text-slate-400">Nama:</span>
-                    <strong id="lblInNamaBarang" class="text-slate-800 ml-1"
+                    <span class="text-slate-400">Nama:</span
+                    ><strong id="lblInNamaBarang" class="text-slate-800 ml-1"
                       >-</strong
                     >
                   </div>
                   <div>
-                    <span class="text-slate-400">Stok Saat Ini:</span>
-                    <strong id="lblInStokCurrent" class="text-slate-800 ml-1"
+                    <span class="text-slate-400">Stok Saat Ini:</span
+                    ><strong id="lblInStokCurrent" class="text-slate-800 ml-1"
                       >0</strong
                     >
                   </div>
                   <div>
-                    <span class="text-slate-400">Std. Packing:</span>
-                    <strong id="lblInStdPack" class="text-brand-600 ml-1"
+                    <span class="text-slate-400">Std. Packing:</span
+                    ><strong id="lblInStdPack" class="text-brand-600 ml-1"
                       >1</strong
                     >
                   </div>
                   <div>
-                    <span class="text-slate-400">No. Rel:</span>
-                    <strong id="lblInNoRel" class="text-slate-800 ml-1"
+                    <span class="text-slate-400">No. Rel:</span
+                    ><strong id="lblInNoRel" class="text-slate-800 ml-1"
                       >-</strong
                     >
                   </div>
@@ -511,8 +511,8 @@
                   type="submit"
                   class="px-5 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md flex items-center gap-2"
                 >
-                  <i class="fa-solid fa-arrow-down-to-bracket"></i>
-                  <span>Simpan Transaksi Masuk</span>
+                  <i class="fa-solid fa-arrow-down-to-bracket"></i
+                  ><span>Simpan Transaksi Masuk</span>
                 </button>
               </div>
             </form>
@@ -536,8 +536,8 @@
                 onclick="startSingleQrScanner('outPartNumber')"
                 class="px-3 py-1.5 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold text-xs flex items-center gap-1.5 transition-colors"
               >
-                <i class="fa-solid fa-qrcode text-sm"></i>
-                <span>Scan Kamera</span>
+                <i class="fa-solid fa-qrcode text-sm"></i
+                ><span>Scan Kamera</span>
               </button>
             </div>
             <form
@@ -628,14 +628,14 @@
                   onclick="previewSuratJalanCurrentForm()"
                   class="px-4 py-2.5 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-2"
                 >
-                  <i class="fa-solid fa-print"></i>
-                  <span>Surat Jalan</span></button
+                  <i class="fa-solid fa-print"></i
+                  ><span>Surat Jalan</span></button
                 ><button
                   type="submit"
                   class="px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md flex items-center gap-2"
                 >
-                  <i class="fa-solid fa-truck-arrow-right"></i>
-                  <span>Keluarkan Barang</span>
+                  <i class="fa-solid fa-truck-arrow-right"></i
+                  ><span>Keluarkan Barang</span>
                 </button>
               </div>
             </form>
@@ -699,8 +699,8 @@
                   onclick="toggleContinuousCamera()"
                   class="px-4 py-2 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
                 >
-                  <i class="fa-solid fa-camera"></i>
-                  <span id="lblCamStatus">Buka Kamera HP / PC</span></button
+                  <i class="fa-solid fa-camera"></i
+                  ><span id="lblCamStatus">Buka Kamera HP / PC</span></button
                 ><button
                   onclick="clearMassScanBuffer()"
                   class="px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs"
@@ -775,8 +775,8 @@
                   onclick="submitMassScanTransaction()"
                   class="px-5 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2"
                 >
-                  <i class="fa-solid fa-cloud-arrow-up"></i>
-                  <span>Submit Transaksi Pengeluaran</span>
+                  <i class="fa-solid fa-cloud-arrow-up"></i
+                  ><span>Submit Transaksi Pengeluaran</span>
                 </button>
               </div>
             </div>
@@ -916,8 +916,9 @@
               onclick="closeLoginModal()"
               class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs"
             >
-              Batal</button
-            ><button
+              Batal
+            </button>
+            <button
               type="submit"
               class="flex-1 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs"
             >
@@ -1077,8 +1078,9 @@
               onclick="closeModalBarang()"
               class="flex-1 py-2 rounded-xl border text-slate-600 text-xs font-bold"
             >
-              Batal</button
-            ><button
+              Batal
+            </button>
+            <button
               type="submit"
               class="flex-1 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold"
             >
@@ -1150,8 +1152,9 @@
               onclick="closeModalCustomer()"
               class="flex-1 py-2 rounded-xl border text-slate-600 text-xs font-bold"
             >
-              Batal</button
-            ><button
+              Batal
+            </button>
+            <button
               type="submit"
               class="flex-1 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold"
             >
@@ -1219,8 +1222,9 @@
               onclick="closeModalUser()"
               class="flex-1 py-2 rounded-xl border text-slate-600 text-xs font-bold"
             >
-              Batal</button
-            ><button
+              Batal
+            </button>
+            <button
               type="submit"
               class="flex-1 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold"
             >
@@ -1231,7 +1235,6 @@
       </div>
     </div>
 
-    <!-- Memanggil File JavaScript Terpisah dengan Trik Pemaksaan Cache -->
-    <script src="script.js?v=2"></script>
+    <script src="script.js?v=3"></script>
   </body>
 </html>

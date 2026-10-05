@@ -266,11 +266,12 @@ function buildSeatAssyControlDataset() {
     const sisaBarang = Number(itemBarang.stok) || 0;
     const stokAwal = sisaBarang - totalMasuk + totalKeluar;
 
-    const assy_fsg = Math.floor(sisaBarang * 0.4); // 40% rule
-    const variance = totalMasuk - totalKeluar; // Tanda Plus Minus
+    const assy_fsg = Math.floor(sisaBarang * 0.4);
+    const variance = totalMasuk - totalKeluar;
 
     list.push({
       no: index + 1,
+      No_Rel: itemBarang.No_Rel || "-",
       Part_Number: partNum,
       nama_barang: itemBarang.nama_barang || "-",
       stok_awal: Math.max(0, stokAwal),
@@ -304,23 +305,19 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     dataset = dataset.filter(
       (d) =>
         d.Part_Number.toLowerCase().includes(kw) ||
-        d.nama_barang.toLowerCase().includes(kw),
+        d.nama_barang.toLowerCase().includes(kw) ||
+        d.No_Rel.toLowerCase().includes(kw),
     );
   }
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
-  // Sembunyikan on progress dan selesai (karena sekarang membaca semua barang)
-  if (document.getElementById("cntOnProgressSeatAssy"))
-    document.getElementById("cntOnProgressSeatAssy").innerText = "-";
-  if (document.getElementById("cntSelesaiSeatAssy"))
-    document.getElementById("cntSelesaiSeatAssy").innerText = "-";
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
     return;
   }
 
-  // RENDER 7 KOLOM DASHBOARD
+  // RENDER 8 KOLOM DASHBOARD
   tbody.innerHTML = dataset
     .map((row) => {
       const stockWarningClass =
@@ -329,38 +326,43 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
           : "text-slate-700 font-extrabold";
 
       return `<tr class="hover:bg-slate-50 transition-colors">
-        <!-- 1. PART NUMBER -->
+        <!-- 1. NO RELL -->
+        <td class="py-3 px-3 border-r border-slate-100 text-center">
+          <span class="px-2.5 py-1 rounded-full bg-slate-100 text-[11px] font-bold text-slate-700 border border-slate-200">${row.No_Rel}</span>
+        </td>
+
+        <!-- 2. PART NUMBER -->
         <td class="py-3 px-4 border-r border-slate-100">
           <div class="font-extrabold text-slate-900 tracking-tight">${row.Part_Number}</div>
           <div class="text-[11px] text-slate-400 truncate max-w-xs">${row.nama_barang}</div>
         </td>
         
-        <!-- 2. STOK BARANG AWAL -->
+        <!-- 3. STOK BARANG AWAL -->
         <td class="py-3 px-3 border-r border-slate-100 text-center font-semibold text-slate-600">
           ${row.stok_awal}
         </td>
         
-        <!-- 3. BARANG MASUK -->
+        <!-- 4. BARANG MASUK -->
         <td class="py-3 px-3 text-center border-r border-slate-100 font-bold text-emerald-600">
           ${row.masuk}
         </td>
         
-        <!-- 4. BARANG KELUAR -->
+        <!-- 5. BARANG KELUAR -->
         <td class="py-3 px-3 text-center border-r border-slate-100 font-bold text-blue-600">
           ${row.keluar}
         </td>
         
-        <!-- 5. SISA BARANG -->
+        <!-- 6. SISA BARANG -->
         <td class="py-3 px-3 text-center border-r border-slate-100">
           <span class="${stockWarningClass}">${row.sisa}</span>
         </td>
         
-        <!-- 6. HASIL ASSY -->
+        <!-- 7. HASIL ASSY -->
         <td class="py-3 px-3 text-center border-r border-slate-100 font-extrabold text-indigo-700">
           ${row.assy_fsg}
         </td>
         
-        <!-- 7. [ +/- ] -->
+        <!-- 8. [ +/- ] -->
         <td class="py-3 px-3 text-center font-extrabold text-slate-700">
           ${row.variance}
         </td>
