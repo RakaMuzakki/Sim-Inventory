@@ -1,5 +1,5 @@
 // =========================================================================
-// !!! PENTING: PASTE LINK URL GOOGLE APPS SCRIPT ANDA DI SINI !!!
+// KONFIGURASI API & STATE GLOBAL
 // =========================================================================
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwzjcbbXsU6_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
@@ -12,6 +12,7 @@ let appData = {
   seatAssyControl: [],
   users: [],
 };
+
 let massScanBuffer = [];
 let massScannerInstance = null;
 let singleScannerInstance = null;
@@ -24,14 +25,10 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
-  // ========================================================
-  // KODE AUTO REFRESH (Jalan setiap 60.000 milidetik / 60 detik)
-  // ========================================================
   // AUTO REFRESH DIAM-DIAM (STEALTH MODE) SETIAP 60 DETIK
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     if (overviewTab && !overviewTab.classList.contains("hidden")) {
-      // Kirim fetch diam-diam tanpa memicu pop-up error di layar
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({ action: "apiGetMasterData", payload: {} }),
@@ -45,7 +42,6 @@ window.addEventListener("DOMContentLoaded", () => {
             buildSeatAssyControlDataset();
             renderSeatAssyControlBoard();
 
-            // Efek putar ikon kecil di pojok kanan atas
             const spinner = document.getElementById("syncSpinner");
             if (spinner) {
               spinner.classList.add(
@@ -61,29 +57,23 @@ window.addEventListener("DOMContentLoaded", () => {
             }
           }
         })
-        .catch((err) => {
-          // Jika gagal, sistem HANYA mencatat di console laptop, TIDAK MEMUNCULKAN POP-UP KE USER
-          console.log("Auto-refresh tertunda, koneksi sibuk.");
+        .catch(() => {
+          console.log("Auto-refresh ditunda sementara oleh Google Sheets.");
         });
     }
-  }, 60000); // 60 Detik
-  // Angka 60000 bisa Anda ganti jadi 30000 jika ingin 30 detik.
+  }, 60000);
 });
 
 // =========================================================================
-// KOMUNIKASI API (FETCH) KE GOOGLE APPS SCRIPT
-// =========================================================================
-// =========================================================================
-// KOMUNIKASI API (FETCH) KE GOOGLE APPS SCRIPT (DILENGKAPI AUTO-RETRY)
+// KOMUNIKASI API (FETCH) DILENGKAPI AUTO-RETRY
 // =========================================================================
 async function sendToBackend(action, payload = {}) {
-  if (API_URL === "1ZnOPjXr4ND6nA8Dmulq9Dcj-QTwywi1CVq6dgiiqScY" || !API_URL) {
+  if (API_URL === "PASTE_URL_WEB_APP_ANDA_DISINI" || !API_URL) {
     throw new Error(
       "PENTING: Anda belum memasukkan API_URL dari Google Apps Script!",
     );
   }
 
-  // Coba kirim data, berikan 3 kali kesempatan jika koneksi gagal/terputus
   let retries = 3;
   while (retries > 0) {
     try {
@@ -94,8 +84,7 @@ async function sendToBackend(action, payload = {}) {
 
       const textResult = await response.text();
       try {
-        const jsonResult = JSON.parse(textResult);
-        return jsonResult;
+        return JSON.parse(textResult);
       } catch (jsonErr) {
         throw new Error("Server Google sedang sibuk. Mengulangi koneksi...");
       }
@@ -107,7 +96,6 @@ async function sendToBackend(action, payload = {}) {
           "Gagal terhubung ke database server. Pastikan jaringan stabil dan URL API benar.",
         );
       }
-      // Tunggu 1,5 detik sebelum mencoba ulang otomatis
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
   }
@@ -118,8 +106,9 @@ async function sendToBackend(action, payload = {}) {
 // =========================================================================
 function startLiveClock() {
   setInterval(() => {
-    document.getElementById("liveClock").innerText =
-      new Date().toLocaleTimeString("id-ID", { hour12: false });
+    const el = document.getElementById("liveClock");
+    if (el)
+      el.innerText = new Date().toLocaleTimeString("id-ID", { hour12: false });
   }, 1000);
 }
 
@@ -165,6 +154,7 @@ function switchTab(tabId) {
     activeNav.classList.add("bg-brand-50", "text-brand-600", "font-semibold");
     activeNav.classList.remove("text-slate-600");
   }
+
   if (tabId === "overview") renderSeatAssyControlBoard();
 }
 
@@ -173,6 +163,7 @@ function applyRbacUI() {
     gPrompt = document.getElementById("guestLoginPrompt"),
     qBtn = document.getElementById("quickNavLoginBtn"),
     gTitle = document.getElementById("greetingTitle");
+
   document
     .querySelectorAll(".role-admin, .role-prod, .role-wh")
     .forEach((el) => el.classList.add("hidden"));
@@ -189,18 +180,19 @@ function applyRbacUI() {
       .toUpperCase();
     gTitle.innerText = `Halo, ${currentUser.username}!`;
 
-    if (currentUser.role === "Admin")
+    if (currentUser.role === "Admin") {
       document
         .querySelectorAll(".role-admin, .role-prod, .role-wh")
         .forEach((el) => el.classList.remove("hidden"));
-    else if (currentUser.role === "Produksi")
+    } else if (currentUser.role === "Produksi") {
       document
         .querySelectorAll(".role-prod")
         .forEach((el) => el.classList.remove("hidden"));
-    else if (currentUser.role === "Warehouse")
+    } else if (currentUser.role === "Warehouse") {
       document
         .querySelectorAll(".role-wh")
         .forEach((el) => el.classList.remove("hidden"));
+    }
   } else {
     pCard.classList.add("hidden");
     pCard.classList.remove("flex");
@@ -215,8 +207,10 @@ function applyRbacUI() {
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
-  if (show) s.classList.add("animate-spin");
-  else s.classList.remove("animate-spin");
+  if (s) {
+    if (show) s.classList.add("animate-spin");
+    else s.classList.remove("animate-spin");
+  }
 }
 
 function refreshAllData() {
@@ -226,7 +220,6 @@ function refreshAllData() {
 
 function loadInitialOrMockData() {
   showSyncSpinner(true);
-
   if (API_URL === "PASTE_URL_WEB_APP_ANDA_DISINI") {
     Swal.fire({
       toast: true,
@@ -343,13 +336,10 @@ function buildSeatAssyControlDataset() {
       appData.barang.find((b) => b.Part_Number === ord.Part_Number) || {};
     const itemCust =
       appData.customer.find((c) => c.id_customer === ord.id_customer) || {};
-
     const qtyOrder = Number(ord.qty_order) || 0;
     const qtyDelivery = Number(ord.qty_delivery) || 0;
     const sisa = Math.max(0, qtyOrder - qtyDelivery);
     const stock = Number(itemBarang.stok) || 0;
-
-    // Kalkulasi ASSY IN STORE FSG dan VARIANS
     const assy_fsg = Math.floor(stock * 0.4);
     const variance = stock - qtyDelivery;
 
@@ -438,30 +428,54 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     })
     .join("");
 }
-if (outPartSelect)
-  outPartSelect.innerHTML =
-    '<option value="">-- Pilih Part Number --</option>' +
-    appData.barang
-      .map(
-        (b) =>
-          `<option value="${b.Part_Number}">${b.Part_Number} (Stok: ${b.stok})</option>`,
-      )
-      .join("");
-if (outOrderSelect)
-  outOrderSelect.innerHTML =
-    '<option value="">-- Pengiriman Bebas --</option>' +
-    appData.orders
-      .filter((o) => o.status_order !== "Selesai")
-      .map((o) => `<option value="${o.no_order}">${o.no_order}</option>`)
-      .join("");
-if (outCustSelect)
-  outCustSelect.innerHTML =
-    '<option value="">-- Pilih Customer --</option>' +
-    appData.customer
-      .map(
-        (c) => `<option value="${c.id_customer}">${c.nama_customer}</option>`,
-      )
-      .join("");
+
+function handleGlobalSearch(keyword) {
+  renderSeatAssyControlBoard(keyword);
+}
+
+function populateDropdowns() {
+  const inPartSelect = document.getElementById("inPartNumber"),
+    outPartSelect = document.getElementById("outPartNumber"),
+    outOrderSelect = document.getElementById("outNoOrder"),
+    outCustSelect = document.getElementById("outCustomer");
+
+  if (inPartSelect) {
+    inPartSelect.innerHTML =
+      '<option value="">-- Pilih Part Number --</option>' +
+      appData.barang
+        .map(
+          (b) => `<option value="${b.Part_Number}">${b.Part_Number}</option>`,
+        )
+        .join("");
+  }
+  if (outPartSelect) {
+    outPartSelect.innerHTML =
+      '<option value="">-- Pilih Part Number --</option>' +
+      appData.barang
+        .map(
+          (b) =>
+            `<option value="${b.Part_Number}">${b.Part_Number} (Stok: ${b.stok})</option>`,
+        )
+        .join("");
+  }
+  if (outOrderSelect) {
+    outOrderSelect.innerHTML =
+      '<option value="">-- Pengiriman Bebas --</option>' +
+      appData.orders
+        .filter((o) => o.status_order !== "Selesai")
+        .map((o) => `<option value="${o.no_order}">${o.no_order}</option>`)
+        .join("");
+  }
+  if (outCustSelect) {
+    outCustSelect.innerHTML =
+      '<option value="">-- Pilih Customer --</option>' +
+      appData.customer
+        .map(
+          (c) => `<option value="${c.id_customer}">${c.nama_customer}</option>`,
+        )
+        .join("");
+  }
+}
 
 function handleSelectBarangMasuk(part) {
   const item = appData.barang.find((b) => b.Part_Number === part);
@@ -577,14 +591,12 @@ function handleFormBarangMasuk(e) {
     openLoginModal();
     return;
   }
-
   const payload = {
     partNumber: document.getElementById("inPartNumber").value,
     qty: document.getElementById("inTotalQty").value,
     catatan: document.getElementById("inCatatan").value,
     petugas: currentUser.username,
   };
-
   Swal.fire({
     title: "Menyimpan...",
     allowOutsideClick: false,
@@ -612,7 +624,6 @@ function handleFormBarangKeluar(e) {
     openLoginModal();
     return;
   }
-
   const payload = {
     noOrder: document.getElementById("outNoOrder").value,
     idCustomer: document.getElementById("outCustomer").value,
@@ -621,7 +632,6 @@ function handleFormBarangKeluar(e) {
     catatan: document.getElementById("outCatatan").value,
     petugas: currentUser.username,
   };
-
   Swal.fire({
     title: "Menyimpan...",
     allowOutsideClick: false,
@@ -652,13 +662,11 @@ function submitMassScanTransaction() {
     Swal.fire("Kosong", "Silakan scan barcode terlebih dahulu!", "info");
     return;
   }
-
   const payload = {
     items: massScanBuffer,
     petugas: currentUser.username,
     catatanUmum: document.getElementById("massCatatan").value,
   };
-
   Swal.fire({
     title: "Memproses Batch...",
     allowOutsideClick: false,
@@ -694,7 +702,6 @@ function handleSaveBarang(e) {
     },
     user: currentUser ? currentUser.username : "Admin",
   };
-
   Swal.fire({
     title: "Menyimpan Part...",
     allowOutsideClick: false,
@@ -727,7 +734,6 @@ function handleSaveCustomer(e) {
     },
     user: currentUser ? currentUser.username : "Admin",
   };
-
   Swal.fire({
     title: "Menyimpan...",
     allowOutsideClick: false,
@@ -759,7 +765,6 @@ function handleSaveUser(e) {
     },
     adminUser: currentUser ? currentUser.username : "Admin",
   };
-
   Swal.fire({
     title: "Mendaftarkan User...",
     allowOutsideClick: false,
@@ -787,7 +792,6 @@ function handleLoginSubmit(e) {
     username: document.getElementById("loginUsername").value.trim(),
     password: document.getElementById("loginPassword").value.trim(),
   };
-
   Swal.fire({
     title: "Autentikasi...",
     allowOutsideClick: false,
@@ -827,7 +831,7 @@ function handleLoginSubmit(e) {
 }
 
 // =========================================================================
-// CAMERA & SCANNER FUNCTIONS (BEKERJA DI GITHUB PAGES)
+// CAMERA & SCANNER FUNCTIONS
 // =========================================================================
 function handleMassBarcodeInput(e) {
   if (e.key === "Enter") {
@@ -853,18 +857,20 @@ function processScannedMassBarcode(scannedCode) {
     });
     return;
   }
+
   const existing = massScanBuffer.find(
     (item) => item.Part_Number === found.Part_Number,
   );
-  if (existing) existing.qty += 1;
-  else
+  if (existing) {
+    existing.qty += 1;
+  } else {
     massScanBuffer.push({
       Part_Number: found.Part_Number,
       nama_barang: found.nama_barang,
       qty: 1,
       stok: found.stok,
     });
-
+  }
   document.getElementById("massScanCount").innerText = massScanBuffer.length;
   renderMassScanTable();
 }
@@ -878,7 +884,14 @@ function renderMassScanTable() {
   tbody.innerHTML = massScanBuffer
     .map(
       (item, idx) =>
-        `<tr class="hover:bg-slate-50"><td class="py-2.5 px-3 font-bold">${idx + 1}</td><td class="py-2.5 px-3 font-bold">${item.Part_Number}</td><td class="py-2.5 px-3">${item.nama_barang}</td><td class="py-2.5 px-3"><span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-brand-700 font-extrabold">${item.qty}</span></td><td class="py-2.5 px-3 font-bold">${item.stok}</td><td class="py-2.5 px-3 text-center"><button onclick="massScanBuffer.splice(${idx}, 1); renderMassScanTable();" class="text-rose-500"><i class="fa-solid fa-trash-can"></i></button></td></tr>`,
+        `<tr class="hover:bg-slate-50">
+          <td class="py-2.5 px-3 font-bold">${idx + 1}</td>
+          <td class="py-2.5 px-3 font-bold">${item.Part_Number}</td>
+          <td class="py-2.5 px-3">${item.nama_barang}</td>
+          <td class="py-2.5 px-3"><span class="px-2.5 py-1 rounded-lg bg-emerald-50 text-brand-700 font-extrabold">${item.qty}</span></td>
+          <td class="py-2.5 px-3 font-bold">${item.stok}</td>
+          <td class="py-2.5 px-3 text-center"><button onclick="massScanBuffer.splice(${idx}, 1); renderMassScanTable();" class="text-rose-500"><i class="fa-solid fa-trash-can"></i></button></td>
+        </tr>`,
     )
     .join("");
 }
@@ -912,7 +925,7 @@ function toggleContinuousCamera() {
         },
         () => {},
       )
-      .catch((err) => {
+      .catch(() => {
         Swal.fire(
           "Error Kamera",
           "Kamera gagal terbuka. Pastikan Anda telah memberikan izin kamera pada browser Anda.",
@@ -943,7 +956,7 @@ function startSingleQrScanner(targetInputId) {
       },
       () => {},
     )
-    .catch((err) => {
+    .catch(() => {
       Swal.fire("Error Kamera", "Gagal mengakses kamera.", "error");
       stopSingleQrScanner();
     });
@@ -973,30 +986,39 @@ function stopSingleQrScanner() {
 function previewSuratJalanCurrentForm() {
   document.getElementById("modalSuratJalan").classList.remove("hidden");
 }
+
 function closeModalSuratJalan() {
   document.getElementById("modalSuratJalan").classList.add("hidden");
 }
+
 function openModalBarang() {
   document.getElementById("modalMasterBarang").classList.remove("hidden");
 }
+
 function closeModalBarang() {
   document.getElementById("modalMasterBarang").classList.add("hidden");
 }
+
 function openModalCustomer() {
   document.getElementById("modalMasterCustomer").classList.remove("hidden");
 }
+
 function closeModalCustomer() {
   document.getElementById("modalMasterCustomer").classList.add("hidden");
 }
+
 function openModalUser() {
   document.getElementById("modalMasterUser").classList.remove("hidden");
 }
+
 function closeModalUser() {
   document.getElementById("modalMasterUser").classList.add("hidden");
 }
+
 function openLoginModal() {
   document.getElementById("modalLogin").classList.remove("hidden");
 }
+
 function closeLoginModal() {
   document.getElementById("modalLogin").classList.add("hidden");
 }
