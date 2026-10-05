@@ -14,16 +14,7 @@
         theme: {
           extend: {
             colors: {
-              brand: {
-                50: "#ecfdf5",
-                100: "#d1fae5",
-                200: "#a7f3d0",
-                500: "#10b981",
-                600: "#059669",
-                700: "#047857",
-                800: "#065f46",
-                900: "#064e3b",
-              },
+              brand: { 50: "#ecfdf5", 500: "#10b981", 600: "#059669" },
             },
             fontFamily: {
               sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
@@ -33,7 +24,7 @@
       };
     </script>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap"
       rel="stylesheet"
     />
     <link
@@ -41,11 +32,12 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
     />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="stylesheet" href="style.css" />
   </head>
 
   <body
-    class="antialiased min-h-screen flex flex-col md:flex-row relative overflow-x-hidden bg-slate-50"
+    class="antialiased min-h-screen flex flex-col md:flex-row relative overflow-x-hidden bg-slate-50 text-slate-800"
   >
     <!-- SIDEBAR -->
     <div
@@ -55,24 +47,22 @@
     ></div>
     <aside
       id="mainSidebar"
-      class="fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-100 flex flex-col justify-between p-6 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl"
+      class="fixed inset-y-0 left-0 z-40 w-72 bg-white border-r-4 border-slate-800 flex flex-col justify-between p-6 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl"
     >
       <div>
         <div class="flex items-center justify-between mb-8 px-2">
           <div class="flex items-center gap-3">
             <div
-              class="w-10 h-10 rounded-2xl bg-brand-500 flex items-center justify-center text-white text-xl shadow-lg shadow-brand-500/25"
+              class="w-10 h-10 rounded bg-slate-800 flex items-center justify-center text-white text-xl border-2 border-slate-800"
             >
               <i class="fa-solid fa-boxes-stacked"></i>
             </div>
             <div>
-              <h1
-                class="font-extrabold text-base tracking-tight text-slate-800 leading-tight"
-              >
+              <h1 class="font-black text-base tracking-tight leading-tight">
                 SIM-INVENTORY
               </h1>
               <p
-                class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase"
+                class="text-[10px] text-slate-500 font-bold uppercase tracking-widest"
               >
                 Visual Warehouse
               </p>
@@ -80,251 +70,191 @@
           </div>
           <button
             onclick="closeSidebar()"
-            class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors"
+            class="w-8 h-8 rounded bg-slate-100 md:hidden flex items-center justify-center border-2 border-slate-800"
           >
-            <i class="fa-solid fa-xmark text-sm"></i>
+            <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
         <div class="space-y-6">
           <div>
             <p
-              class="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2"
+              class="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2"
             >
-              Main Menu
+              Operasional
             </p>
-            <nav class="space-y-1" id="navLinks">
+            <nav class="space-y-2">
               <button
-                onclick="
-                  switchTab('overview');
-                  closeSidebar();
-                "
+                onclick="switchTab('overview')"
                 id="btn-tab-overview"
-                class="nav-item w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all duration-200 bg-brand-50 text-brand-600"
+                class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded border-2 border-slate-800 font-black text-xs transition-all bg-slate-800 text-white shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
               >
-                <i class="fa-solid fa-chart-pie text-sm"></i
-                ><span>Dashboard Control</span>
+                <i class="fa-solid fa-table"></i><span>Papan Kontrol</span>
+              </button>
+              <button
+                onclick="switchTab('scanner')"
+                id="btn-tab-scanner"
+                class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded border-2 border-slate-800 font-black text-xs transition-all bg-white text-slate-800 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+              >
+                <i class="fa-solid fa-barcode"></i><span>Smart Scanner</span>
               </button>
             </nav>
           </div>
           <div class="role-admin hidden">
             <p
-              class="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2"
+              class="px-3 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2"
             >
               Master Data
             </p>
-            <nav class="space-y-1">
+            <nav class="space-y-2">
               <button
-                onclick="
-                  switchTab('barang');
-                  closeSidebar();
-                "
+                onclick="switchTab('barang')"
                 id="btn-tab-barang"
-                class="nav-item w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
+                class="nav-item w-full flex items-center gap-3.5 px-4 py-2.5 rounded border-2 border-transparent font-bold text-xs transition-all hover:border-slate-800"
               >
-                <i class="fa-solid fa-cubes text-sm"></i
-                ><span>Master Barang</span>
+                <i class="fa-solid fa-cubes"></i><span>Master Barang</span>
               </button>
               <button
-                onclick="
-                  switchTab('customer');
-                  closeSidebar();
-                "
+                onclick="switchTab('customer')"
                 id="btn-tab-customer"
-                class="nav-item w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
+                class="nav-item w-full flex items-center gap-3.5 px-4 py-2.5 rounded border-2 border-transparent font-bold text-xs transition-all hover:border-slate-800"
               >
-                <i class="fa-solid fa-building text-sm"></i
-                ><span>Master Customer</span>
-              </button>
-              <button
-                onclick="
-                  switchTab('users');
-                  closeSidebar();
-                "
-                id="btn-tab-users"
-                class="nav-item w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all duration-200"
-              >
-                <i class="fa-solid fa-users-gear text-sm"></i
-                ><span>Kelola Pengguna</span>
+                <i class="fa-solid fa-building"></i><span>Master Customer</span>
               </button>
             </nav>
           </div>
         </div>
       </div>
-      <div class="pt-4 border-t border-slate-100">
+      <div class="pt-4 border-t-2 border-slate-200">
         <div
           id="userProfileCard"
-          class="hidden items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-100"
+          class="hidden items-center justify-between p-3 rounded border-2 border-slate-800 bg-slate-100 shadow-[2px_2px_0px_rgba(0,0,0,1)]"
         >
-          <div class="flex items-center gap-3 overflow-hidden">
+          <div class="flex items-center gap-3">
             <div
-              class="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm shrink-0"
+              class="w-8 h-8 rounded bg-slate-800 text-white flex items-center justify-center font-black text-sm"
             >
               <span id="avatarLetter">U</span>
             </div>
-            <div class="truncate">
-              <p
-                id="userNameDisplay"
-                class="text-xs font-bold text-slate-800 truncate"
-              >
-                Username
+            <div>
+              <p id="userNameDisplay" class="text-xs font-black uppercase">
+                User
               </p>
-              <span
-                id="userRoleBadge"
-                class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800"
-                >Role</span
-              >
+              <span id="userRoleBadge" class="text-[9px] font-bold">Role</span>
             </div>
           </div>
           <button
             onclick="logoutAction()"
-            title="Keluar Akun"
-            class="text-slate-400 hover:text-rose-500 p-1.5 transition-colors"
+            class="hover:text-red-600 font-black"
           >
-            <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+            <i class="fa-solid fa-power-off"></i>
           </button>
         </div>
-        <div
-          id="guestLoginPrompt"
-          class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 text-center"
-        >
-          <p class="text-[11px] text-emerald-800 font-medium mb-2.5">
-            Mode Publik (Monitoring)
-          </p>
+        <div id="guestLoginPrompt" class="p-3 text-center">
           <button
             onclick="openLoginModal()"
-            class="w-full py-2 px-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs transition-colors shadow-sm shadow-brand-500/20"
+            class="w-full py-2.5 rounded border-2 border-slate-800 bg-slate-800 text-white font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]"
           >
-            <i class="fa-solid fa-right-to-bracket mr-1.5"></i> Masuk Akun
+            Masuk Akun
           </button>
         </div>
       </div>
     </aside>
 
     <!-- HEADER & MAIN CONTENT -->
-    <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
+    <main
+      class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden md:ml-72"
+    >
       <header
-        class="bg-white/80 backdrop-blur-md sticky top-0 z-20 px-4 sm:px-8 py-3.5 border-b border-slate-200 shadow-sm flex items-center justify-between gap-4"
+        class="bg-white border-b-4 border-slate-800 py-3.5 px-4 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20"
       >
-        <div class="flex items-center gap-3 sm:gap-4">
+        <div class="flex items-center gap-3">
           <button
             onclick="toggleSidebar()"
-            class="w-10 h-10 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-slate-700 flex items-center justify-center transition-colors"
+            class="md:hidden w-10 h-10 rounded border-2 border-slate-800 flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)]"
           >
-            <i class="fa-solid fa-bars-staggered text-sm"></i>
+            <i class="fa-solid fa-bars font-black"></i>
           </button>
           <div>
-            <h2
-              id="greetingTitle"
-              class="text-base sm:text-lg font-bold text-slate-800 tracking-tight"
-            >
-              Halo, Selamat Datang!
+            <h2 id="greetingTitle" class="text-lg font-black uppercase">
+              Halo!
             </h2>
-            <p
-              class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5"
-            >
+            <p class="text-[10px] text-slate-500 font-bold tracking-widest">
               <span
-                class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
+                class="w-2 h-2 inline-block rounded-full bg-emerald-500 animate-pulse mr-1"
               ></span
-              ><span>Live Inventory & Production Andon</span>
+              >LIVE ANDON
             </p>
           </div>
         </div>
-        <div class="hidden lg:flex items-center flex-1 max-w-md mx-4">
-          <div class="w-full relative">
-            <i
-              class="fa-solid fa-magnifying-glass absolute left-3.5 top-2.5 text-slate-400 text-xs"
-            ></i
-            ><input
-              type="text"
-              id="globalSearchInput"
-              oninput="handleGlobalSearch(this.value)"
-              placeholder="Cari Part Number, Customer, Rel..."
-              class="w-full bg-slate-100 border border-slate-200 rounded-full pl-9 pr-4 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
-            />
-          </div>
-        </div>
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-3">
           <div
-            class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-[11px] font-semibold"
+            class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded border-2 border-slate-800 bg-slate-100 font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]"
           >
-            <i class="fa-regular fa-clock text-brand-600"></i
+            <i class="fa-solid fa-clock"></i
             ><span id="liveClock">--:--:--</span>
           </div>
           <button
-            onclick="toggleBrowserFullscreen()"
-            class="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200/70 text-slate-600 flex items-center justify-center transition-colors"
-          >
-            <i class="fa-solid fa-expand text-xs" id="fullscreenIcon"></i>
-          </button>
-          <button
             onclick="refreshAllData()"
-            class="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-200/70 text-slate-600 flex items-center justify-center transition-colors"
+            class="w-9 h-9 rounded border-2 border-slate-800 flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-emerald-400"
           >
-            <i class="fa-solid fa-rotate text-xs" id="syncSpinner"></i>
-          </button>
-          <button
-            id="quickNavLoginBtn"
-            onclick="openLoginModal()"
-            class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-sm shadow-brand-500/30"
-          >
-            <i class="fa-solid fa-lock text-[11px]"></i
-            ><span class="hidden sm:inline">Masuk</span>
+            <i class="fa-solid fa-rotate font-black" id="syncSpinner"></i>
           </button>
         </div>
       </header>
 
       <div class="p-4 sm:p-8 space-y-6 flex-1">
-        <!-- TAB OVERVIEW (DASHBOARD) -->
+        <!-- TAB OVERVIEW (PAPAN KONTROL) -->
         <section id="tab-overview" class="tab-pane block space-y-6">
           <div
-            class="bg-white p-5 sm:p-7 rounded-lg border-2 border-slate-800 shadow-md transition-all"
+            class="bg-white p-5 sm:p-7 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
           >
             <div
-              class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b-2 border-slate-800 gap-3 mb-5"
+              class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b-4 border-slate-800 mb-5"
             >
               <div>
-                <div class="flex items-center gap-2">
-                  <span
-                    class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"
-                  ></span>
-                  <h3
-                    class="text-xl font-black text-slate-900 tracking-tight uppercase"
-                  >
-                    Papan Kontrol Seat Assy
-                  </h3>
-                </div>
+                <h3 class="text-2xl font-black uppercase tracking-tighter">
+                  Papan Kontrol Seat Assy
+                </h3>
                 <p
-                  class="text-xs text-slate-500 font-semibold mt-0.5 uppercase tracking-wide"
+                  class="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1"
                 >
-                  Monitoring live pemenuhan delivery, ketersediaan stok, dan
-                  alokasi rel.
+                  Monitoring Live Stok & Delivery
                 </p>
               </div>
-              <div class="flex items-center gap-2 text-[11px] font-bold">
-                <span
-                  class="px-3 py-1 rounded border-2 border-slate-800 text-slate-800 uppercase tracking-widest"
-                  >Total Item: <strong id="cntTotalSeatAssy">0</strong></span
-                >
+              <div
+                class="mt-3 sm:mt-0 px-3 py-1.5 border-2 border-slate-800 bg-yellow-300 font-black text-sm shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+              >
+                Total Item: <span id="cntTotalSeatAssy">0</span>
               </div>
             </div>
+
+            <div class="mb-4">
+              <input
+                type="text"
+                id="globalSearchInput"
+                oninput="handleGlobalSearch(this.value)"
+                placeholder="🔍 CARI PART NUMBER ATAU NO RELL..."
+                class="w-full sm:w-1/3 bg-slate-100 border-2 border-slate-800 rounded px-4 py-2 font-black text-xs uppercase focus:outline-none focus:bg-yellow-100 shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+              />
+            </div>
+
             <div class="overflow-x-auto">
-              <!-- TABEL GAYA PAPAN TULIS FISIK PABRIK -->
               <table
                 class="w-full text-xs border-collapse border-2 border-slate-800 bg-white"
               >
                 <thead>
                   <tr
-                    class="bg-slate-100 text-slate-800 font-black uppercase text-center border-b-2 border-slate-800"
+                    class="bg-slate-200 font-black uppercase text-center border-b-4 border-slate-800"
                   >
                     <th
                       rowspan="2"
                       class="py-3 px-2 border-2 border-slate-800 w-16 text-[9px]"
                     >
-                      CUSTOMER
+                      CUST
                     </th>
                     <th
                       rowspan="2"
-                      class="py-3 px-2 border-2 border-slate-800 w-16"
+                      class="py-3 px-2 border-2 border-slate-800 w-16 text-yellow-600"
                     >
                       NO RELL
                     </th>
@@ -336,31 +266,31 @@
                     </th>
                     <th
                       rowspan="2"
-                      class="py-3 px-2 border-2 border-slate-800 text-sm"
+                      class="py-3 px-2 border-2 border-slate-800 text-sm bg-blue-100"
                     >
                       STOCK
                     </th>
                     <th
                       colspan="3"
-                      class="py-1 px-2 border-2 border-slate-800 text-sm tracking-widest"
+                      class="py-1 px-2 border-2 border-slate-800 text-sm tracking-widest bg-emerald-100"
                     >
                       DELIVERY
                     </th>
                     <th
                       rowspan="2"
-                      class="py-3 px-2 border-2 border-slate-800 leading-tight"
+                      class="py-3 px-2 border-2 border-slate-800 leading-tight bg-purple-100"
                     >
                       ASSY IN<br />STORE FSG
                     </th>
                     <th
                       rowspan="2"
-                      class="py-3 px-2 border-2 border-slate-800 text-sm"
+                      class="py-3 px-2 border-2 border-slate-800 text-sm bg-amber-100"
                     >
                       [ +/- ]
                     </th>
                   </tr>
                   <tr
-                    class="bg-slate-50 text-slate-700 font-bold uppercase text-[9px] text-center border-b-2 border-slate-800"
+                    class="bg-slate-100 font-black uppercase text-[9px] text-center border-b-2 border-slate-800"
                   >
                     <th class="py-1.5 px-1 border-2 border-slate-800">
                       QTY/DAY
@@ -375,11 +305,11 @@
                 </thead>
                 <tbody
                   id="tblSeatAssyControlBody"
-                  class="font-bold text-slate-800 text-center text-sm divide-y-2 divide-slate-800"
+                  class="font-bold text-center text-sm divide-y-2 divide-slate-800"
                 >
                   <tr>
-                    <td colspan="9" class="py-8 text-slate-400 font-medium">
-                      Memuat data papan kontrol...
+                    <td colspan="9" class="py-8 text-slate-400">
+                      Memuat data...
                     </td>
                   </tr>
                 </tbody>
@@ -388,411 +318,274 @@
           </div>
         </section>
 
-        <!-- TAB BARANG, CUSTOMER, USERS -->
+        <!-- TAB SMART SCANNER (FITUR BARU) -->
+        <section id="tab-scanner" class="tab-pane hidden space-y-6">
+          <div
+            class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] max-w-lg mx-auto text-center"
+          >
+            <h3 class="text-2xl font-black uppercase tracking-tighter mb-1">
+              Smart Scanner
+            </h3>
+            <p
+              class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6"
+            >
+              Arahkan kamera ke Barcode Barang
+            </p>
+
+            <div
+              id="smartReaderWrapper"
+              class="bg-slate-800 rounded border-4 border-slate-800 p-2 mb-6 hidden relative"
+            >
+              <div
+                id="smartReaderViewport"
+                class="w-full aspect-square rounded overflow-hidden"
+              ></div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+              <button
+                id="btnStartScan"
+                onclick="startSmartScanner()"
+                class="w-full py-4 rounded border-2 border-slate-800 bg-emerald-400 text-slate-900 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"
+              >
+                <i class="fa-solid fa-camera mr-2"></i> Aktifkan Kamera
+              </button>
+              <button
+                id="btnStopScan"
+                onclick="stopSmartScanner()"
+                class="hidden w-full py-3 rounded border-2 border-slate-800 bg-red-400 text-slate-900 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all"
+              >
+                <i class="fa-solid fa-stop mr-2"></i> Matikan Kamera
+              </button>
+            </div>
+
+            <div class="mt-6 pt-6 border-t-2 border-slate-800">
+              <p class="text-[10px] font-black uppercase mb-2">
+                Input Manual (Jika Barcode Rusak)
+              </p>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  id="manualSmartInput"
+                  placeholder="Ketik Part Number..."
+                  class="flex-1 bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 font-black text-xs uppercase"
+                />
+                <button
+                  onclick="
+                    processSmartScan(
+                      document.getElementById('manualSmartInput').value,
+                    )
+                  "
+                  class="px-4 border-2 border-slate-800 bg-yellow-400 font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                >
+                  CARI
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB MASTER BARANG & CUSTOMER -->
         <section id="tab-barang" class="tab-pane hidden space-y-6">
           <div
-            class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"
+            class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
           >
-            <div class="flex justify-between items-center">
-              <h3 class="font-bold text-slate-800">Master Data Barang</h3>
-              <button
-                onclick="openModalBarang()"
-                class="role-admin hidden px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs shadow-sm"
-              >
-                <i class="fa-solid fa-plus"></i> Tambah Part Number
-              </button>
+            <h3 class="font-black text-xl uppercase">Master Data Barang</h3>
+            <div class="overflow-x-auto mt-4">
+              <table class="w-full text-xs border-2 border-slate-800">
+                <tbody
+                  id="tblMasterBarangBody"
+                  class="font-bold divide-y-2 divide-slate-800"
+                ></tbody>
+              </table>
             </div>
-            <table class="w-full text-xs mt-4">
-              <thead>
-                <tr
-                  class="text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b"
-                >
-                  <th class="py-2 text-left">Part Number</th>
-                  <th class="py-2 text-left">Nama</th>
-                  <th class="py-2 text-left">Stok</th>
-                  <th class="py-2 text-left">No. Rel</th>
-                </tr>
-              </thead>
-              <tbody id="tblMasterBarangBody"></tbody>
-            </table>
           </div>
         </section>
-
         <section id="tab-customer" class="tab-pane hidden space-y-6">
           <div
-            class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"
+            class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
           >
-            <div class="flex justify-between items-center">
-              <h3 class="font-bold text-slate-800">Master Customer</h3>
-              <button
-                onclick="openModalCustomer()"
-                class="role-admin hidden px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs shadow-sm"
-              >
-                <i class="fa-solid fa-plus"></i> Tambah Customer
-              </button>
+            <h3 class="font-black text-xl uppercase">Master Customer</h3>
+            <div class="overflow-x-auto mt-4">
+              <table class="w-full text-xs border-2 border-slate-800">
+                <tbody
+                  id="tblCustomerBody"
+                  class="font-bold divide-y-2 divide-slate-800"
+                ></tbody>
+              </table>
             </div>
-            <table class="w-full text-xs mt-4">
-              <thead>
-                <tr
-                  class="text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b"
-                >
-                  <th class="py-2 text-left">ID Customer</th>
-                  <th class="py-2 text-left">Nama Perusahaan</th>
-                  <th class="py-2 text-left">Alamat</th>
-                </tr>
-              </thead>
-              <tbody id="tblCustomerBody"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="tab-users" class="tab-pane hidden space-y-6">
-          <div
-            class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm"
-          >
-            <div class="flex justify-between items-center">
-              <h3 class="font-bold text-slate-800">Kelola Pengguna</h3>
-              <button
-                onclick="openModalUser()"
-                class="role-admin hidden px-4 py-2 rounded-xl bg-brand-500 text-white font-bold text-xs shadow-sm"
-              >
-                <i class="fa-solid fa-plus"></i> Tambah Pengguna
-              </button>
-            </div>
-            <table class="w-full text-xs mt-4">
-              <thead>
-                <tr
-                  class="text-slate-400 font-bold uppercase tracking-wider text-[10px] border-b"
-                >
-                  <th class="py-2 text-left">Username</th>
-                  <th class="py-2 text-left">Role</th>
-                </tr>
-              </thead>
-              <tbody id="tblUsersBody"></tbody>
-            </table>
           </div>
         </section>
       </div>
     </main>
 
-    <!-- MODALS -->
+    <!-- ========================================== -->
+    <!-- MODAL SMART ACTION (KARTU IDENTITAS BARANG)-->
+    <!-- ========================================== -->
     <div
-      id="modalLogin"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+      id="modalSmartAction"
+      class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden transition-all"
     >
       <div
-        class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl relative"
+        class="bg-white w-full max-w-md sm:rounded-lg border-t-4 sm:border-4 border-slate-800 shadow-[8px_8px_0px_rgba(0,0,0,1)] relative overflow-hidden animate-slide-up"
+      >
+        <button
+          onclick="closeSmartAction()"
+          class="absolute top-3 right-3 w-8 h-8 rounded border-2 border-slate-800 bg-red-400 flex items-center justify-center font-black shadow-[2px_2px_0px_rgba(0,0,0,1)] z-10"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <!-- Header Kartu -->
+        <div
+          class="bg-yellow-300 p-5 border-b-4 border-slate-800 pt-8 relative"
+        >
+          <div
+            class="absolute -top-3 -left-3 bg-slate-800 text-white font-black text-xl px-4 py-2 border-2 border-white shadow-md transform -rotate-3"
+            id="smInfoRell"
+          >
+            A.00
+          </div>
+          <h2
+            id="smInfoPart"
+            class="text-2xl font-black tracking-tighter uppercase mt-2"
+          >
+            PART NUMBER
+          </h2>
+          <p id="smInfoNama" class="text-xs font-bold text-slate-700 uppercase">
+            Nama Barang
+          </p>
+        </div>
+
+        <!-- Info Grid -->
+        <div
+          class="grid grid-cols-2 divide-x-2 divide-slate-800 border-b-4 border-slate-800"
+        >
+          <div class="p-4 text-center bg-slate-50">
+            <p class="text-[10px] font-black uppercase text-slate-500">
+              Stok Sistem Saat Ini
+            </p>
+            <p id="smInfoStok" class="text-4xl font-black text-blue-600 mt-1">
+              0
+            </p>
+          </div>
+          <div class="p-4 text-center bg-red-50">
+            <p class="text-[10px] font-black uppercase text-slate-500">
+              Kekurangan Target Keluar
+            </p>
+            <p id="smInfoTarget" class="text-4xl font-black text-red-600 mt-1">
+              0
+            </p>
+          </div>
+        </div>
+
+        <!-- Action Area -->
+        <div class="p-5 bg-white">
+          <p class="text-[10px] font-black uppercase text-center mb-3">
+            Tentukan Jumlah Transaksi (Pcs)
+          </p>
+          <div class="flex items-center justify-center gap-3 mb-5">
+            <button
+              onclick="adjSmartQty(-1)"
+              class="w-12 h-12 border-4 border-slate-800 rounded-full font-black text-xl bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all"
+            >
+              -
+            </button>
+            <input
+              type="number"
+              id="smInputQty"
+              value="1"
+              class="w-24 text-center text-3xl font-black border-none focus:outline-none focus:ring-0 bg-transparent"
+            />
+            <button
+              onclick="adjSmartQty(1)"
+              class="w-12 h-12 border-4 border-slate-800 rounded-full font-black text-xl bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all"
+            >
+              +
+            </button>
+          </div>
+
+          <div class="flex gap-3">
+            <button
+              onclick="submitSmartAction('IN')"
+              class="flex-1 py-3 border-4 border-slate-800 bg-emerald-400 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] active:bg-emerald-500 transition-all flex flex-col items-center justify-center"
+            >
+              <i class="fa-solid fa-box-open mb-1 text-lg"></i> MASUK (IN)
+            </button>
+            <button
+              onclick="submitSmartAction('OUT')"
+              class="flex-1 py-3 border-4 border-slate-800 bg-red-400 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] active:bg-red-500 transition-all flex flex-col items-center justify-center"
+            >
+              <i class="fa-solid fa-truck-fast mb-1 text-lg"></i> KELUAR (OUT)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL LOGIN -->
+    <div
+      id="modalLogin"
+      class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+    >
+      <div
+        class="bg-white rounded border-4 border-slate-800 p-6 max-w-sm w-full shadow-[8px_8px_0px_rgba(0,0,0,1)] relative"
       >
         <button
           onclick="closeLoginModal()"
-          class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+          class="absolute top-2 right-2 text-slate-800 font-black text-xl"
         >
-          <i class="fa-solid fa-xmark text-lg"></i>
+          <i class="fa-solid fa-xmark"></i>
         </button>
-        <div class="text-center mb-6">
-          <h3 class="text-lg font-bold text-slate-900">Autentikasi Akun</h3>
-        </div>
-        <form
-          id="formLogin"
-          onsubmit="handleLoginSubmit(event)"
-          class="space-y-3.5"
+        <h3
+          class="text-xl font-black uppercase text-center mb-6 border-b-4 border-slate-800 pb-2"
         >
+          LOGIN SISTEM
+        </h3>
+        <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold mb-1">Username</label
+            <label class="block text-[10px] font-black uppercase mb-1"
+              >Username</label
             ><input
               type="text"
               id="loginUsername"
               required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs"
+              class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 font-bold focus:bg-yellow-100"
             />
           </div>
           <div>
-            <label class="block text-xs font-bold mb-1">Password</label
+            <label class="block text-[10px] font-black uppercase mb-1"
+              >Password</label
             ><input
               type="password"
               id="loginPassword"
               required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs"
+              class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 font-bold focus:bg-yellow-100"
             />
           </div>
-          <div class="pt-2 flex gap-2">
-            <button
-              type="button"
-              onclick="closeLoginModal()"
-              class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              class="flex-1 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs"
-            >
-              Masuk
-            </button>
-          </div>
+          <button
+            type="submit"
+            class="w-full py-3 bg-blue-500 border-2 border-slate-800 text-white font-black uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] mt-2"
+          >
+            Masuk
+          </button>
         </form>
       </div>
     </div>
 
-    <div
-      id="modalMasterBarang"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
-    >
-      <div
-        class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl relative"
-      >
-        <button
-          onclick="closeModalBarang()"
-          class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
-        >
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-        <h3 class="text-base font-bold text-slate-800 mb-4">
-          Form Data Part Number
-        </h3>
-        <form
-          id="formMasterBarang"
-          onsubmit="handleSaveBarang(event)"
-          class="space-y-3"
-        >
-          <div>
-            <label class="block text-xs font-bold mb-1">Part Number *</label
-            ><input
-              type="text"
-              id="mbPartNumber"
-              required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1">Nama Barang *</label
-            ><input
-              type="text"
-              id="mbNamaBarang"
-              required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-            />
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-xs font-bold mb-1">Kategori</label
-              ><input
-                type="text"
-                id="mbKategori"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-bold mb-1">Satuan</label
-              ><input
-                type="text"
-                id="mbSatuan"
-                value="Pcs"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-              />
-            </div>
-          </div>
-          <div class="grid grid-cols-3 gap-2">
-            <div>
-              <label class="block text-xs font-bold mb-1">Std Pack</label
-              ><input
-                type="number"
-                id="mbStdPack"
-                value="1"
-                class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-bold"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-bold mb-1">Stok Awal</label
-              ><input
-                type="number"
-                id="mbStok"
-                value="0"
-                class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-bold"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-bold mb-1">Stok Min</label
-              ><input
-                type="number"
-                id="mbStokMin"
-                value="10"
-                class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-bold"
-              />
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1">No Rel Rak *</label
-            ><input
-              type="text"
-              id="mbNoRel"
-              required
-              class="w-full bg-slate-50 border rounded-xl px-3 py-2 text-xs font-semibold"
-            />
-          </div>
-          <div class="pt-3 flex gap-2">
-            <button
-              type="button"
-              onclick="closeModalBarang()"
-              class="flex-1 py-2 rounded-xl border text-slate-600 text-xs font-bold"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              class="flex-1 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold"
-            >
-              Simpan
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div
-      id="modalMasterCustomer"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
-    >
-      <div
-        class="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl relative"
-      >
-        <button
-          onclick="closeModalCustomer()"
-          class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
-        >
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-        <h3 class="text-base font-bold text-slate-800 mb-4">
-          Form Data Customer
-        </h3>
-        <form
-          id="formMasterCustomer"
-          onsubmit="handleSaveCustomer(event)"
-          class="space-y-3"
-        >
-          <div>
-            <label class="block text-xs font-bold mb-1">ID Customer *</label
-            ><input
-              type="text"
-              id="mcId"
-              required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1">Nama Perusahaan *</label
-            ><input
-              type="text"
-              id="mcNama"
-              required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1">Kontak / Telepon</label
-            ><input
-              type="text"
-              id="mcKontak"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1">Alamat Pabrik</label
-            ><textarea
-              id="mcAlamat"
-              rows="2"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs"
-            ></textarea>
-          </div>
-          <div class="pt-3 flex gap-2">
-            <button
-              type="button"
-              onclick="closeModalCustomer()"
-              class="flex-1 py-2 rounded-xl border text-slate-600 text-xs font-bold"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              class="flex-1 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold"
-            >
-              Simpan
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div
-      id="modalMasterUser"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
-    >
-      <div
-        class="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl relative"
-      >
-        <button
-          onclick="closeModalUser()"
-          class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
-        >
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
-        <h3 class="text-base font-bold text-slate-800 mb-4">
-          Registrasi Akun Baru
-        </h3>
-        <form
-          id="formMasterUser"
-          onsubmit="handleSaveUser(event)"
-          class="space-y-3"
-        >
-          <div>
-            <label class="block text-xs font-bold mb-1">Username *</label
-            ><input
-              type="text"
-              id="muUsername"
-              required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1">Password *</label
-            ><input
-              type="password"
-              id="muPassword"
-              required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1">Role Akses *</label
-            ><select
-              id="muRole"
-              required
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-            >
-              <option value="Produksi">User Produksi (Masuk)</option>
-              <option value="Warehouse">User Warehouse (Keluar)</option>
-              <option value="Admin">Admin (Akses Penuh)</option>
-            </select>
-          </div>
-          <div class="pt-3 flex gap-2">
-            <button
-              type="button"
-              onclick="closeModalUser()"
-              class="flex-1 py-2 rounded-xl border text-slate-600 text-xs font-bold"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              class="flex-1 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold"
-            >
-              Daftarkan
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <script src="script.js?v=5"></script>
+    <style>
+      .animate-slide-up {
+        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      @keyframes slideUp {
+        from {
+          transform: translateY(100%);
+        }
+        to {
+          transform: translateY(0);
+        }
+      }
+    </style>
+    <script src="script.js?v=6"></script>
   </body>
 </html>
