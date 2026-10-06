@@ -132,7 +132,6 @@ function switchTab(tabId) {
   if (tabId === "riwayat") renderRiwayatTable();
   if (tabId !== "scanner") stopSmartScanner();
 
-  // FITUR BARU: Saat tab Scanner dibuka, otomatis fokus ke input Gun Scanner
   if (tabId === "scanner") {
     setTimeout(() => {
       const manualInput = document.getElementById("manualSmartInput");
@@ -176,7 +175,7 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// DASHBOARD LOGIC (PAPAN KONTROL)
+// DASHBOARD LOGIC (PAPAN KONTROL) - PERBAIKAN RUMUS STOK
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
@@ -232,19 +231,19 @@ function buildSeatAssyControlDataset() {
     if (relatedOrders.length > 0) custName = relatedOrders[0].id_customer;
     else if (itemBarang.id_customer) custName = itemBarang.id_customer;
 
+    // Menghitung Target Keluar Harian
     const qtyDay = relatedOrders.reduce(
       (sum, o) => sum + (Number(o.qty_order) || 0),
       0,
     );
+    // Menghitung yang SUDAH keluar (untuk kolom pengurang sisa delivery)
     const qtyOut = appData.keluar
       .filter((k) => String(k.Part_Number).trim() === partNum)
       .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
     const sisaDel = Math.max(0, qtyDay - qtyOut);
 
-    const totalMasuk = appData.masuk
-      .filter((k) => String(k.Part_Number).trim() === partNum)
-      .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
-    const currentStock = (Number(itemBarang.stok) || 0) + totalMasuk - qtyOut;
+    // PERBAIKAN: Stok langsung murni membaca dari Master_Barang tanpa ditambahkan transaksi lagi
+    const currentStock = Number(itemBarang.stok) || 0;
 
     const assyFsg = Math.floor(currentStock * 0.4);
     const variance = currentStock + assyFsg - qtyDay;
@@ -449,10 +448,9 @@ function renderRiwayatTable() {
 // =========================================================================
 // SMART SCANNER & GUN SCANNER LOGIC
 // =========================================================================
-// FITUR BARU: Menangkap ketikan Gun Scanner otomatis (Menekan Enter)
 function handleScannerGun(event) {
   if (event.key === "Enter") {
-    event.preventDefault(); // Mencegah reload halaman
+    event.preventDefault();
     const scanValue = document.getElementById("manualSmartInput").value;
     if (scanValue) {
       processSmartScan(scanValue);
@@ -521,7 +519,6 @@ function processSmartScan(scannedCode) {
       showConfirmButton: false,
     });
     document.getElementById("manualSmartInput").value = "";
-    // Kembalikan fokus ke kolom input
     document.getElementById("manualSmartInput").focus();
     return;
   }
@@ -545,7 +542,6 @@ function closeSmartAction() {
   activeScannedPart = null;
   if (smartScanner) smartScanner.resume();
 
-  // Kembalikan fokus ke kolom input Gun Scanner supaya bisa langsung tembak lagi
   const manualInput = document.getElementById("manualSmartInput");
   if (manualInput) manualInput.focus();
 }
