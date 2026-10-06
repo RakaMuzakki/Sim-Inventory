@@ -12,6 +12,7 @@ let appData = {
   masuk: [],
   keluar: [],
   seatAssyControl: [],
+  users: [],
 };
 
 // Variabel Scanner Baru
@@ -551,17 +552,81 @@ function renderCustomerTable() {
 function renderUsersTable() {
   const tbody = document.getElementById("tblUsersBody");
   if (!tbody) return;
-  const usersList = [
-    { username: "admin", role: "Admin" },
-    { username: "prod01", role: "Produksi" },
-    { username: "wh01", role: "Warehouse" },
-  ];
+
+  // Baca daftar user asli dari database Google Sheets (Bukan tulisan manual lagi)
+  const usersList = appData.users || [];
+
+  // Jangan tampilkan jika kosong
+  if (usersList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400">Tidak ada data.</td></tr>`;
+    return;
+  }
+
   tbody.innerHTML = usersList
-    .map(
-      (u) =>
-        `<tr class="hover:bg-yellow-50 transition-colors"><td class="py-2 px-3 border-2 border-slate-800 font-black text-slate-900">${u.username}</td><td class="py-2 px-3 border-2 border-slate-800"><span class="px-2.5 py-1 bg-slate-800 text-white font-bold text-[10px] uppercase rounded shadow-[2px_2px_0px_rgba(0,0,0,1)]">${u.role}</span></td></tr>`,
-    )
+    .map((u) => {
+      // Tombol hapus berwarna merah dan bergaya industrial
+      const btnDelete = `<button onclick="deleteUser('${u.username}')" class="px-3 py-1.5 bg-red-400 hover:bg-red-500 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none transition-all text-slate-900" title="Hapus User"><i class="fa-solid fa-trash-can"></i></button>`;
+
+      return `<tr class="hover:bg-yellow-50 transition-colors">
+      <td class="py-2 px-3 border-2 border-slate-800 font-black text-slate-900">${u.username}</td>
+      <td class="py-2 px-3 border-2 border-slate-800"><span class="px-2.5 py-1 bg-slate-800 text-white font-bold text-[10px] uppercase rounded shadow-[2px_2px_0px_rgba(0,0,0,1)]">${u.role}</span></td>
+      <td class="py-2 px-3 border-2 border-slate-800 text-center">${btnDelete}</td>
+    </tr>`;
+    })
     .join("");
+}
+
+// Fungsi Konfirmasi & Kirim Perintah Hapus ke Backend
+function deleteUser(usernameTarget) {
+  // Cegah admin menghapus dirinya sendiri
+  if (currentUser && currentUser.username === usernameTarget) {
+    return Swal.fire(
+      "Ditolak!",
+      "Anda tidak bisa menghapus akun Anda sendiri saat sedang login.",
+      "warning",
+    );
+  }
+
+  Swal.fire({
+    title: `Hapus Akun ${usernameTarget}?`,
+    text: "Akun yang dihapus tidak bisa dikembalikan dan tidak akan bisa login lagi.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#ef4444", // Merah
+    cancelButtonColor: "#334155", // Slate
+    confirmButtonText: "Ya, Hapus!",
+    cancelButtonText: "Batal",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      Swal.fire({
+        title: "Menghapus...",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      const payload = {
+        usernameTarget: usernameTarget,
+        adminUser: currentUser.username,
+      };
+
+      sendToBackend("apiDeleteUser", payload)
+        .then((res) => {
+          if (res.success) {
+            Swal.fire({
+              icon: "success",
+              title: "Terhapus!",
+              text: res.message,
+              timer: 1500,
+              showConfirmButton: false,
+            });
+            refreshAllData(); // Segarkan tabel agar user hilang dari daftar
+          } else {
+            Swal.fire("Gagal", res.message, "error");
+          }
+        })
+        .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+    }
+  });
 }
 
 // =========================================================================
