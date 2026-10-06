@@ -2,7 +2,7 @@
 // KONFIGURASI API & STATE GLOBAL
 // =========================================================================
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbwzjcbbXsU6https://script.google.com/u/0/home/projects/1QmoWnuL92kAq86Mb7hGl0G3uZ7Xk_Q14F8EvTPB3HjjOY4YM5Et9UH2z/edit_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
+  "https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbwzjcbbXsU6_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/execAKfycbwzjcbbXsU6https://script.google.com/u/0/home/projects/1QmoWnuL92kAq86Mb7hGl0G3uZ7Xk_Q14F8EvTPB3HjjOY4YM5Et9UH2z/edit_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
 
 let currentUser = null;
 let appData = {
