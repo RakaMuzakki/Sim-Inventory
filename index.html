@@ -92,10 +92,12 @@
               >
                 <i class="fa-solid fa-table"></i><span>Papan Kontrol</span>
               </button>
+
+              <!-- PERUBAHAN: Class 'role-auth' dan 'hidden' ditambahkan agar sembunyi sebelum login -->
               <button
                 onclick="switchTab('scanner')"
                 id="btn-tab-scanner"
-                class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded border-2 border-slate-800 font-black text-xs transition-all bg-white text-slate-800 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+                class="role-auth hidden nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded border-2 border-slate-800 font-black text-xs transition-all bg-white text-slate-800 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
               >
                 <i class="fa-solid fa-barcode"></i><span>Smart Scanner</span>
               </button>
@@ -1018,6 +1020,6 @@
       }
     </style>
 
-    <script src="script.js?v=11"></script>
+    <script src="script.js?v=12"></script>
   </body>
 </html>

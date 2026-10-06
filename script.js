@@ -127,14 +127,21 @@ function switchTab(tabId) {
   if (tabId !== "scanner") stopSmartScanner();
 }
 
+// PERUBAHAN ADA DI SINI: MENYEMBUNYIKAN SCANNER SEBELUM LOGIN
 function applyRbacUI() {
   const pCard = document.getElementById("userProfileCard"),
     gPrompt = document.getElementById("guestLoginPrompt");
+
+  // Sembunyikan semua menu Admin & Scanner (role-auth) secara default
   document
     .querySelectorAll(".role-admin")
     .forEach((el) => el.classList.add("hidden"));
+  document
+    .querySelectorAll(".role-auth")
+    .forEach((el) => el.classList.add("hidden"));
 
   if (currentUser) {
+    // Jika User Login: Tampilkan Scanner dan Profil
     pCard.classList.remove("hidden");
     pCard.classList.add("flex");
     gPrompt.classList.add("hidden");
@@ -143,11 +150,19 @@ function applyRbacUI() {
     document.getElementById("avatarLetter").innerText = currentUser.username
       .charAt(0)
       .toUpperCase();
+
+    // Buka kunci menu Smart Scanner untuk semua role yang login
+    document
+      .querySelectorAll(".role-auth")
+      .forEach((el) => el.classList.remove("hidden"));
+
+    // Buka kunci menu Master Data hanya untuk Admin
     if (currentUser.role === "Admin")
       document
         .querySelectorAll(".role-admin")
         .forEach((el) => el.classList.remove("hidden"));
   } else {
+    // Jika Tamu (Guest): Sembunyikan profil, kembalikan ke Overview
     pCard.classList.add("hidden");
     pCard.classList.remove("flex");
     gPrompt.classList.remove("hidden");
