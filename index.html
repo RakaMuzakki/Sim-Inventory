@@ -92,14 +92,22 @@
               >
                 <i class="fa-solid fa-table"></i><span>Papan Kontrol</span>
               </button>
-
-              <!-- PERUBAHAN: Class 'role-auth' dan 'hidden' ditambahkan agar sembunyi sebelum login -->
               <button
                 onclick="switchTab('scanner')"
                 id="btn-tab-scanner"
                 class="role-auth hidden nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded border-2 border-slate-800 font-black text-xs transition-all bg-white text-slate-800 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
               >
                 <i class="fa-solid fa-barcode"></i><span>Smart Scanner</span>
+              </button>
+
+              <!-- MENU BARU: RIWAYAT TRANSAKSI (Hanya tampil jika login) -->
+              <button
+                onclick="switchTab('riwayat')"
+                id="btn-tab-riwayat"
+                class="role-auth hidden nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded border-2 border-slate-800 font-black text-xs transition-all bg-white text-slate-800 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+              >
+                <i class="fa-solid fa-clock-rotate-left"></i
+                ><span>Riwayat Transaksi</span>
               </button>
             </nav>
           </div>
@@ -391,6 +399,82 @@
                   CARI
                 </button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB RIWAYAT TRANSAKSI (FITUR BARU) -->
+        <section id="tab-riwayat" class="tab-pane hidden space-y-6">
+          <div
+            class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
+          >
+            <div
+              class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b-4 border-slate-800 pb-4 mb-4"
+            >
+              <div>
+                <h3 class="font-black text-xl uppercase tracking-tighter">
+                  Riwayat Transaksi
+                </h3>
+                <p
+                  class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1"
+                >
+                  Aktivitas Barang Keluar & Masuk
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <select
+                  id="filterRiwayat"
+                  onchange="renderRiwayatTable()"
+                  class="bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100 uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                >
+                  <option value="ALL">Semua Transaksi</option>
+                  <option value="IN">Barang Masuk (IN)</option>
+                  <option value="OUT">Barang Keluar (OUT)</option>
+                </select>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table
+                class="w-full text-xs border-collapse border-2 border-slate-800 text-center"
+              >
+                <thead>
+                  <tr
+                    class="bg-slate-200 font-black uppercase border-b-4 border-slate-800"
+                  >
+                    <th class="py-3 px-3 border-2 border-slate-800 w-32">
+                      Waktu
+                    </th>
+                    <th class="py-3 px-3 border-2 border-slate-800 w-24">
+                      Tipe
+                    </th>
+                    <th class="py-3 px-3 border-2 border-slate-800 text-left">
+                      Part Number
+                    </th>
+                    <th class="py-3 px-3 border-2 border-slate-800 w-20">
+                      Qty
+                    </th>
+                    <th class="py-3 px-3 border-2 border-slate-800 w-24">
+                      Petugas
+                    </th>
+                    <th class="py-3 px-3 border-2 border-slate-800 text-left">
+                      Catatan
+                    </th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="tblRiwayatBody"
+                  class="font-bold divide-y-2 divide-slate-800 bg-white"
+                >
+                  <tr>
+                    <td
+                      colspan="6"
+                      class="py-6 text-center text-slate-400 font-medium"
+                    >
+                      Memuat data...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
@@ -1020,6 +1104,6 @@
       }
     </style>
 
-    <script src="script.js?v=12"></script>
+    <script src="script.js?v=13"></script>
   </body>
 </html>

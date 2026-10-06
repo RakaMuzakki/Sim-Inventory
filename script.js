@@ -1,7 +1,7 @@
 // =========================================================================
 // KONFIGURASI API & STATE GLOBAL
 // =========================================================================
-// !!! PASTE LINK GOOGLE APPS SCRIPT ANDA DI SINI !!!
+// !!! PASTE LINK GOOGLE APPS SCRIPT ANDA DI BAWAH INI !!!
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwzjcbbXsU6_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
 
@@ -27,7 +27,12 @@ window.addEventListener("DOMContentLoaded", () => {
 
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
-    if (overviewTab && !overviewTab.classList.contains("hidden")) {
+    const riwayatTab = document.getElementById("tab-riwayat");
+
+    if (
+      (overviewTab && !overviewTab.classList.contains("hidden")) ||
+      (riwayatTab && !riwayatTab.classList.contains("hidden"))
+    ) {
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({ action: "apiGetMasterData", payload: {} }),
@@ -41,7 +46,7 @@ window.addEventListener("DOMContentLoaded", () => {
             appData.keluar = res.keluar || [];
             appData.users = res.users || [];
             buildSeatAssyControlDataset();
-            renderSeatAssyControlBoard();
+            refreshAllUI();
             const spinner = document.getElementById("syncSpinner");
             if (spinner) {
               spinner.classList.add("rotate-180");
@@ -124,15 +129,13 @@ function switchTab(tabId) {
   }
 
   if (tabId === "overview") renderSeatAssyControlBoard();
+  if (tabId === "riwayat") renderRiwayatTable();
   if (tabId !== "scanner") stopSmartScanner();
 }
 
-// PERUBAHAN ADA DI SINI: MENYEMBUNYIKAN SCANNER SEBELUM LOGIN
 function applyRbacUI() {
   const pCard = document.getElementById("userProfileCard"),
     gPrompt = document.getElementById("guestLoginPrompt");
-
-  // Sembunyikan semua menu Admin & Scanner (role-auth) secara default
   document
     .querySelectorAll(".role-admin")
     .forEach((el) => el.classList.add("hidden"));
@@ -141,7 +144,6 @@ function applyRbacUI() {
     .forEach((el) => el.classList.add("hidden"));
 
   if (currentUser) {
-    // Jika User Login: Tampilkan Scanner dan Profil
     pCard.classList.remove("hidden");
     pCard.classList.add("flex");
     gPrompt.classList.add("hidden");
@@ -151,18 +153,14 @@ function applyRbacUI() {
       .charAt(0)
       .toUpperCase();
 
-    // Buka kunci menu Smart Scanner untuk semua role yang login
     document
       .querySelectorAll(".role-auth")
       .forEach((el) => el.classList.remove("hidden"));
-
-    // Buka kunci menu Master Data hanya untuk Admin
     if (currentUser.role === "Admin")
       document
         .querySelectorAll(".role-admin")
         .forEach((el) => el.classList.remove("hidden"));
   } else {
-    // Jika Tamu (Guest): Sembunyikan profil, kembalikan ke Overview
     pCard.classList.add("hidden");
     pCard.classList.remove("flex");
     gPrompt.classList.remove("hidden");
@@ -170,7 +168,7 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// DASHBOARD LOGIC (PAPAN KONTROL) & KLIK QTY/DAY
+// DASHBOARD LOGIC (PAPAN KONTROL)
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
@@ -208,6 +206,7 @@ function loadInitialOrMockData() {
 
 function refreshAllUI() {
   renderSeatAssyControlBoard();
+  renderRiwayatTable();
   renderMasterBarangTable();
   renderCustomerTable();
   renderUsersTable();
@@ -364,6 +363,85 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
 
 function handleGlobalSearch(keyword) {
   renderSeatAssyControlBoard(keyword);
+}
+
+// =========================================================================
+// TABEL RIWAYAT TRANSAKSI (FITUR BARU)
+// =========================================================================
+function renderRiwayatTable() {
+  const tbody = document.getElementById("tblRiwayatBody");
+  if (!tbody) return;
+
+  const filterDropdown = document.getElementById("filterRiwayat");
+  const filterVal = filterDropdown ? filterDropdown.value : "ALL";
+
+  let riwayatGabungan = [];
+
+  // Masukkan data barang masuk
+  if (filterVal === "ALL" || filterVal === "IN") {
+    (appData.masuk || []).forEach((m) => {
+      riwayatGabungan.push({
+        waktu: new Date(m.tanggal),
+        tipe: "IN",
+        part: m.Part_Number,
+        qty: m.qty,
+        petugas: m.petugas,
+        catatan: m.catatan,
+      });
+    });
+  }
+
+  // Masukkan data barang keluar
+  if (filterVal === "ALL" || filterVal === "OUT") {
+    (appData.keluar || []).forEach((k) => {
+      riwayatGabungan.push({
+        waktu: new Date(k.tanggal),
+        tipe: "OUT",
+        part: k.Part_Number,
+        qty: k.qty,
+        petugas: k.petugas,
+        catatan: k.catatan,
+      });
+    });
+  }
+
+  // Urutkan dari yang terbaru ke terlama (Descending)
+  riwayatGabungan.sort((a, b) => b.waktu - a.waktu);
+
+  if (riwayatGabungan.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = riwayatGabungan
+    .map((r) => {
+      // Format Waktu: 15 Okt 2026, 14:30
+      const waktuStr = r.waktu.toLocaleString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const isMasuk = r.tipe === "IN";
+      const badgeTipe = isMasuk
+        ? `<span class="px-2 py-1 bg-emerald-400 text-slate-900 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[9px] font-black uppercase">MASUK</span>`
+        : `<span class="px-2 py-1 bg-red-400 text-slate-900 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[9px] font-black uppercase">KELUAR</span>`;
+
+      const colorQty = isMasuk ? "text-emerald-600" : "text-red-600";
+      const signQty = isMasuk ? "+" : "-";
+
+      return `<tr class="hover:bg-yellow-50 transition-colors">
+      <td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-black text-slate-500">${waktuStr}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 text-center">${badgeTipe}</td>
+      <td class="py-2 px-3 border-2 border-slate-800 text-left font-black text-slate-900 text-sm tracking-tight">${r.part}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-black text-base ${colorQty}">${signQty}${r.qty}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-black uppercase text-slate-700">${r.petugas || "-"}</td>
+      <td class="py-2 px-3 border-2 border-slate-800 text-left text-[10px] text-slate-500 italic max-w-xs truncate">${r.catatan || "-"}</td>
+    </tr>`;
+    })
+    .join("");
 }
 
 // =========================================================================
