@@ -1,10 +1,18 @@
 // =========================================================================
 // KONFIGURASI API & STATE GLOBAL
 // =========================================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbwzjcbbXsU6_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbwzjcbbXsU6_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
 
 let currentUser = null;
-let appData = { barang: [], customer: [], orders: [], masuk: [], keluar: [], seatAssyControl: [] };
+let appData = {
+  barang: [],
+  customer: [],
+  orders: [],
+  masuk: [],
+  keluar: [],
+  seatAssyControl: [],
+};
 
 // Variabel Scanner Baru
 let smartScanner = null;
@@ -20,17 +28,27 @@ window.addEventListener("DOMContentLoaded", () => {
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     if (overviewTab && !overviewTab.classList.contains("hidden")) {
-      fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "apiGetMasterData", payload: {} }) })
+      fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "apiGetMasterData", payload: {} }),
+      })
         .then((res) => res.json())
         .then((res) => {
           if (res && res.success) {
-            appData.barang = res.barang || []; appData.orders = res.orders || [];
-            appData.masuk = res.masuk || []; appData.keluar = res.keluar || [];
-            buildSeatAssyControlDataset(); renderSeatAssyControlBoard();
+            appData.barang = res.barang || [];
+            appData.orders = res.orders || [];
+            appData.masuk = res.masuk || [];
+            appData.keluar = res.keluar || [];
+            buildSeatAssyControlDataset();
+            renderSeatAssyControlBoard();
             const spinner = document.getElementById("syncSpinner");
-            if (spinner) { spinner.classList.add("rotate-180"); setTimeout(() => spinner.classList.remove("rotate-180"), 1000); }
+            if (spinner) {
+              spinner.classList.add("rotate-180");
+              setTimeout(() => spinner.classList.remove("rotate-180"), 1000);
+            }
           }
-        }).catch(() => console.log("Auto-refresh tertunda."));
+        })
+        .catch(() => console.log("Auto-refresh tertunda."));
     }
   }, 30000);
 });
@@ -39,11 +57,17 @@ async function sendToBackend(action, payload = {}) {
   let retries = 3;
   while (retries > 0) {
     try {
-      const response = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: action, payload: payload }) });
+      const response = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: action, payload: payload }),
+      });
       return JSON.parse(await response.text());
     } catch (error) {
       retries--;
-      if (retries === 0) throw new Error("Gagal terhubung ke database. Pastikan jaringan stabil.");
+      if (retries === 0)
+        throw new Error(
+          "Gagal terhubung ke database. Pastikan jaringan stabil.",
+        );
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
   }
@@ -52,102 +76,165 @@ async function sendToBackend(action, payload = {}) {
 // =========================================================================
 // UI & NAVIGASI
 // =========================================================================
-function startLiveClock() { setInterval(() => { const el = document.getElementById("liveClock"); if (el) el.innerText = new Date().toLocaleTimeString("id-ID", { hour12: false }); }, 1000); }
+function startLiveClock() {
+  setInterval(() => {
+    const el = document.getElementById("liveClock");
+    if (el)
+      el.innerText = new Date().toLocaleTimeString("id-ID", { hour12: false });
+  }, 1000);
+}
 function toggleSidebar() {
-  const sb = document.getElementById("mainSidebar"), bd = document.getElementById("sidebarBackdrop");
-  if (sb.classList.contains("-translate-x-full")) { sb.classList.remove("-translate-x-full"); bd.classList.remove("opacity-0", "pointer-events-none"); bd.classList.add("opacity-100"); } 
-  else { closeSidebar(); }
+  const sb = document.getElementById("mainSidebar"),
+    bd = document.getElementById("sidebarBackdrop");
+  if (sb.classList.contains("-translate-x-full")) {
+    sb.classList.remove("-translate-x-full");
+    bd.classList.remove("opacity-0", "pointer-events-none");
+    bd.classList.add("opacity-100");
+  } else {
+    closeSidebar();
+  }
 }
 function closeSidebar() {
   document.getElementById("mainSidebar").classList.add("-translate-x-full");
   const bd = document.getElementById("sidebarBackdrop");
-  bd.classList.add("opacity-0", "pointer-events-none"); bd.classList.remove("opacity-100");
+  bd.classList.add("opacity-0", "pointer-events-none");
+  bd.classList.remove("opacity-100");
 }
-function toggleBrowserFullscreen() { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+function toggleBrowserFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+}
 
 function switchTab(tabId) {
-  document.querySelectorAll(".tab-pane").forEach((el) => el.classList.add("hidden"));
+  document
+    .querySelectorAll(".tab-pane")
+    .forEach((el) => el.classList.add("hidden"));
   const activeTab = document.getElementById(`tab-${tabId}`);
   if (activeTab) activeTab.classList.remove("hidden");
-  document.querySelectorAll(".nav-item").forEach((btn) => { btn.classList.remove("bg-slate-800", "text-white"); btn.classList.add("bg-white", "text-slate-800"); });
+  document.querySelectorAll(".nav-item").forEach((btn) => {
+    btn.classList.remove("bg-slate-800", "text-white");
+    btn.classList.add("bg-white", "text-slate-800");
+  });
   const activeNav = document.getElementById(`btn-tab-${tabId}`);
-  if (activeNav) { activeNav.classList.add("bg-slate-800", "text-white"); activeNav.classList.remove("bg-white", "text-slate-800"); }
+  if (activeNav) {
+    activeNav.classList.add("bg-slate-800", "text-white");
+    activeNav.classList.remove("bg-white", "text-slate-800");
+  }
   if (tabId === "overview") renderSeatAssyControlBoard();
   if (tabId !== "scanner") stopSmartScanner(); // Matikan kamera jika pindah menu
 }
 
 function applyRbacUI() {
-  const pCard = document.getElementById("userProfileCard"), gPrompt = document.getElementById("guestLoginPrompt");
-  document.querySelectorAll(".role-admin").forEach((el) => el.classList.add("hidden"));
+  const pCard = document.getElementById("userProfileCard"),
+    gPrompt = document.getElementById("guestLoginPrompt");
+  document
+    .querySelectorAll(".role-admin")
+    .forEach((el) => el.classList.add("hidden"));
   if (currentUser) {
-    pCard.classList.remove("hidden"); pCard.classList.add("flex"); gPrompt.classList.add("hidden");
+    pCard.classList.remove("hidden");
+    pCard.classList.add("flex");
+    gPrompt.classList.add("hidden");
     document.getElementById("userNameDisplay").innerText = currentUser.username;
     document.getElementById("userRoleBadge").innerText = currentUser.role;
-    document.getElementById("avatarLetter").innerText = currentUser.username.charAt(0).toUpperCase();
-    if (currentUser.role === "Admin") document.querySelectorAll(".role-admin").forEach(el => el.classList.remove("hidden"));
+    document.getElementById("avatarLetter").innerText = currentUser.username
+      .charAt(0)
+      .toUpperCase();
+    if (currentUser.role === "Admin")
+      document
+        .querySelectorAll(".role-admin")
+        .forEach((el) => el.classList.remove("hidden"));
   } else {
-    pCard.classList.add("hidden"); pCard.classList.remove("flex"); gPrompt.classList.remove("hidden");
+    pCard.classList.add("hidden");
+    pCard.classList.remove("flex");
+    gPrompt.classList.remove("hidden");
   }
 }
 
 // =========================================================================
 // DASHBOARD LOGIC (PAPAN KONTROL) DENGAN RUMUS FISIK PABRIK
 // =========================================================================
-function showSyncSpinner(show) { const s = document.getElementById("syncSpinner"); if (s) { if (show) s.classList.add("animate-spin"); else s.classList.remove("animate-spin"); } }
-function refreshAllData() { showSyncSpinner(true); loadInitialOrMockData(); }
+function showSyncSpinner(show) {
+  const s = document.getElementById("syncSpinner");
+  if (s) {
+    if (show) s.classList.add("animate-spin");
+    else s.classList.remove("animate-spin");
+  }
+}
+function refreshAllData() {
+  showSyncSpinner(true);
+  loadInitialOrMockData();
+}
 
 function loadInitialOrMockData() {
   showSyncSpinner(true);
-  sendToBackend("apiGetMasterData").then((res) => {
-    showSyncSpinner(false);
-    if (res && res.success) {
-      appData.barang = res.barang || []; appData.customer = res.customer || []; appData.orders = res.orders || [];
-      appData.masuk = res.masuk || []; appData.keluar = res.keluar || [];
-      buildSeatAssyControlDataset(); renderSeatAssyControlBoard();
-    } else Swal.fire("Error", res.message || "Gagal memuat data", "error");
-  }).catch((err) => { showSyncSpinner(false); Swal.fire("Error", err.message, "error"); });
+  sendToBackend("apiGetMasterData")
+    .then((res) => {
+      showSyncSpinner(false);
+      if (res && res.success) {
+        appData.barang = res.barang || [];
+        appData.customer = res.customer || [];
+        appData.orders = res.orders || [];
+        appData.masuk = res.masuk || [];
+        appData.keluar = res.keluar || [];
+        buildSeatAssyControlDataset();
+        renderSeatAssyControlBoard();
+      } else Swal.fire("Error", res.message || "Gagal memuat data", "error");
+    })
+    .catch((err) => {
+      showSyncSpinner(false);
+      Swal.fire("Error", err.message, "error");
+    });
 }
 
 function buildSeatAssyControlDataset() {
   const list = [];
   appData.barang.forEach((itemBarang, index) => {
     const partNum = String(itemBarang.Part_Number).trim();
-    const relatedOrders = appData.orders.filter(o => String(o.Part_Number).trim() === partNum);
-    
+    const relatedOrders = appData.orders.filter(
+      (o) => String(o.Part_Number).trim() === partNum,
+    );
+
     // NAMA CUSTOMER
     let custName = "-";
     if (relatedOrders.length > 0) custName = relatedOrders[0].id_customer;
     else if (itemBarang.id_customer) custName = itemBarang.id_customer;
 
     // RUMUS 1: QTY/DAY (Target Harian)
-    const qtyDay = relatedOrders.reduce((sum, o) => sum + (Number(o.qty_order) || 0), 0);
-    
+    const qtyDay = relatedOrders.reduce(
+      (sum, o) => sum + (Number(o.qty_order) || 0),
+      0,
+    );
+
     // RUMUS 2: QTY OUT (Total Terkirim)
-    const qtyOut = appData.keluar.filter(k => String(k.Part_Number).trim() === partNum).reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
-    
+    const qtyOut = appData.keluar
+      .filter((k) => String(k.Part_Number).trim() === partNum)
+      .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
+
     // RUMUS 3: SISA DEL (Kekurangan Target Pengiriman) = Target - Keluar
     const sisaDel = Math.max(0, qtyDay - qtyOut);
-    
+
     // RUMUS 4: STOCK (Stok Sistem Real-Time) = Fisik Awal + Masuk - Keluar
-    const totalMasuk = appData.masuk.filter(k => String(k.Part_Number).trim() === partNum).reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
+    const totalMasuk = appData.masuk
+      .filter((k) => String(k.Part_Number).trim() === partNum)
+      .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
     const currentStock = (Number(itemBarang.stok) || 0) + totalMasuk - qtyOut;
 
     // RUMUS 5: ASSY IN STORE FSG (Simulasi 40% dari Stok, karena belum ada alat input khusus dari divisi Assy)
     const assyFsg = Math.floor(currentStock * 0.4);
-    
+
     // RUMUS 6: [ +/- ] (Status Keamanan Stok) = (Stock + Assy) - QTY/DAY
-    const variance = (currentStock + assyFsg) - qtyDay;
+    const variance = currentStock + assyFsg - qtyDay;
 
     list.push({
-      Customer: custName, 
-      No_Rel: itemBarang.No_Rel || "-", 
-      Part_Number: partNum, 
+      Customer: custName,
+      No_Rel: itemBarang.No_Rel || "-",
+      Part_Number: partNum,
       nama_barang: itemBarang.nama_barang || "-",
-      stock: currentStock, 
-      qty_day: qtyDay, 
-      qty_out: qtyOut, 
-      sisa_del: sisaDel, 
-      assy_fsg: assyFsg, 
+      stock: currentStock,
+      qty_day: qtyDay,
+      qty_out: qtyOut,
+      sisa_del: sisaDel,
+      assy_fsg: assyFsg,
       variance: variance,
     });
   });
@@ -160,28 +247,36 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
   let dataset = appData.seatAssyControl || [];
   if (filterKeyword) {
     const kw = filterKeyword.toLowerCase();
-    dataset = dataset.filter(d => d.Part_Number.toLowerCase().includes(kw) || d.No_Rel.toLowerCase().includes(kw));
+    dataset = dataset.filter(
+      (d) =>
+        d.Part_Number.toLowerCase().includes(kw) ||
+        d.No_Rel.toLowerCase().includes(kw),
+    );
   }
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
-  if (dataset.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`; return; }
+  if (dataset.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
+    return;
+  }
 
-  tbody.innerHTML = dataset.map((row) => {
-    // Fungsi untuk mengubah angka 0 menjadi strip "-"
-    const formatNum = (num) => num === 0 ? "-" : num;
-    
-    // Format khusus untuk kolom variance [+/-]
-    let varFormat = row.variance;
-    let varColor = "text-slate-700";
-    if (row.variance > 0) {
-      varFormat = "+" + row.variance;
-      varColor = "text-emerald-600";
-    } else if (row.variance < 0) {
-      varColor = "text-red-600"; // Warna merah jika stok minus/bahaya
-    } else {
-      varFormat = "-";
-    }
+  tbody.innerHTML = dataset
+    .map((row) => {
+      // Fungsi untuk mengubah angka 0 menjadi strip "-"
+      const formatNum = (num) => (num === 0 ? "-" : num);
 
-    return `<tr class="hover:bg-yellow-50 transition-colors">
+      // Format khusus untuk kolom variance [+/-]
+      let varFormat = row.variance;
+      let varColor = "text-slate-700";
+      if (row.variance > 0) {
+        varFormat = "+" + row.variance;
+        varColor = "text-emerald-600";
+      } else if (row.variance < 0) {
+        varColor = "text-red-600"; // Warna merah jika stok minus/bahaya
+      } else {
+        varFormat = "-";
+      }
+
+      return `<tr class="hover:bg-yellow-50 transition-colors">
       <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-500 break-words">${row.Customer}</td>
       <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left">
@@ -195,51 +290,84 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50">${formatNum(row.assy_fsg)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
     </tr>`;
-  }).join("");
+    })
+    .join("");
 }
 
-function handleGlobalSearch(keyword) { renderSeatAssyControlBoard(keyword); }
+function handleGlobalSearch(keyword) {
+  renderSeatAssyControlBoard(keyword);
+}
 
 // =========================================================================
 // SMART SCANNER LOGIC
 // =========================================================================
 function startSmartScanner() {
-  if(!currentUser) { openLoginModal(); return; }
+  if (!currentUser) {
+    openLoginModal();
+    return;
+  }
   const wrapper = document.getElementById("smartReaderWrapper");
   document.getElementById("btnStartScan").classList.add("hidden");
   document.getElementById("btnStopScan").classList.remove("hidden");
   wrapper.classList.remove("hidden");
-  
+
   smartScanner = new Html5Qrcode("smartReaderViewport");
-  smartScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (decodedText) => {
-    const beep = new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3'); beep.play().catch(()=>{});
-    processSmartScan(decodedText);
-  }, () => {}).catch(err => {
-    Swal.fire("Kamera Error", "Gagal membuka kamera perangkat.", "error"); stopSmartScanner();
-  });
+  smartScanner
+    .start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      (decodedText) => {
+        const beep = new Audio(
+          "https://www.soundjay.com/buttons/sounds/button-3.mp3",
+        );
+        beep.play().catch(() => {});
+        processSmartScan(decodedText);
+      },
+      () => {},
+    )
+    .catch((err) => {
+      Swal.fire("Kamera Error", "Gagal membuka kamera perangkat.", "error");
+      stopSmartScanner();
+    });
 }
 
 function stopSmartScanner() {
-  if (smartScanner) { smartScanner.stop().then(() => { smartScanner.clear(); smartScanner = null; }).catch(()=>{}); }
+  if (smartScanner) {
+    smartScanner
+      .stop()
+      .then(() => {
+        smartScanner.clear();
+        smartScanner = null;
+      })
+      .catch(() => {});
+  }
   document.getElementById("smartReaderWrapper").classList.add("hidden");
   document.getElementById("btnStartScan").classList.remove("hidden");
   document.getElementById("btnStopScan").classList.add("hidden");
 }
 
 function processSmartScan(scannedCode) {
-  if(!scannedCode) return;
+  if (!scannedCode) return;
   const part = scannedCode.trim();
-  const foundData = appData.seatAssyControl.find(item => item.Part_Number.toLowerCase() === part.toLowerCase());
-  
-  if(!foundData) {
-    Swal.fire({ icon: 'warning', title: 'Tidak Dikenali!', text: `Part ${part} tidak terdaftar di sistem.`, timer: 2000, showConfirmButton: false });
-    document.getElementById('manualSmartInput').value = "";
+  const foundData = appData.seatAssyControl.find(
+    (item) => item.Part_Number.toLowerCase() === part.toLowerCase(),
+  );
+
+  if (!foundData) {
+    Swal.fire({
+      icon: "warning",
+      title: "Tidak Dikenali!",
+      text: `Part ${part} tidak terdaftar di sistem.`,
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    document.getElementById("manualSmartInput").value = "";
     return;
   }
 
-  if(smartScanner) smartScanner.pause();
+  if (smartScanner) smartScanner.pause();
   activeScannedPart = foundData;
-  
+
   document.getElementById("smInfoRell").innerText = foundData.No_Rel;
   document.getElementById("smInfoPart").innerText = foundData.Part_Number;
   document.getElementById("smInfoNama").innerText = foundData.nama_barang;
@@ -248,104 +376,125 @@ function processSmartScan(scannedCode) {
   document.getElementById("smInputQty").value = 1;
 
   document.getElementById("modalSmartAction").classList.remove("hidden");
-  document.getElementById('manualSmartInput').value = "";
+  document.getElementById("manualSmartInput").value = "";
 }
 
 function closeSmartAction() {
   document.getElementById("modalSmartAction").classList.add("hidden");
   activeScannedPart = null;
-  if(smartScanner) smartScanner.resume();
+  if (smartScanner) smartScanner.resume();
 }
 
 function adjSmartQty(amount) {
   const input = document.getElementById("smInputQty");
   let val = parseInt(input.value) || 0;
   val += amount;
-  if (val < 1) val = 1; 
+  if (val < 1) val = 1;
   input.value = val;
 }
 
 function submitSmartAction(tipeAction) {
-  if(!activeScannedPart || !currentUser) return;
+  if (!activeScannedPart || !currentUser) return;
   const qty = parseInt(document.getElementById("smInputQty").value) || 0;
-  if(qty <= 0) return Swal.fire("Error", "Jumlah harus lebih dari 0", "error");
+  if (qty <= 0) return Swal.fire("Error", "Jumlah harus lebih dari 0", "error");
 
-  const actionName = tipeAction === 'IN' ? 'apiSaveTransaksiMasuk' : 'apiSaveTransaksiKeluar';
-  const actionText = tipeAction === 'IN' ? 'Barang Masuk' : 'Barang Keluar';
+  const actionName =
+    tipeAction === "IN" ? "apiSaveTransaksiMasuk" : "apiSaveTransaksiKeluar";
+  const actionText = tipeAction === "IN" ? "Barang Masuk" : "Barang Keluar";
 
-  if(tipeAction === 'OUT' && qty > activeScannedPart.stock) {
-    return Swal.fire("Stok Kurang!", `Stok sistem hanya sisa ${activeScannedPart.stock} Pcs.`, "error");
+  if (tipeAction === "OUT" && qty > activeScannedPart.stock) {
+    return Swal.fire(
+      "Stok Kurang!",
+      `Stok sistem hanya sisa ${activeScannedPart.stock} Pcs.`,
+      "error",
+    );
   }
 
   const payload = {
     partNumber: activeScannedPart.Part_Number,
     qty: qty,
     petugas: currentUser.username,
-    catatan: `Smart Scan ${actionText}`
+    catatan: `Smart Scan ${actionText}`,
   };
 
-  Swal.fire({ title: "Mencatat ke Sistem...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-  
-  sendToBackend(actionName, payload).then(res => {
-    if(res.success) {
-      Swal.fire({ icon: 'success', title: 'Berhasil!', text: `${qty} Pcs ${actionText} dicatat.`, timer: 1500, showConfirmButton: false });
-      closeSmartAction();
-      refreshAllData();
-    } else {
-      Swal.fire("Gagal", res.message, "error");
-    }
-  }).catch(err => Swal.fire("Error Koneksi", err.message, "error"));
+  Swal.fire({
+    title: "Mencatat ke Sistem...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
+
+  sendToBackend(actionName, payload)
+    .then((res) => {
+      if (res.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Berhasil!",
+          text: `${qty} Pcs ${actionText} dicatat.`,
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        closeSmartAction();
+        refreshAllData();
+      } else {
+        Swal.fire("Gagal", res.message, "error");
+      }
+    })
+    .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
 }
 
 // =========================================================================
 // FUNGSI UMUM & LOGIN
 // =========================================================================
-function openLoginModal() { document.getElementById("modalLogin").classList.remove("hidden"); }
-function closeLoginModal() { document.getElementById("modalLogin").classList.add("hidden"); }
+function openLoginModal() {
+  document.getElementById("modalLogin").classList.remove("hidden");
+}
+function closeLoginModal() {
+  document.getElementById("modalLogin").classList.add("hidden");
+}
 function logoutAction() {
-  Swal.fire({ title: "Keluar Sistem?", showCancelButton: true, confirmButtonColor: '#d33' }).then((res) => {
-    if (res.isConfirmed) { currentUser = null; sessionStorage.removeItem("sim_inventory_user"); applyRbacUI(); switchTab("overview"); }
+  Swal.fire({
+    title: "Keluar Sistem?",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+  }).then((res) => {
+    if (res.isConfirmed) {
+      currentUser = null;
+      sessionStorage.removeItem("sim_inventory_user");
+      applyRbacUI();
+      switchTab("overview");
+    }
   });
 }
 function handleLoginSubmit(e) {
   e.preventDefault();
-  const payload = { username: document.getElementById("loginUsername").value.trim(), password: document.getElementById("loginPassword").value.trim() };
-  Swal.fire({ title: "Autentikasi...", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  const payload = {
+    username: document.getElementById("loginUsername").value.trim(),
+    password: document.getElementById("loginPassword").value.trim(),
+  };
+  Swal.fire({
+    title: "Autentikasi...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
   sendToBackend("apiLogin", payload).then((res) => {
     if (res.success) {
-      currentUser = res.user; sessionStorage.setItem("sim_inventory_user", JSON.stringify(currentUser)); applyRbacUI(); closeLoginModal();
-      Swal.fire({ icon: "success", title: "Masuk!", timer: 1000, showConfirmButton: false });
-      switchTab("scanner"); 
-    } else { Swal.fire("Gagal", res.message, "error"); }
+      currentUser = res.user;
+      sessionStorage.setItem("sim_inventory_user", JSON.stringify(currentUser));
+      applyRbacUI();
+      closeLoginModal();
+      Swal.fire({
+        icon: "success",
+        title: "Masuk!",
+        timer: 1000,
+        showConfirmButton: false,
+      });
+      switchTab("scanner");
+    } else {
+      Swal.fire("Gagal", res.message, "error");
+    }
   });
 }
 
 // =========================================================================
 // MASTER DATA TABLES
-// =========================================================================
-function renderMasterBarangTable() {
-  const tbody = document.getElementById("tblMasterBarangBody");
-  if (!tbody) return;
-  if (appData.barang.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">Tidak ada barang.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = appData.barang.map((b) => `<tr class="hover:bg-slate-50 border-b"><td class="py-2 font-bold">${b.Part_Number}</td><td class="py-2">${b.nama_barang}</td><td class="py-2 font-bold">${b.stok}</td><td class="py-2 text-brand-700">${b.No_Rel || "-"}</td></tr>`).join("");
-}
-
-function renderCustomerTable() {
-  const tbody = document.getElementById("tblCustomerBody");
-  if (!tbody) return;
-  if (appData.customer.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400">Tidak ada data.</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = appData.customer.map((c) => `<tr class="hover:bg-slate-50 border-b"><td class="py-2 font-bold">${c.id_customer}</td><td class="py-2 font-bold text-slate-900">${c.nama_customer}</td><td class="py-2 text-slate-600">${c.alamat || "-"}</td></tr>`).join("");
-}
-
-function renderUsersTable() {
-  const tbody = document.getElementById("tblUsersBody");
-  if (!tbody) return;
-  const usersList = [{ username: "admin", role: "Admin" }, { username: "prod01", role: "Produksi" }, { username: "wh01", role: "Warehouse" }];
-  tbody.innerHTML = usersList.map((u) => `<tr class="hover:bg-slate-50 border-b"><td class="py-2 font-bold">${u.username}</td><td class="py-2"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">${u.role}</span></td></tr>`).join("");
-}
+// ==========================================================

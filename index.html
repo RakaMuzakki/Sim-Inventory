@@ -387,39 +387,84 @@
           </div>
         </section>
 
-        <!-- TAB MASTER BARANG & CUSTOMER -->
+<!-- TAB MASTER BARANG, CUSTOMER, USERS -->
         <section id="tab-barang" class="tab-pane hidden space-y-6">
-          <div
-            class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
-          >
-            <h3 class="font-black text-xl uppercase">Master Data Barang</h3>
-            <div class="overflow-x-auto mt-4">
-              <table class="w-full text-xs border-2 border-slate-800">
-                <tbody
-                  id="tblMasterBarangBody"
-                  class="font-bold divide-y-2 divide-slate-800"
-                ></tbody>
+          <div class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b-4 border-slate-800 pb-4 mb-4">
+              <h3 class="font-black text-xl uppercase tracking-tighter">Master Data Barang</h3>
+              <!-- Tombol Tambah Barang -->
+              <button onclick="openModalBarang()" class="role-admin hidden px-4 py-2 border-4 border-slate-800 bg-emerald-400 text-slate-900 font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all">
+                <i class="fa-solid fa-plus mr-1"></i> Tambah Part Number
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs border-collapse border-2 border-slate-800 text-center">
+                <thead>
+                  <tr class="bg-slate-200 font-black uppercase border-b-4 border-slate-800">
+                    <th class="py-3 px-3 border-2 border-slate-800">Part Number</th>
+                    <th class="py-3 px-3 border-2 border-slate-800">Nama Barang</th>
+                    <th class="py-3 px-3 border-2 border-slate-800">Stok Master</th>
+                    <th class="py-3 px-3 border-2 border-slate-800">No. Rell</th>
+                  </tr>
+                </thead>
+                <tbody id="tblMasterBarangBody" class="font-bold divide-y-2 divide-slate-800 bg-white">
+                  <tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">Memuat data...</td></tr>
+                </tbody>
               </table>
             </div>
           </div>
         </section>
+
         <section id="tab-customer" class="tab-pane hidden space-y-6">
-          <div
-            class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
-          >
-            <h3 class="font-black text-xl uppercase">Master Customer</h3>
-            <div class="overflow-x-auto mt-4">
-              <table class="w-full text-xs border-2 border-slate-800">
-                <tbody
-                  id="tblCustomerBody"
-                  class="font-bold divide-y-2 divide-slate-800"
-                ></tbody>
+          <div class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b-4 border-slate-800 pb-4 mb-4">
+              <h3 class="font-black text-xl uppercase tracking-tighter">Master Customer</h3>
+              <!-- Tombol Tambah Customer -->
+              <button onclick="openModalCustomer()" class="role-admin hidden px-4 py-2 border-4 border-slate-800 bg-blue-400 text-slate-900 font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all">
+                <i class="fa-solid fa-plus mr-1"></i> Tambah Customer
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs border-collapse border-2 border-slate-800 text-center">
+                <thead>
+                  <tr class="bg-slate-200 font-black uppercase border-b-4 border-slate-800">
+                    <th class="py-3 px-3 border-2 border-slate-800">ID Customer</th>
+                    <th class="py-3 px-3 border-2 border-slate-800">Nama Perusahaan</th>
+                    <th class="py-3 px-3 border-2 border-slate-800">Alamat</th>
+                  </tr>
+                </thead>
+                <tbody id="tblCustomerBody" class="font-bold divide-y-2 divide-slate-800 bg-white">
+                  <tr><td colspan="3" class="py-6 text-center text-slate-400 font-medium">Memuat data...</td></tr>
+                </tbody>
               </table>
             </div>
           </div>
         </section>
-      </div>
-    </main>
+
+        <section id="tab-users" class="tab-pane hidden space-y-6">
+          <div class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b-4 border-slate-800 pb-4 mb-4">
+              <h3 class="font-black text-xl uppercase tracking-tighter">Kelola Pengguna</h3>
+              <!-- Tombol Tambah Pengguna -->
+              <button onclick="openModalUser()" class="role-admin hidden px-4 py-2 border-4 border-slate-800 bg-yellow-400 text-slate-900 font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all">
+                <i class="fa-solid fa-plus mr-1"></i> Tambah Pengguna
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs border-collapse border-2 border-slate-800 text-center">
+                <thead>
+                  <tr class="bg-slate-200 font-black uppercase border-b-4 border-slate-800">
+                    <th class="py-3 px-3 border-2 border-slate-800">Username</th>
+                    <th class="py-3 px-3 border-2 border-slate-800">Role</th>
+                  </tr>
+                </thead>
+                <tbody id="tblUsersBody" class="font-bold divide-y-2 divide-slate-800 bg-white">
+                  <tr><td colspan="2" class="py-6 text-center text-slate-400 font-medium">Memuat data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
 
     <!-- MODAL SMART ACTION (KARTU IDENTITAS BARANG)-->
     <div
