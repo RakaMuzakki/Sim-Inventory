@@ -252,6 +252,51 @@ function buildSeatAssyControlDataset() {
   appData.seatAssyControl = list;
 }
 
+// =======================================================
+// FITUR BARU: KLIK UNTUK MENGUBAH TARGET QTY/DAY
+// =======================================================
+function promptUpdateQtyDay(partNumber, currentQty) {
+  Swal.fire({
+    title: "SET TARGET (QTY/DAY)",
+    html: `<p class="text-sm mb-3">Target Harian untuk Part:<br><b class="text-lg">${partNumber}</b></p>`,
+    input: "number",
+    inputValue: currentQty > 0 ? currentQty : "",
+    inputAttributes: { min: 0, step: 1, placeholder: "Ketik angka..." },
+    showCancelButton: true,
+    confirmButtonText: '<i class="fa-solid fa-check"></i> Simpan',
+    cancelButtonText: "Batal",
+    confirmButtonColor: "#10b981",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const newVal = Number(result.value) || 0;
+      Swal.fire({
+        title: "Menyimpan...",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+      sendToBackend("apiUpdateQtyDay", {
+        partNumber: partNumber,
+        qty: newVal,
+        user: currentUser.username,
+      })
+        .then((res) => {
+          if (res.success) {
+            Swal.fire({
+              icon: "success",
+              title: "Tersimpan!",
+              timer: 1000,
+              showConfirmButton: false,
+            });
+            refreshAllData(); // Refresh data otomatis setelah simpan
+          } else {
+            Swal.fire("Gagal", res.message, "error");
+          }
+        })
+        .catch((err) => Swal.fire("Error", err.message, "error"));
+    }
+  });
+}
+
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
   if (!tbody) return;
@@ -270,6 +315,9 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     return;
   }
 
+  // Cek apakah Admin yang login (Klik QTY/DAY hanya aktif untuk Admin)
+  const isAdmin = currentUser && currentUser.role === "Admin";
+
   tbody.innerHTML = dataset
     .map((row) => {
       const formatNum = (num) => (num === 0 ? "-" : num);
@@ -285,6 +333,17 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         varFormat = "-";
       }
 
+      // Efek visual & Fungsi klik khusus Admin
+      const qtyDayClass = isAdmin
+        ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-all"
+        : "";
+      const qtyDayAction = isAdmin
+        ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day})"`
+        : "";
+      const qtyDayTitle = isAdmin
+        ? `title="Klik untuk Mengisi Target Harian"`
+        : "";
+
       return `<tr class="hover:bg-yellow-50 transition-colors">
       <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-500 break-words">${row.Customer}</td>
       <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
@@ -293,7 +352,12 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         <div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div>
       </td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-700 text-base bg-blue-50/50">${formatNum(row.stock)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.qty_day)}</td>
+      
+      <!-- INI KOLOM QTY/DAY YANG BISA DIKLIK -->
+      <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction} ${qtyDayTitle}>
+        ${formatNum(row.qty_day)}
+      </td>
+      
       <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.qty_out)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-red-600">${formatNum(row.sisa_del)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50">${formatNum(row.assy_fsg)}</td>
