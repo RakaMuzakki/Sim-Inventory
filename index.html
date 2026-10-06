@@ -99,8 +99,6 @@
               >
                 <i class="fa-solid fa-barcode"></i><span>Smart Scanner</span>
               </button>
-
-              <!-- MENU BARU: RIWAYAT TRANSAKSI (Hanya tampil jika login) -->
               <button
                 onclick="switchTab('riwayat')"
                 id="btn-tab-riwayat"
@@ -347,7 +345,7 @@
             <p
               class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6"
             >
-              Arahkan kamera ke Barcode Barang
+              Gunakan Kamera atau Gun Scanner Fisik
             </p>
 
             <div
@@ -379,14 +377,16 @@
 
             <div class="mt-6 pt-6 border-t-2 border-slate-800">
               <p class="text-[10px] font-black uppercase mb-2">
-                Input Manual (Jika Barcode Rusak)
+                Mode Gun Scanner / Manual Input
               </p>
               <div class="flex gap-2">
+                <!-- FITUR BARU: onkeypress ditambahkan agar mendeteksi tembakan Gun Scanner -->
                 <input
                   type="text"
                   id="manualSmartInput"
-                  placeholder="Ketik Part Number..."
-                  class="flex-1 bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 font-black text-xs uppercase"
+                  onkeypress="handleScannerGun(event)"
+                  placeholder="Ketik atau Tembak Barcode di sini..."
+                  class="flex-1 bg-yellow-100 border-2 border-slate-800 rounded px-3 py-2 font-black text-sm uppercase focus:outline-none focus:ring-2 ring-slate-800"
                 />
                 <button
                   onclick="
@@ -403,7 +403,7 @@
           </div>
         </section>
 
-        <!-- TAB RIWAYAT TRANSAKSI (FITUR BARU) -->
+        <!-- TAB RIWAYAT TRANSAKSI -->
         <section id="tab-riwayat" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -1104,6 +1104,6 @@
       }
     </style>
 
-    <script src="script.js?v=13"></script>
+    <script src="script.js?v=14"></script>
   </body>
 </html>

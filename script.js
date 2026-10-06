@@ -131,6 +131,14 @@ function switchTab(tabId) {
   if (tabId === "overview") renderSeatAssyControlBoard();
   if (tabId === "riwayat") renderRiwayatTable();
   if (tabId !== "scanner") stopSmartScanner();
+
+  // FITUR BARU: Saat tab Scanner dibuka, otomatis fokus ke input Gun Scanner
+  if (tabId === "scanner") {
+    setTimeout(() => {
+      const manualInput = document.getElementById("manualSmartInput");
+      if (manualInput) manualInput.focus();
+    }, 100);
+  }
 }
 
 function applyRbacUI() {
@@ -366,7 +374,7 @@ function handleGlobalSearch(keyword) {
 }
 
 // =========================================================================
-// TABEL RIWAYAT TRANSAKSI (FITUR BARU)
+// TABEL RIWAYAT TRANSAKSI
 // =========================================================================
 function renderRiwayatTable() {
   const tbody = document.getElementById("tblRiwayatBody");
@@ -377,7 +385,6 @@ function renderRiwayatTable() {
 
   let riwayatGabungan = [];
 
-  // Masukkan data barang masuk
   if (filterVal === "ALL" || filterVal === "IN") {
     (appData.masuk || []).forEach((m) => {
       riwayatGabungan.push({
@@ -391,7 +398,6 @@ function renderRiwayatTable() {
     });
   }
 
-  // Masukkan data barang keluar
   if (filterVal === "ALL" || filterVal === "OUT") {
     (appData.keluar || []).forEach((k) => {
       riwayatGabungan.push({
@@ -405,7 +411,6 @@ function renderRiwayatTable() {
     });
   }
 
-  // Urutkan dari yang terbaru ke terlama (Descending)
   riwayatGabungan.sort((a, b) => b.waktu - a.waktu);
 
   if (riwayatGabungan.length === 0) {
@@ -415,7 +420,6 @@ function renderRiwayatTable() {
 
   tbody.innerHTML = riwayatGabungan
     .map((r) => {
-      // Format Waktu: 15 Okt 2026, 14:30
       const waktuStr = r.waktu.toLocaleString("id-ID", {
         day: "2-digit",
         month: "short",
@@ -423,12 +427,10 @@ function renderRiwayatTable() {
         hour: "2-digit",
         minute: "2-digit",
       });
-
       const isMasuk = r.tipe === "IN";
       const badgeTipe = isMasuk
         ? `<span class="px-2 py-1 bg-emerald-400 text-slate-900 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[9px] font-black uppercase">MASUK</span>`
         : `<span class="px-2 py-1 bg-red-400 text-slate-900 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] text-[9px] font-black uppercase">KELUAR</span>`;
-
       const colorQty = isMasuk ? "text-emerald-600" : "text-red-600";
       const signQty = isMasuk ? "+" : "-";
 
@@ -445,8 +447,19 @@ function renderRiwayatTable() {
 }
 
 // =========================================================================
-// SMART SCANNER LOGIC
+// SMART SCANNER & GUN SCANNER LOGIC
 // =========================================================================
+// FITUR BARU: Menangkap ketikan Gun Scanner otomatis (Menekan Enter)
+function handleScannerGun(event) {
+  if (event.key === "Enter") {
+    event.preventDefault(); // Mencegah reload halaman
+    const scanValue = document.getElementById("manualSmartInput").value;
+    if (scanValue) {
+      processSmartScan(scanValue);
+    }
+  }
+}
+
 function startSmartScanner() {
   if (!currentUser) {
     openLoginModal();
@@ -508,6 +521,8 @@ function processSmartScan(scannedCode) {
       showConfirmButton: false,
     });
     document.getElementById("manualSmartInput").value = "";
+    // Kembalikan fokus ke kolom input
+    document.getElementById("manualSmartInput").focus();
     return;
   }
 
@@ -529,6 +544,10 @@ function closeSmartAction() {
   document.getElementById("modalSmartAction").classList.add("hidden");
   activeScannedPart = null;
   if (smartScanner) smartScanner.resume();
+
+  // Kembalikan fokus ke kolom input Gun Scanner supaya bisa langsung tembak lagi
+  const manualInput = document.getElementById("manualSmartInput");
+  if (manualInput) manualInput.focus();
 }
 
 function adjSmartQty(amount) {
