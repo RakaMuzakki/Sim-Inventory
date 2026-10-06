@@ -1,6 +1,7 @@
 // =========================================================================
 // KONFIGURASI API & STATE GLOBAL
 // =========================================================================
+// !!! PASTE LINK GOOGLE APPS SCRIPT ANDA DI SINI !!!
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwzjcbbXsU6_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
 
@@ -14,10 +15,8 @@ let appData = {
   seatAssyControl: [],
   users: [],
 };
-
-// Variabel Scanner Baru
 let smartScanner = null;
-let activeScannedPart = null; // Menyimpan data barang yang sedang aktif di-scan
+let activeScannedPart = null;
 
 window.addEventListener("DOMContentLoaded", () => {
   startLiveClock();
@@ -26,7 +25,6 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
-  // Auto-Refresh tiap 30 detik di latar belakang
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     if (overviewTab && !overviewTab.classList.contains("hidden")) {
@@ -41,6 +39,7 @@ window.addEventListener("DOMContentLoaded", () => {
             appData.orders = res.orders || [];
             appData.masuk = res.masuk || [];
             appData.keluar = res.keluar || [];
+            appData.users = res.users || [];
             buildSeatAssyControlDataset();
             renderSeatAssyControlBoard();
             const spinner = document.getElementById("syncSpinner");
@@ -125,7 +124,7 @@ function switchTab(tabId) {
   }
 
   if (tabId === "overview") renderSeatAssyControlBoard();
-  if (tabId !== "scanner") stopSmartScanner(); // Matikan kamera jika pindah menu
+  if (tabId !== "scanner") stopSmartScanner();
 }
 
 function applyRbacUI() {
@@ -156,7 +155,7 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// DASHBOARD LOGIC (PAPAN KONTROL) - RUMUS FISIK PABRIK
+// DASHBOARD LOGIC (PAPAN KONTROL) & KLIK QTY/DAY
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
@@ -181,6 +180,7 @@ function loadInitialOrMockData() {
         appData.orders = res.orders || [];
         appData.masuk = res.masuk || [];
         appData.keluar = res.keluar || [];
+        appData.users = res.users || [];
         buildSeatAssyControlDataset();
         refreshAllUI();
       } else Swal.fire("Error", res.message || "Gagal memuat data", "error");
@@ -200,41 +200,31 @@ function refreshAllUI() {
 
 function buildSeatAssyControlDataset() {
   const list = [];
-  appData.barang.forEach((itemBarang, index) => {
+  appData.barang.forEach((itemBarang) => {
     const partNum = String(itemBarang.Part_Number).trim();
     const relatedOrders = appData.orders.filter(
       (o) => String(o.Part_Number).trim() === partNum,
     );
 
-    // CUSTOMER
     let custName = "-";
     if (relatedOrders.length > 0) custName = relatedOrders[0].id_customer;
     else if (itemBarang.id_customer) custName = itemBarang.id_customer;
 
-    // RUMUS 1: QTY/DAY (Target Harian)
     const qtyDay = relatedOrders.reduce(
       (sum, o) => sum + (Number(o.qty_order) || 0),
       0,
     );
-
-    // RUMUS 2: QTY OUT (Total Terkirim)
     const qtyOut = appData.keluar
       .filter((k) => String(k.Part_Number).trim() === partNum)
       .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
-
-    // RUMUS 3: SISA DEL = Target - Keluar
     const sisaDel = Math.max(0, qtyDay - qtyOut);
 
-    // RUMUS 4: STOCK = Fisik Awal + Masuk - Keluar
     const totalMasuk = appData.masuk
       .filter((k) => String(k.Part_Number).trim() === partNum)
       .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
     const currentStock = (Number(itemBarang.stok) || 0) + totalMasuk - qtyOut;
 
-    // RUMUS 5: ASSY IN STORE FSG (Simulasi 40%)
     const assyFsg = Math.floor(currentStock * 0.4);
-
-    // RUMUS 6: [ +/- ] = (Stock + Assy) - QTY/DAY
     const variance = currentStock + assyFsg - qtyDay;
 
     list.push({
@@ -253,9 +243,6 @@ function buildSeatAssyControlDataset() {
   appData.seatAssyControl = list;
 }
 
-// =======================================================
-// FITUR BARU: KLIK UNTUK MENGUBAH TARGET QTY/DAY
-// =======================================================
 function promptUpdateQtyDay(partNumber, currentQty) {
   Swal.fire({
     title: "SET TARGET (QTY/DAY)",
@@ -288,7 +275,7 @@ function promptUpdateQtyDay(partNumber, currentQty) {
               timer: 1000,
               showConfirmButton: false,
             });
-            refreshAllData(); // Refresh data otomatis setelah simpan
+            refreshAllData();
           } else {
             Swal.fire("Gagal", res.message, "error");
           }
@@ -316,13 +303,11 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     return;
   }
 
-  // Cek apakah Admin yang login (Klik QTY/DAY hanya aktif untuk Admin)
   const isAdmin = currentUser && currentUser.role === "Admin";
 
   tbody.innerHTML = dataset
     .map((row) => {
       const formatNum = (num) => (num === 0 ? "-" : num);
-
       let varFormat = row.variance;
       let varColor = "text-slate-700";
       if (row.variance > 0) {
@@ -334,7 +319,6 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         varFormat = "-";
       }
 
-      // Efek visual & Fungsi klik khusus Admin
       const qtyDayClass = isAdmin
         ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-all"
         : "";
@@ -342,7 +326,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day})"`
         : "";
       const qtyDayTitle = isAdmin
-        ? `title="Klik untuk Mengisi Target Harian"`
+        ? `title="Klik untuk Edit Target Harian"`
         : "";
 
       return `<tr class="hover:bg-yellow-50 transition-colors">
@@ -353,12 +337,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         <div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div>
       </td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-700 text-base bg-blue-50/50">${formatNum(row.stock)}</td>
-      
-      <!-- INI KOLOM QTY/DAY YANG BISA DIKLIK -->
-      <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction} ${qtyDayTitle}>
-        ${formatNum(row.qty_day)}
-      </td>
-      
+      <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction} ${qtyDayTitle}>${formatNum(row.qty_day)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.qty_out)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-red-600">${formatNum(row.sisa_del)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50">${formatNum(row.assy_fsg)}</td>
@@ -490,7 +469,6 @@ function submitSmartAction(tipeAction) {
     petugas: currentUser.username,
     catatan: `Smart Scan ${actionText}`,
   };
-
   Swal.fire({
     title: "Mencatat ke Sistem...",
     allowOutsideClick: false,
@@ -517,7 +495,7 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// MASTER DATA TABLES (Gaya Industrial)
+// MASTER DATA TABLES & FUNGSI HAPUS USER
 // =========================================================================
 function renderMasterBarangTable() {
   const tbody = document.getElementById("tblMasterBarangBody");
@@ -552,11 +530,7 @@ function renderCustomerTable() {
 function renderUsersTable() {
   const tbody = document.getElementById("tblUsersBody");
   if (!tbody) return;
-
-  // Baca daftar user asli dari database Google Sheets (Bukan tulisan manual lagi)
   const usersList = appData.users || [];
-
-  // Jangan tampilkan jika kosong
   if (usersList.length === 0) {
     tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400">Tidak ada data.</td></tr>`;
     return;
@@ -564,9 +538,7 @@ function renderUsersTable() {
 
   tbody.innerHTML = usersList
     .map((u) => {
-      // Tombol hapus berwarna merah dan bergaya industrial
       const btnDelete = `<button onclick="deleteUser('${u.username}')" class="px-3 py-1.5 bg-red-400 hover:bg-red-500 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none transition-all text-slate-900" title="Hapus User"><i class="fa-solid fa-trash-can"></i></button>`;
-
       return `<tr class="hover:bg-yellow-50 transition-colors">
       <td class="py-2 px-3 border-2 border-slate-800 font-black text-slate-900">${u.username}</td>
       <td class="py-2 px-3 border-2 border-slate-800"><span class="px-2.5 py-1 bg-slate-800 text-white font-bold text-[10px] uppercase rounded shadow-[2px_2px_0px_rgba(0,0,0,1)]">${u.role}</span></td>
@@ -576,24 +548,21 @@ function renderUsersTable() {
     .join("");
 }
 
-// Fungsi Konfirmasi & Kirim Perintah Hapus ke Backend
 function deleteUser(usernameTarget) {
-  // Cegah admin menghapus dirinya sendiri
   if (currentUser && currentUser.username === usernameTarget) {
     return Swal.fire(
       "Ditolak!",
-      "Anda tidak bisa menghapus akun Anda sendiri saat sedang login.",
+      "Anda tidak bisa menghapus akun Anda sendiri.",
       "warning",
     );
   }
-
   Swal.fire({
     title: `Hapus Akun ${usernameTarget}?`,
-    text: "Akun yang dihapus tidak bisa dikembalikan dan tidak akan bisa login lagi.",
+    text: "Akun ini akan dihapus permanen.",
     icon: "warning",
     showCancelButton: true,
-    confirmButtonColor: "#ef4444", // Merah
-    cancelButtonColor: "#334155", // Slate
+    confirmButtonColor: "#ef4444",
+    cancelButtonColor: "#334155",
     confirmButtonText: "Ya, Hapus!",
     cancelButtonText: "Batal",
   }).then((result) => {
@@ -603,34 +572,30 @@ function deleteUser(usernameTarget) {
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading(),
       });
-
-      const payload = {
+      sendToBackend("apiDeleteUser", {
         usernameTarget: usernameTarget,
         adminUser: currentUser.username,
-      };
-
-      sendToBackend("apiDeleteUser", payload)
+      })
         .then((res) => {
           if (res.success) {
             Swal.fire({
               icon: "success",
               title: "Terhapus!",
-              text: res.message,
               timer: 1500,
               showConfirmButton: false,
             });
-            refreshAllData(); // Segarkan tabel agar user hilang dari daftar
+            refreshAllData();
           } else {
             Swal.fire("Gagal", res.message, "error");
           }
         })
-        .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+        .catch((err) => Swal.fire("Error", err.message, "error"));
     }
   });
 }
 
 // =========================================================================
-// MODAL & API MASTER DATA
+// MODAL & FORM MASTER DATA
 // =========================================================================
 function openModalBarang() {
   document.getElementById("modalMasterBarang").classList.remove("hidden");
@@ -739,7 +704,7 @@ function handleSaveUser(e) {
 }
 
 // =========================================================================
-// FUNGSI UMUM & LOGIN
+// LOGIN
 // =========================================================================
 function openLoginModal() {
   document.getElementById("modalLogin").classList.remove("hidden");
