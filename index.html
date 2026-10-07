@@ -33,6 +33,8 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- SUPABASE LIBRARY (WAJIB ADA) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css" />
   </head>
 
@@ -635,7 +637,6 @@
       </div>
     </main>
 
-    <!-- MODAL SMART ACTION (PERUBAHAN UNTUK PRODUKSI/ASSY) -->
     <div
       id="modalSmartAction"
       class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden transition-all"
@@ -670,7 +671,6 @@
           </p>
         </div>
 
-        <!-- FITUR BARU: 3 Kotak Data untuk menampilkan Stok, Sisa Kirim, dan ASSY -->
         <div
           class="grid grid-cols-3 divide-x-2 divide-slate-800 border-b-4 border-slate-800"
         >
@@ -725,7 +725,6 @@
             </button>
           </div>
 
-          <!-- TOMBOL WAREHOUSE (Hanya muncul untuk Gudang / Admin) -->
           <div id="btnGroupWH" class="flex gap-2 mb-2 hidden">
             <button
               onclick="submitSmartAction('IN')"
@@ -741,7 +740,6 @@
             </button>
           </div>
 
-          <!-- TOMBOL ASSY PRODUKSI (Hanya muncul untuk Produksi / Admin) -->
           <div id="btnGroupAssy" class="flex gap-2 hidden">
             <button
               onclick="submitSmartAction('ASSY_ADD')"
@@ -760,7 +758,6 @@
       </div>
     </div>
 
-    <!-- MODALS MASTER DATA... -->
     <div
       id="modalMasterBarang"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1121,6 +1118,6 @@
       }
     </style>
 
-    <script src="script.js?v=16"></script>
+    <script src="script.js?v=20"></script>
   </body>
 </html>
