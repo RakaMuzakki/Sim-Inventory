@@ -380,7 +380,6 @@
                 Mode Gun Scanner / Manual Input
               </p>
               <div class="flex gap-2">
-                <!-- FITUR BARU: onkeypress ditambahkan agar mendeteksi tembakan Gun Scanner -->
                 <input
                   type="text"
                   id="manualSmartInput"
@@ -993,18 +992,23 @@
               class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100"
             />
           </div>
+
+          <!-- FITUR BARU: Tambahan role Produksi di dropdown -->
           <div>
             <label class="block text-[10px] font-black uppercase mb-1"
               >Role Akses *</label
-            ><select
+            >
+            <select
               id="muRole"
               required
               class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100"
             >
               <option value="Warehouse">Warehouse (Keluar/Masuk)</option>
+              <option value="Produksi">Produksi (Perakitan)</option>
               <option value="Admin">Admin (Akses Penuh)</option>
             </select>
           </div>
+
           <div class="pt-3 flex gap-2">
             <button
               type="button"
@@ -1104,6 +1108,6 @@
       }
     </style>
 
-    <script src="script.js?v=14"></script>
+    <script src="script.js?v=15"></script>
   </body>
 </html>

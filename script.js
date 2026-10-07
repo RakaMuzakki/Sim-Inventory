@@ -175,7 +175,7 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// DASHBOARD LOGIC (PAPAN KONTROL) - PERBAIKAN RUMUS STOK
+// DASHBOARD LOGIC (PAPAN KONTROL) - PERBAIKAN STOK ASSY
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
@@ -231,21 +231,19 @@ function buildSeatAssyControlDataset() {
     if (relatedOrders.length > 0) custName = relatedOrders[0].id_customer;
     else if (itemBarang.id_customer) custName = itemBarang.id_customer;
 
-    // Menghitung Target Keluar Harian
     const qtyDay = relatedOrders.reduce(
       (sum, o) => sum + (Number(o.qty_order) || 0),
       0,
     );
-    // Menghitung yang SUDAH keluar (untuk kolom pengurang sisa delivery)
     const qtyOut = appData.keluar
       .filter((k) => String(k.Part_Number).trim() === partNum)
       .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
     const sisaDel = Math.max(0, qtyDay - qtyOut);
 
-    // PERBAIKAN: Stok langsung murni membaca dari Master_Barang tanpa ditambahkan transaksi lagi
     const currentStock = Number(itemBarang.stok) || 0;
 
-    const assyFsg = Math.floor(currentStock * 0.4);
+    // FITUR BARU: Membaca murni dari kolom 'assy_fsg', bukan lagi simulasi 40%
+    const assyFsg = Number(itemBarang.assy_fsg) || 0;
     const variance = currentStock + assyFsg - qtyDay;
 
     list.push({
@@ -262,6 +260,49 @@ function buildSeatAssyControlDataset() {
     });
   });
   appData.seatAssyControl = list;
+}
+
+// FUNGSI BARU: Modal Input khusus Stok Perakitan
+function promptUpdateAssyFsg(partNumber, currentQty) {
+  Swal.fire({
+    title: "UPDATE STOK ASSY",
+    html: `<p class="text-sm mb-3">Jumlah barang dirakit untuk Part:<br><b class="text-lg">${partNumber}</b></p>`,
+    input: "number",
+    inputValue: currentQty > 0 ? currentQty : "",
+    inputAttributes: { min: 0, step: 1, placeholder: "Ketik angka..." },
+    showCancelButton: true,
+    confirmButtonText: '<i class="fa-solid fa-check"></i> Simpan',
+    cancelButtonText: "Batal",
+    confirmButtonColor: "#9333ea", // Warna ungu
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const newVal = Number(result.value) || 0;
+      Swal.fire({
+        title: "Menyimpan...",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+      sendToBackend("apiUpdateAssyFsg", {
+        partNumber: partNumber,
+        qty: newVal,
+        user: currentUser.username,
+      })
+        .then((res) => {
+          if (res.success) {
+            Swal.fire({
+              icon: "success",
+              title: "Tersimpan!",
+              timer: 1000,
+              showConfirmButton: false,
+            });
+            refreshAllData();
+          } else {
+            Swal.fire("Gagal", res.message, "error");
+          }
+        })
+        .catch((err) => Swal.fire("Error", err.message, "error"));
+    }
+  });
 }
 
 function promptUpdateQtyDay(partNumber, currentQty) {
@@ -324,7 +365,12 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     return;
   }
 
+  // HAK AKSES PENGATURAN KOLOM
   const isAdmin = currentUser && currentUser.role === "Admin";
+  // Hanya Admin & Produksi yang bisa edit Assy
+  const canEditAssy =
+    currentUser &&
+    (currentUser.role === "Admin" || currentUser.role === "Produksi");
 
   tbody.innerHTML = dataset
     .map((row) => {
@@ -340,6 +386,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         varFormat = "-";
       }
 
+      // Efek Kolom QTY/DAY (Hanya Admin)
       const qtyDayClass = isAdmin
         ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-all"
         : "";
@@ -347,7 +394,18 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day})"`
         : "";
       const qtyDayTitle = isAdmin
-        ? `title="Klik untuk Edit Target Harian"`
+        ? `title="Klik untuk Edit Target Harian (Khusus Admin)"`
+        : "";
+
+      // Efek Kolom ASSY IN STORE (Admin & Produksi)
+      const assyClass = canEditAssy
+        ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4 transition-all"
+        : "";
+      const assyAction = canEditAssy
+        ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
+        : "";
+      const assyTitle = canEditAssy
+        ? `title="Klik untuk Edit Stok Perakitan (Khusus Produksi/Admin)"`
         : "";
 
       return `<tr class="hover:bg-yellow-50 transition-colors">
@@ -361,7 +419,12 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction} ${qtyDayTitle}>${formatNum(row.qty_day)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.qty_out)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-red-600">${formatNum(row.sisa_del)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50">${formatNum(row.assy_fsg)}</td>
+      
+      <!-- KOLOM ASSY YANG BARU -->
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction} ${assyTitle}>
+        ${formatNum(row.assy_fsg)}
+      </td>
+      
       <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
     </tr>`;
     })
