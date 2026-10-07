@@ -1,12 +1,9 @@
 // =========================================================================
-// KONFIGURASI SUPABASE DATABASE
+// KONFIGURASI API & STATE GLOBAL
 // =========================================================================
-// ⚠️ GANTI DENGAN URL & KEY SUPABASE MILIK ANDA! ⚠️
-const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
-
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// !!! PASTE LINK GOOGLE APPS SCRIPT ANDA DI BAWAH INI !!!
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbwzjcbbXsU6_lj5Y2X6lEDMsIyUt545kky3Akw4Hdb2atVB0wejFTRSaXaJASxDhs6MjA/exec";
 
 let currentUser = null;
 let appData = {
@@ -20,7 +17,6 @@ let appData = {
 };
 let smartScanner = null;
 let activeScannedPart = null;
-let isProcessing = false;
 
 window.addEventListener("DOMContentLoaded", () => {
   startLiveClock();
@@ -29,208 +25,57 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
-  // 🔥 PERBAIKAN: AUTO-REFRESH KINI HANYA 3 DETIK DAN BERJALAN DIAM-DIAM
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     const riwayatTab = document.getElementById("tab-riwayat");
-
-    // Jangan ganggu kalau operator sedang nembak scanner
-    if (isProcessing) return;
 
     if (
       (overviewTab && !overviewTab.classList.contains("hidden")) ||
       (riwayatTab && !riwayatTab.classList.contains("hidden"))
     ) {
-      sendToBackend("apiGetMasterData").then((res) => {
-        if (res && res.success) {
-          appData.barang = res.barang || [];
-          appData.customer = res.customer || [];
-          appData.orders = res.orders || [];
-          appData.masuk = res.masuk || [];
-          appData.keluar = res.keluar || [];
-          appData.users = res.users || [];
-          buildSeatAssyControlDataset();
-          refreshAllUI();
-          // Spinner dimatikan di sini agar layar TV Andon tidak berkedip-kedip mengganggu
-        }
-      });
+      fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "apiGetMasterData", payload: {} }),
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          if (res && res.success) {
+            appData.barang = res.barang || [];
+            appData.orders = res.orders || [];
+            appData.masuk = res.masuk || [];
+            appData.keluar = res.keluar || [];
+            appData.users = res.users || [];
+            buildSeatAssyControlDataset();
+            refreshAllUI();
+            const spinner = document.getElementById("syncSpinner");
+            if (spinner) {
+              spinner.classList.add("rotate-180");
+              setTimeout(() => spinner.classList.remove("rotate-180"), 1000);
+            }
+          }
+        })
+        .catch(() => console.log("Auto-refresh tertunda."));
     }
-  }, 3000); // <-- JEDA HANYA 3 DETIK!
+  }, 30000);
 });
 
-// =========================================================================
-// CORE ENGINE: KOMUNIKASI KE SUPABASE
-// =========================================================================
 async function sendToBackend(action, payload = {}) {
-  try {
-    switch (action) {
-      case "apiGetMasterData":
-        const [b, c, o, m, k, u] = await Promise.all([
-          _supabase.from("Master_Barang").select("*"),
-          _supabase.from("Master_Customer").select("*"),
-          _supabase.from("List_Order").select("*"),
-          _supabase.from("Transaksi_Masuk").select("*"),
-          _supabase.from("Transaksi_Keluar").select("*"),
-          _supabase.from("Users").select("*"),
-        ]);
-        return {
-          success: true,
-          barang: b.data,
-          customer: c.data,
-          orders: o.data,
-          masuk: m.data,
-          keluar: k.data,
-          users: u.data,
-        };
-
-      case "apiLogin":
-        const { data: cekUsers } = await _supabase.from("Users").select("*");
-        if (!cekUsers || cekUsers.length === 0) {
-          if (payload.username === "admin") {
-            await _supabase
-              .from("Users")
-              .insert([
-                { username: "admin", password: "admin", role: "Admin" },
-              ]);
-            return {
-              success: true,
-              user: { username: "admin", role: "Admin" },
-            };
-          }
-        }
-
-        const { data: loginData } = await _supabase
-          .from("Users")
-          .select("*")
-          .eq("username", payload.username)
-          .eq("password", payload.password);
-        if (loginData && loginData.length > 0)
-          return { success: true, user: loginData[0] };
-        return { success: false, message: "Username atau password salah!" };
-
-      case "apiSaveTransaksiMasuk":
-        const { data: bIn } = await _supabase
-          .from("Master_Barang")
-          .select("stok")
-          .eq("Part_Number", payload.partNumber)
-          .single();
-        const newStokIn = (Number(bIn?.stok) || 0) + Number(payload.qty);
-        await _supabase
-          .from("Master_Barang")
-          .update({ stok: newStokIn })
-          .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
-        return { success: true };
-
-      case "apiSaveTransaksiKeluar":
-        const { data: bOut } = await _supabase
-          .from("Master_Barang")
-          .select("stok")
-          .eq("Part_Number", payload.partNumber)
-          .single();
-        const currentStokOut = Number(bOut?.stok) || 0;
-        if (currentStokOut < payload.qty)
-          throw new Error("Stok sistem tidak cukup!");
-        await _supabase
-          .from("Master_Barang")
-          .update({ stok: currentStokOut - Number(payload.qty) })
-          .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Keluar").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
-        return { success: true };
-
-      case "apiUpdateAssyFsg":
-        await _supabase
-          .from("Master_Barang")
-          .update({ assy_fsg: payload.qty })
-          .eq("Part_Number", payload.partNumber);
-        return { success: true };
-
-      case "apiUpdateQtyDay":
-        const { data: checkO } = await _supabase
-          .from("List_Order")
-          .select("*")
-          .eq("Part_Number", payload.partNumber);
-        if (checkO && checkO.length > 0) {
-          await _supabase
-            .from("List_Order")
-            .update({ qty_order: payload.qty })
-            .eq("Part_Number", payload.partNumber);
-        } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              { Part_Number: payload.partNumber, qty_order: payload.qty },
-            ]);
-        }
-        return { success: true };
-
-      case "apiSaveBarang":
-        const { data: checkB } = await _supabase
-          .from("Master_Barang")
-          .select("*")
-          .eq("Part_Number", payload.item.Part_Number);
-        if (checkB && checkB.length > 0) {
-          await _supabase
-            .from("Master_Barang")
-            .update(payload.item)
-            .eq("Part_Number", payload.item.Part_Number);
-        } else {
-          await _supabase.from("Master_Barang").insert([payload.item]);
-        }
-        return { success: true, message: "Barang berhasil disimpan!" };
-
-      case "apiSaveCustomer":
-        const { data: checkC } = await _supabase
-          .from("Master_Customer")
-          .select("*")
-          .eq("id_customer", payload.cust.id_customer);
-        if (checkC && checkC.length > 0) {
-          await _supabase
-            .from("Master_Customer")
-            .update(payload.cust)
-            .eq("id_customer", payload.cust.id_customer);
-        } else {
-          await _supabase.from("Master_Customer").insert([payload.cust]);
-        }
-        return { success: true, message: "Customer tersimpan!" };
-
-      case "apiSaveUser":
-        const { data: checkU } = await _supabase
-          .from("Users")
-          .select("*")
-          .eq("username", payload.userData.username);
-        if (checkU && checkU.length > 0) throw new Error("Username sudah ada!");
-        await _supabase.from("Users").insert([payload.userData]);
-        return { success: true, message: "User baru berhasil dibuat!" };
-
-      case "apiDeleteUser":
-        await _supabase
-          .from("Users")
-          .delete()
-          .eq("username", payload.usernameTarget);
-        return { success: true, message: "User telah dihapus!" };
-
-      default:
-        return { success: false, message: "Aksi tidak dikenal." };
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: action, payload: payload }),
+      });
+      return JSON.parse(await response.text());
+    } catch (error) {
+      retries--;
+      if (retries === 0)
+        throw new Error(
+          "Gagal terhubung ke database. Pastikan jaringan stabil.",
+        );
+      await new Promise((resolve) => setTimeout(resolve, 1500));
     }
-  } catch (err) {
-    return { success: false, message: err.message };
   }
 }
 
@@ -330,7 +175,7 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// DASHBOARD LOGIC
+// DASHBOARD LOGIC (PAPAN KONTROL) - PERBAIKAN STOK ASSY
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
@@ -367,11 +212,7 @@ function loadInitialOrMockData() {
 }
 
 function refreshAllUI() {
-  // Ambil keyword pencarian agar tidak hilang saat auto-refresh
-  const searchInput = document.getElementById("globalSearchInput");
-  const keyword = searchInput ? searchInput.value : "";
-
-  renderSeatAssyControlBoard(keyword);
+  renderSeatAssyControlBoard();
   renderRiwayatTable();
   renderMasterBarangTable();
   renderCustomerTable();
@@ -400,6 +241,8 @@ function buildSeatAssyControlDataset() {
     const sisaDel = Math.max(0, qtyDay - qtyOut);
 
     const currentStock = Number(itemBarang.stok) || 0;
+
+    // FITUR BARU: Membaca murni dari kolom 'assy_fsg', bukan lagi simulasi 40%
     const assyFsg = Number(itemBarang.assy_fsg) || 0;
     const variance = currentStock + assyFsg - qtyDay;
 
@@ -419,35 +262,37 @@ function buildSeatAssyControlDataset() {
   appData.seatAssyControl = list;
 }
 
+// FUNGSI BARU: Modal Input khusus Stok Perakitan
 function promptUpdateAssyFsg(partNumber, currentQty) {
-  if (isProcessing) return;
   Swal.fire({
     title: "UPDATE STOK ASSY",
     html: `<p class="text-sm mb-3">Jumlah barang dirakit untuk Part:<br><b class="text-lg">${partNumber}</b></p>`,
     input: "number",
     inputValue: currentQty > 0 ? currentQty : "",
-    inputAttributes: { min: 0, step: 1 },
+    inputAttributes: { min: 0, step: 1, placeholder: "Ketik angka..." },
     showCancelButton: true,
-    confirmButtonText: "Simpan",
-    confirmButtonColor: "#9333ea",
+    confirmButtonText: '<i class="fa-solid fa-check"></i> Simpan',
+    cancelButtonText: "Batal",
+    confirmButtonColor: "#9333ea", // Warna ungu
   }).then((result) => {
     if (result.isConfirmed) {
-      isProcessing = true;
       const newVal = Number(result.value) || 0;
       Swal.fire({
         title: "Menyimpan...",
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading(),
       });
-      sendToBackend("apiUpdateAssyFsg", { partNumber: partNumber, qty: newVal })
+      sendToBackend("apiUpdateAssyFsg", {
+        partNumber: partNumber,
+        qty: newVal,
+        user: currentUser.username,
+      })
         .then((res) => {
-          isProcessing = false;
-          // 🔥 PERBAIKAN: Notif dipercepat jadi 0.8 detik (800ms)
           if (res.success) {
             Swal.fire({
               icon: "success",
               title: "Tersimpan!",
-              timer: 800,
+              timer: 1000,
               showConfirmButton: false,
             });
             refreshAllData();
@@ -455,42 +300,41 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
             Swal.fire("Gagal", res.message, "error");
           }
         })
-        .catch((err) => {
-          isProcessing = false;
-          Swal.fire("Error", err.message, "error");
-        });
+        .catch((err) => Swal.fire("Error", err.message, "error"));
     }
   });
 }
 
 function promptUpdateQtyDay(partNumber, currentQty) {
-  if (isProcessing) return;
   Swal.fire({
     title: "SET TARGET (QTY/DAY)",
     html: `<p class="text-sm mb-3">Target Harian untuk Part:<br><b class="text-lg">${partNumber}</b></p>`,
     input: "number",
     inputValue: currentQty > 0 ? currentQty : "",
-    inputAttributes: { min: 0, step: 1 },
+    inputAttributes: { min: 0, step: 1, placeholder: "Ketik angka..." },
     showCancelButton: true,
-    confirmButtonText: "Simpan",
+    confirmButtonText: '<i class="fa-solid fa-check"></i> Simpan',
+    cancelButtonText: "Batal",
     confirmButtonColor: "#10b981",
   }).then((result) => {
     if (result.isConfirmed) {
-      isProcessing = true;
       const newVal = Number(result.value) || 0;
       Swal.fire({
         title: "Menyimpan...",
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading(),
       });
-      sendToBackend("apiUpdateQtyDay", { partNumber: partNumber, qty: newVal })
+      sendToBackend("apiUpdateQtyDay", {
+        partNumber: partNumber,
+        qty: newVal,
+        user: currentUser.username,
+      })
         .then((res) => {
-          isProcessing = false;
           if (res.success) {
             Swal.fire({
               icon: "success",
               title: "Tersimpan!",
-              timer: 800,
+              timer: 1000,
               showConfirmButton: false,
             });
             refreshAllData();
@@ -498,10 +342,7 @@ function promptUpdateQtyDay(partNumber, currentQty) {
             Swal.fire("Gagal", res.message, "error");
           }
         })
-        .catch((err) => {
-          isProcessing = false;
-          Swal.fire("Error", err.message, "error");
-        });
+        .catch((err) => Swal.fire("Error", err.message, "error"));
     }
   });
 }
@@ -520,11 +361,13 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
   }
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Belum ada barang di database.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Tidak ada data.</td></tr>`;
     return;
   }
 
+  // HAK AKSES PENGATURAN KOLOM
   const isAdmin = currentUser && currentUser.role === "Admin";
+  // Hanya Admin & Produksi yang bisa edit Assy
   const canEditAssy =
     currentUser &&
     (currentUser.role === "Admin" || currentUser.role === "Produksi");
@@ -543,18 +386,26 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         varFormat = "-";
       }
 
+      // Efek Kolom QTY/DAY (Hanya Admin)
       const qtyDayClass = isAdmin
         ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-all"
         : "";
       const qtyDayAction = isAdmin
         ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day})"`
         : "";
+      const qtyDayTitle = isAdmin
+        ? `title="Klik untuk Edit Target Harian (Khusus Admin)"`
+        : "";
 
+      // Efek Kolom ASSY IN STORE (Admin & Produksi)
       const assyClass = canEditAssy
         ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4 transition-all"
         : "";
       const assyAction = canEditAssy
         ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
+        : "";
+      const assyTitle = canEditAssy
+        ? `title="Klik untuk Edit Stok Perakitan (Khusus Produksi/Admin)"`
         : "";
 
       return `<tr class="hover:bg-yellow-50 transition-colors">
@@ -565,10 +416,15 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         <div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div>
       </td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-700 text-base bg-blue-50/50">${formatNum(row.stock)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction} ${qtyDayTitle}>${formatNum(row.qty_day)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.qty_out)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-red-600">${formatNum(row.sisa_del)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</td>
+      
+      <!-- KOLOM ASSY YANG BARU -->
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction} ${assyTitle}>
+        ${formatNum(row.assy_fsg)}
+      </td>
+      
       <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
     </tr>`;
     })
@@ -585,14 +441,16 @@ function handleGlobalSearch(keyword) {
 function renderRiwayatTable() {
   const tbody = document.getElementById("tblRiwayatBody");
   if (!tbody) return;
+
   const filterDropdown = document.getElementById("filterRiwayat");
   const filterVal = filterDropdown ? filterDropdown.value : "ALL";
+
   let riwayatGabungan = [];
 
   if (filterVal === "ALL" || filterVal === "IN") {
     (appData.masuk || []).forEach((m) => {
       riwayatGabungan.push({
-        waktu: new Date(m.tanggal || m.created_at),
+        waktu: new Date(m.tanggal),
         tipe: "IN",
         part: m.Part_Number,
         qty: m.qty,
@@ -601,10 +459,11 @@ function renderRiwayatTable() {
       });
     });
   }
+
   if (filterVal === "ALL" || filterVal === "OUT") {
     (appData.keluar || []).forEach((k) => {
       riwayatGabungan.push({
-        waktu: new Date(k.tanggal || k.created_at),
+        waktu: new Date(k.tanggal),
         tipe: "OUT",
         part: k.Part_Number,
         qty: k.qty,
@@ -613,6 +472,7 @@ function renderRiwayatTable() {
       });
     });
   }
+
   riwayatGabungan.sort((a, b) => b.waktu - a.waktu);
 
   if (riwayatGabungan.length === 0) {
@@ -649,17 +509,14 @@ function renderRiwayatTable() {
 }
 
 // =========================================================================
-// SMART SCANNER LOGIC
+// SMART SCANNER & GUN SCANNER LOGIC
 // =========================================================================
 function handleScannerGun(event) {
   if (event.key === "Enter") {
     event.preventDefault();
-    if (isProcessing) return;
-    const inputField = document.getElementById("manualSmartInput");
-    if (inputField.value) {
-      isProcessing = true;
-      inputField.disabled = true;
-      processSmartScan(inputField.value);
+    const scanValue = document.getElementById("manualSmartInput").value;
+    if (scanValue) {
+      processSmartScan(scanValue);
     }
   }
 }
@@ -689,6 +546,7 @@ function startSmartScanner() {
       () => {},
     )
     .catch((err) => {
+      Swal.fire("Kamera Error", "Gagal membuka kamera.", "error");
       stopSmartScanner();
     });
 }
@@ -709,12 +567,7 @@ function stopSmartScanner() {
 }
 
 function processSmartScan(scannedCode) {
-  if (!scannedCode) {
-    isProcessing = false;
-    document.getElementById("manualSmartInput").disabled = false;
-    return;
-  }
-
+  if (!scannedCode) return;
   const part = scannedCode.trim();
   const foundData = appData.seatAssyControl.find(
     (item) => item.Part_Number.toLowerCase() === part.toLowerCase(),
@@ -724,12 +577,10 @@ function processSmartScan(scannedCode) {
     Swal.fire({
       icon: "warning",
       title: "Tidak Dikenali!",
-      text: `Part ${part} tidak terdaftar.`,
+      text: `Part ${part} tidak terdaftar di sistem.`,
       timer: 2000,
       showConfirmButton: false,
     });
-    isProcessing = false;
-    document.getElementById("manualSmartInput").disabled = false;
     document.getElementById("manualSmartInput").value = "";
     document.getElementById("manualSmartInput").focus();
     return;
@@ -743,25 +594,9 @@ function processSmartScan(scannedCode) {
   document.getElementById("smInfoNama").innerText = foundData.nama_barang;
   document.getElementById("smInfoStok").innerText = foundData.stock;
   document.getElementById("smInfoTarget").innerText = foundData.sisa_del;
-  document.getElementById("smInfoAssy").innerText = foundData.assy_fsg;
   document.getElementById("smInputQty").value = 1;
 
-  const btnWH = document.getElementById("btnGroupWH");
-  const btnAssy = document.getElementById("btnGroupAssy");
-  if (currentUser.role === "Admin") {
-    btnWH.classList.remove("hidden");
-    btnAssy.classList.remove("hidden");
-  } else if (currentUser.role === "Produksi") {
-    btnWH.classList.add("hidden");
-    btnAssy.classList.remove("hidden");
-  } else {
-    btnWH.classList.remove("hidden");
-    btnAssy.classList.add("hidden");
-  }
-
   document.getElementById("modalSmartAction").classList.remove("hidden");
-  isProcessing = false;
-  document.getElementById("manualSmartInput").disabled = false;
   document.getElementById("manualSmartInput").value = "";
 }
 
@@ -769,12 +604,9 @@ function closeSmartAction() {
   document.getElementById("modalSmartAction").classList.add("hidden");
   activeScannedPart = null;
   if (smartScanner) smartScanner.resume();
+
   const manualInput = document.getElementById("manualSmartInput");
-  if (manualInput) {
-    manualInput.disabled = false;
-    manualInput.value = "";
-    manualInput.focus();
-  }
+  if (manualInput) manualInput.focus();
 }
 
 function adjSmartQty(amount) {
@@ -787,76 +619,41 @@ function adjSmartQty(amount) {
 
 function submitSmartAction(tipeAction) {
   if (!activeScannedPart || !currentUser) return;
-  if (isProcessing) return;
   const qty = parseInt(document.getElementById("smInputQty").value) || 0;
   if (qty <= 0) return Swal.fire("Error", "Jumlah harus lebih dari 0", "error");
 
-  isProcessing = true;
-  if (tipeAction === "ASSY_ADD" || tipeAction === "ASSY_SET") {
-    const finalQty =
-      tipeAction === "ASSY_ADD" ? activeScannedPart.assy_fsg + qty : qty;
-    Swal.fire({
-      title: "Mencatat ke Supabase...",
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
-    sendToBackend("apiUpdateAssyFsg", {
-      partNumber: activeScannedPart.Part_Number,
-      qty: finalQty,
-    })
-      .then((res) => {
-        isProcessing = false;
-        // 🔥 PERBAIKAN: Notif dipercepat jadi 0.8 detik (800ms)
-        if (res.success) {
-          Swal.fire({
-            icon: "success",
-            title: "Tersimpan!",
-            timer: 800,
-            showConfirmButton: false,
-          });
-          closeSmartAction();
-          refreshAllData();
-        } else {
-          Swal.fire("Gagal", res.message, "error");
-        }
-      })
-      .catch((err) => {
-        isProcessing = false;
-        Swal.fire("Error", err.message, "error");
-      });
-    return;
-  }
-
   const actionName =
     tipeAction === "IN" ? "apiSaveTransaksiMasuk" : "apiSaveTransaksiKeluar";
+  const actionText = tipeAction === "IN" ? "Barang Masuk" : "Barang Keluar";
+
   if (tipeAction === "OUT" && qty > activeScannedPart.stock) {
-    isProcessing = false;
     return Swal.fire(
       "Stok Kurang!",
-      `Stok hanya sisa ${activeScannedPart.stock} Pcs.`,
+      `Stok sistem hanya sisa ${activeScannedPart.stock} Pcs.`,
       "error",
     );
   }
 
-  Swal.fire({
-    title: "Mencatat ke Supabase...",
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading(),
-  });
-  sendToBackend(actionName, {
+  const payload = {
     partNumber: activeScannedPart.Part_Number,
     qty: qty,
     petugas: currentUser.username,
-    catatan: `Smart Scan`,
-  })
+    catatan: `Smart Scan ${actionText}`,
+  };
+  Swal.fire({
+    title: "Mencatat ke Sistem...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
+
+  sendToBackend(actionName, payload)
     .then((res) => {
-      isProcessing = false;
-      // 🔥 PERBAIKAN: Notif dipercepat jadi 0.8 detik (800ms)
       if (res.success) {
         Swal.fire({
           icon: "success",
           title: "Berhasil!",
-          timer: 800,
+          text: `${qty} Pcs ${actionText} dicatat.`,
+          timer: 1500,
           showConfirmButton: false,
         });
         closeSmartAction();
@@ -865,14 +662,11 @@ function submitSmartAction(tipeAction) {
         Swal.fire("Gagal", res.message, "error");
       }
     })
-    .catch((err) => {
-      isProcessing = false;
-      Swal.fire("Error", err.message, "error");
-    });
+    .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
 }
 
 // =========================================================================
-// TABEL MASTER DATA & MANAJEMEN USER
+// MASTER DATA TABLES & FUNGSI HAPUS USER
 // =========================================================================
 function renderMasterBarangTable() {
   const tbody = document.getElementById("tblMasterBarangBody");
@@ -912,35 +706,48 @@ function renderUsersTable() {
     tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400">Tidak ada data.</td></tr>`;
     return;
   }
+
   tbody.innerHTML = usersList
     .map((u) => {
-      const btnDelete = `<button onclick="deleteUser('${u.username}')" class="px-3 py-1.5 bg-red-400 hover:bg-red-500 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none transition-all text-slate-900"><i class="fa-solid fa-trash-can"></i></button>`;
-      return `<tr class="hover:bg-yellow-50 transition-colors"><td class="py-2 px-3 border-2 border-slate-800 font-black text-slate-900">${u.username}</td><td class="py-2 px-3 border-2 border-slate-800"><span class="px-2.5 py-1 bg-slate-800 text-white font-bold text-[10px] uppercase rounded shadow-[2px_2px_0px_rgba(0,0,0,1)]">${u.role}</span></td><td class="py-2 px-3 border-2 border-slate-800 text-center">${btnDelete}</td></tr>`;
+      const btnDelete = `<button onclick="deleteUser('${u.username}')" class="px-3 py-1.5 bg-red-400 hover:bg-red-500 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none transition-all text-slate-900" title="Hapus User"><i class="fa-solid fa-trash-can"></i></button>`;
+      return `<tr class="hover:bg-yellow-50 transition-colors">
+      <td class="py-2 px-3 border-2 border-slate-800 font-black text-slate-900">${u.username}</td>
+      <td class="py-2 px-3 border-2 border-slate-800"><span class="px-2.5 py-1 bg-slate-800 text-white font-bold text-[10px] uppercase rounded shadow-[2px_2px_0px_rgba(0,0,0,1)]">${u.role}</span></td>
+      <td class="py-2 px-3 border-2 border-slate-800 text-center">${btnDelete}</td>
+    </tr>`;
     })
     .join("");
 }
 
 function deleteUser(usernameTarget) {
-  if (currentUser && currentUser.username === usernameTarget)
-    return Swal.fire("Ditolak!", "Tidak bisa hapus akun sendiri.", "warning");
-  if (isProcessing) return;
+  if (currentUser && currentUser.username === usernameTarget) {
+    return Swal.fire(
+      "Ditolak!",
+      "Anda tidak bisa menghapus akun Anda sendiri.",
+      "warning",
+    );
+  }
   Swal.fire({
     title: `Hapus Akun ${usernameTarget}?`,
+    text: "Akun ini akan dihapus permanen.",
     icon: "warning",
     showCancelButton: true,
     confirmButtonColor: "#ef4444",
-    confirmButtonText: "Hapus!",
+    cancelButtonColor: "#334155",
+    confirmButtonText: "Ya, Hapus!",
+    cancelButtonText: "Batal",
   }).then((result) => {
     if (result.isConfirmed) {
-      isProcessing = true;
       Swal.fire({
         title: "Menghapus...",
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading(),
       });
-      sendToBackend("apiDeleteUser", { usernameTarget: usernameTarget }).then(
-        (res) => {
-          isProcessing = false;
+      sendToBackend("apiDeleteUser", {
+        usernameTarget: usernameTarget,
+        adminUser: currentUser.username,
+      })
+        .then((res) => {
           if (res.success) {
             Swal.fire({
               icon: "success",
@@ -952,12 +759,15 @@ function deleteUser(usernameTarget) {
           } else {
             Swal.fire("Gagal", res.message, "error");
           }
-        },
-      );
+        })
+        .catch((err) => Swal.fire("Error", err.message, "error"));
     }
   });
 }
 
+// =========================================================================
+// MODAL & FORM MASTER DATA
+// =========================================================================
 function openModalBarang() {
   document.getElementById("modalMasterBarang").classList.remove("hidden");
 }
@@ -982,8 +792,6 @@ function closeModalUser() {
 
 function handleSaveBarang(e) {
   e.preventDefault();
-  if (isProcessing) return;
-  isProcessing = true;
   const payload = {
     item: {
       Part_Number: document.getElementById("mbPartNumber").value.trim(),
@@ -995,6 +803,7 @@ function handleSaveBarang(e) {
       stok_minimum: document.getElementById("mbStokMin").value,
       No_Rel: document.getElementById("mbNoRel").value.trim(),
     },
+    user: currentUser ? currentUser.username : "Admin",
   };
   Swal.fire({
     title: "Menyimpan...",
@@ -1002,7 +811,6 @@ function handleSaveBarang(e) {
     didOpen: () => Swal.showLoading(),
   });
   sendToBackend("apiSaveBarang", payload).then((res) => {
-    isProcessing = false;
     if (res.success) {
       Swal.fire("Berhasil", res.message, "success");
       closeModalBarang();
@@ -1015,8 +823,6 @@ function handleSaveBarang(e) {
 
 function handleSaveCustomer(e) {
   e.preventDefault();
-  if (isProcessing) return;
-  isProcessing = true;
   const payload = {
     cust: {
       id_customer: document.getElementById("mcId").value.trim(),
@@ -1024,6 +830,7 @@ function handleSaveCustomer(e) {
       kontak: document.getElementById("mcKontak").value.trim(),
       alamat: document.getElementById("mcAlamat").value.trim(),
     },
+    user: currentUser ? currentUser.username : "Admin",
   };
   Swal.fire({
     title: "Menyimpan...",
@@ -1031,7 +838,6 @@ function handleSaveCustomer(e) {
     didOpen: () => Swal.showLoading(),
   });
   sendToBackend("apiSaveCustomer", payload).then((res) => {
-    isProcessing = false;
     if (res.success) {
       Swal.fire("Berhasil", res.message, "success");
       closeModalCustomer();
@@ -1044,14 +850,13 @@ function handleSaveCustomer(e) {
 
 function handleSaveUser(e) {
   e.preventDefault();
-  if (isProcessing) return;
-  isProcessing = true;
   const payload = {
     userData: {
       username: document.getElementById("muUsername").value.trim(),
       password: document.getElementById("muPassword").value.trim(),
       role: document.getElementById("muRole").value,
     },
+    adminUser: currentUser ? currentUser.username : "Admin",
   };
   Swal.fire({
     title: "Menyimpan...",
@@ -1059,7 +864,6 @@ function handleSaveUser(e) {
     didOpen: () => Swal.showLoading(),
   });
   sendToBackend("apiSaveUser", payload).then((res) => {
-    isProcessing = false;
     if (res.success) {
       Swal.fire("Berhasil", res.message, "success");
       closeModalUser();
@@ -1071,7 +875,7 @@ function handleSaveUser(e) {
 }
 
 // =========================================================================
-// LOGIN - DENGAN AUTO CREATE ADMIN PERTAMA
+// LOGIN
 // =========================================================================
 function openLoginModal() {
   document.getElementById("modalLogin").classList.remove("hidden");
@@ -1097,19 +901,16 @@ function logoutAction() {
 }
 function handleLoginSubmit(e) {
   e.preventDefault();
-  if (isProcessing) return;
-  isProcessing = true;
   const payload = {
     username: document.getElementById("loginUsername").value.trim(),
     password: document.getElementById("loginPassword").value.trim(),
   };
   Swal.fire({
-    title: "Menghubungkan ke Supabase...",
+    title: "Autentikasi...",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   });
   sendToBackend("apiLogin", payload).then((res) => {
-    isProcessing = false;
     if (res.success) {
       currentUser = res.user;
       sessionStorage.setItem("sim_inventory_user", JSON.stringify(currentUser));
