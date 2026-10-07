@@ -175,7 +175,7 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// DASHBOARD LOGIC (PAPAN KONTROL) - PERBAIKAN STOK ASSY
+// DASHBOARD LOGIC (PAPAN KONTROL)
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
@@ -241,8 +241,6 @@ function buildSeatAssyControlDataset() {
     const sisaDel = Math.max(0, qtyDay - qtyOut);
 
     const currentStock = Number(itemBarang.stok) || 0;
-
-    // FITUR BARU: Membaca murni dari kolom 'assy_fsg', bukan lagi simulasi 40%
     const assyFsg = Number(itemBarang.assy_fsg) || 0;
     const variance = currentStock + assyFsg - qtyDay;
 
@@ -262,7 +260,6 @@ function buildSeatAssyControlDataset() {
   appData.seatAssyControl = list;
 }
 
-// FUNGSI BARU: Modal Input khusus Stok Perakitan
 function promptUpdateAssyFsg(partNumber, currentQty) {
   Swal.fire({
     title: "UPDATE STOK ASSY",
@@ -273,7 +270,7 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
     showCancelButton: true,
     confirmButtonText: '<i class="fa-solid fa-check"></i> Simpan',
     cancelButtonText: "Batal",
-    confirmButtonColor: "#9333ea", // Warna ungu
+    confirmButtonColor: "#9333ea",
   }).then((result) => {
     if (result.isConfirmed) {
       const newVal = Number(result.value) || 0;
@@ -365,9 +362,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     return;
   }
 
-  // HAK AKSES PENGATURAN KOLOM
   const isAdmin = currentUser && currentUser.role === "Admin";
-  // Hanya Admin & Produksi yang bisa edit Assy
   const canEditAssy =
     currentUser &&
     (currentUser.role === "Admin" || currentUser.role === "Produksi");
@@ -386,7 +381,6 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         varFormat = "-";
       }
 
-      // Efek Kolom QTY/DAY (Hanya Admin)
       const qtyDayClass = isAdmin
         ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-all"
         : "";
@@ -394,10 +388,9 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day})"`
         : "";
       const qtyDayTitle = isAdmin
-        ? `title="Klik untuk Edit Target Harian (Khusus Admin)"`
+        ? `title="Klik untuk Edit Target Harian"`
         : "";
 
-      // Efek Kolom ASSY IN STORE (Admin & Produksi)
       const assyClass = canEditAssy
         ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4 transition-all"
         : "";
@@ -405,7 +398,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
         : "";
       const assyTitle = canEditAssy
-        ? `title="Klik untuk Edit Stok Perakitan (Khusus Produksi/Admin)"`
+        ? `title="Klik untuk Edit Stok Perakitan"`
         : "";
 
       return `<tr class="hover:bg-yellow-50 transition-colors">
@@ -419,12 +412,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction} ${qtyDayTitle}>${formatNum(row.qty_day)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700">${formatNum(row.qty_out)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-red-600">${formatNum(row.sisa_del)}</td>
-      
-      <!-- KOLOM ASSY YANG BARU -->
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction} ${assyTitle}>
-        ${formatNum(row.assy_fsg)}
-      </td>
-      
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction} ${assyTitle}>${formatNum(row.assy_fsg)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
     </tr>`;
     })
@@ -441,10 +429,8 @@ function handleGlobalSearch(keyword) {
 function renderRiwayatTable() {
   const tbody = document.getElementById("tblRiwayatBody");
   if (!tbody) return;
-
   const filterDropdown = document.getElementById("filterRiwayat");
   const filterVal = filterDropdown ? filterDropdown.value : "ALL";
-
   let riwayatGabungan = [];
 
   if (filterVal === "ALL" || filterVal === "IN") {
@@ -459,7 +445,6 @@ function renderRiwayatTable() {
       });
     });
   }
-
   if (filterVal === "ALL" || filterVal === "OUT") {
     (appData.keluar || []).forEach((k) => {
       riwayatGabungan.push({
@@ -472,7 +457,6 @@ function renderRiwayatTable() {
       });
     });
   }
-
   riwayatGabungan.sort((a, b) => b.waktu - a.waktu);
 
   if (riwayatGabungan.length === 0) {
@@ -509,7 +493,7 @@ function renderRiwayatTable() {
 }
 
 // =========================================================================
-// SMART SCANNER & GUN SCANNER LOGIC
+// SMART SCANNER LOGIC (DENGAN ROLE-BASED ACCESS CONTROL)
 // =========================================================================
 function handleScannerGun(event) {
   if (event.key === "Enter") {
@@ -589,12 +573,29 @@ function processSmartScan(scannedCode) {
   if (smartScanner) smartScanner.pause();
   activeScannedPart = foundData;
 
+  // Tampilkan data ke layar Kartu Scanner
   document.getElementById("smInfoRell").innerText = foundData.No_Rel;
   document.getElementById("smInfoPart").innerText = foundData.Part_Number;
   document.getElementById("smInfoNama").innerText = foundData.nama_barang;
   document.getElementById("smInfoStok").innerText = foundData.stock;
   document.getElementById("smInfoTarget").innerText = foundData.sisa_del;
+  document.getElementById("smInfoAssy").innerText = foundData.assy_fsg; // Menampilkan info stok Assy juga
   document.getElementById("smInputQty").value = 1;
+
+  // FITUR BARU: Menampilkan tombol sesuai Role Jabatan
+  const btnWH = document.getElementById("btnGroupWH");
+  const btnAssy = document.getElementById("btnGroupAssy");
+
+  if (currentUser.role === "Admin") {
+    btnWH.classList.remove("hidden");
+    btnAssy.classList.remove("hidden"); // Admin bisa semua
+  } else if (currentUser.role === "Produksi") {
+    btnWH.classList.add("hidden");
+    btnAssy.classList.remove("hidden"); // Produksi cuma bisa Assy
+  } else {
+    btnWH.classList.remove("hidden");
+    btnAssy.classList.add("hidden"); // Warehouse cuma bisa IN/OUT
+  }
 
   document.getElementById("modalSmartAction").classList.remove("hidden");
   document.getElementById("manualSmartInput").value = "";
@@ -604,7 +605,6 @@ function closeSmartAction() {
   document.getElementById("modalSmartAction").classList.add("hidden");
   activeScannedPart = null;
   if (smartScanner) smartScanner.resume();
-
   const manualInput = document.getElementById("manualSmartInput");
   if (manualInput) manualInput.focus();
 }
@@ -622,6 +622,43 @@ function submitSmartAction(tipeAction) {
   const qty = parseInt(document.getElementById("smInputQty").value) || 0;
   if (qty <= 0) return Swal.fire("Error", "Jumlah harus lebih dari 0", "error");
 
+  // JIKA YANG DI-KLIK ADALAH TOMBOL ASSY (PRODUKSI)
+  if (tipeAction === "ASSY_ADD" || tipeAction === "ASSY_SET") {
+    // Jika klik "Tambah Assy", maka angka dijumlahkan. Jika klik "Set Total", angka diganti.
+    const finalQty =
+      tipeAction === "ASSY_ADD" ? activeScannedPart.assy_fsg + qty : qty;
+
+    Swal.fire({
+      title: "Mencatat ke Sistem...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+    sendToBackend("apiUpdateAssyFsg", {
+      partNumber: activeScannedPart.Part_Number,
+      qty: finalQty,
+      user: currentUser.username,
+    })
+      .then((res) => {
+        if (res.success) {
+          Swal.fire({
+            icon: "success",
+            title: "Tersimpan!",
+            text: `Stok Assy menjadi ${finalQty} Pcs.`,
+            timer: 1500,
+            showConfirmButton: false,
+          });
+          closeSmartAction();
+          refreshAllData();
+        } else {
+          Swal.fire("Gagal", res.message, "error");
+        }
+      })
+      .catch((err) => Swal.fire("Error Koneksi", err.message, "error"));
+
+    return; // Berhenti di sini, jangan lanjut ke logika Warehouse
+  }
+
+  // JIKA YANG DI-KLIK ADALAH TOMBOL MASUK/KELUAR (WAREHOUSE)
   const actionName =
     tipeAction === "IN" ? "apiSaveTransaksiMasuk" : "apiSaveTransaksiKeluar";
   const actionText = tipeAction === "IN" ? "Barang Masuk" : "Barang Keluar";
@@ -666,7 +703,7 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// MASTER DATA TABLES & FUNGSI HAPUS USER
+// TABEL MASTER DATA & MANAJEMEN USER
 // =========================================================================
 function renderMasterBarangTable() {
   const tbody = document.getElementById("tblMasterBarangBody");
@@ -765,9 +802,6 @@ function deleteUser(usernameTarget) {
   });
 }
 
-// =========================================================================
-// MODAL & FORM MASTER DATA
-// =========================================================================
 function openModalBarang() {
   document.getElementById("modalMasterBarang").classList.remove("hidden");
 }

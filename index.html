@@ -39,14 +39,12 @@
   <body
     class="antialiased min-h-screen flex flex-col relative overflow-x-hidden bg-slate-50 text-slate-800"
   >
-    <!-- SIDEBAR BACKDROP -->
     <div
       id="sidebarBackdrop"
       onclick="closeSidebar()"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300"
     ></div>
 
-    <!-- SIDEBAR -->
     <aside
       id="mainSidebar"
       class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r-4 border-slate-800 flex flex-col justify-between p-6 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-[8px_0px_0px_rgba(0,0,0,1)]"
@@ -178,7 +176,6 @@
       </div>
     </aside>
 
-    <!-- MAIN CONTENT -->
     <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
       <header
         class="bg-white border-b-4 border-slate-800 py-3.5 px-4 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20"
@@ -219,7 +216,6 @@
       </header>
 
       <div class="p-4 sm:p-8 space-y-6 flex-1">
-        <!-- TAB PAPAN KONTROL -->
         <section id="tab-overview" class="tab-pane block space-y-6">
           <div
             class="bg-white p-5 sm:p-7 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -334,7 +330,6 @@
           </div>
         </section>
 
-        <!-- TAB SMART SCANNER -->
         <section id="tab-scanner" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] max-w-lg mx-auto text-center"
@@ -402,7 +397,6 @@
           </div>
         </section>
 
-        <!-- TAB RIWAYAT TRANSAKSI -->
         <section id="tab-riwayat" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -478,7 +472,6 @@
           </div>
         </section>
 
-        <!-- TAB MASTER BARANG -->
         <section id="tab-barang" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -536,7 +529,6 @@
           </div>
         </section>
 
-        <!-- TAB CUSTOMER -->
         <section id="tab-customer" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -589,7 +581,6 @@
           </div>
         </section>
 
-        <!-- TAB KELOLA PENGGUNA -->
         <section id="tab-users" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -644,7 +635,7 @@
       </div>
     </main>
 
-    <!-- MODAL SMART ACTION (KARTU IDENTITAS BARANG) -->
+    <!-- MODAL SMART ACTION (PERUBAHAN UNTUK PRODUKSI/ASSY) -->
     <div
       id="modalSmartAction"
       class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden transition-all"
@@ -679,22 +670,31 @@
           </p>
         </div>
 
+        <!-- FITUR BARU: 3 Kotak Data untuk menampilkan Stok, Sisa Kirim, dan ASSY -->
         <div
-          class="grid grid-cols-2 divide-x-2 divide-slate-800 border-b-4 border-slate-800"
+          class="grid grid-cols-3 divide-x-2 divide-slate-800 border-b-4 border-slate-800"
         >
-          <div class="p-4 text-center bg-slate-50">
-            <p class="text-[10px] font-black uppercase text-slate-500">
-              Stok Sistem Saat Ini
+          <div class="p-3 text-center bg-slate-50">
+            <p class="text-[9px] font-black uppercase text-slate-500">
+              Stok Sistem
             </p>
-            <p id="smInfoStok" class="text-4xl font-black text-blue-600 mt-1">
+            <p id="smInfoStok" class="text-2xl font-black text-blue-600 mt-1">
               0
             </p>
           </div>
-          <div class="p-4 text-center bg-red-50">
-            <p class="text-[10px] font-black uppercase text-slate-500">
-              Kekurangan Target Keluar
+          <div class="p-3 text-center bg-red-50">
+            <p class="text-[9px] font-black uppercase text-slate-500">
+              Sisa Kirim
             </p>
-            <p id="smInfoTarget" class="text-4xl font-black text-red-600 mt-1">
+            <p id="smInfoTarget" class="text-2xl font-black text-red-600 mt-1">
+              0
+            </p>
+          </div>
+          <div class="p-3 text-center bg-purple-50">
+            <p class="text-[9px] font-black uppercase text-slate-500">
+              Stok Assy
+            </p>
+            <p id="smInfoAssy" class="text-2xl font-black text-purple-600 mt-1">
               0
             </p>
           </div>
@@ -702,12 +702,12 @@
 
         <div class="p-5 bg-white">
           <p class="text-[10px] font-black uppercase text-center mb-3">
-            Tentukan Jumlah Transaksi (Pcs)
+            Tentukan Jumlah (Pcs)
           </p>
           <div class="flex items-center justify-center gap-3 mb-5">
             <button
               onclick="adjSmartQty(-1)"
-              class="w-12 h-12 border-4 border-slate-800 rounded-full font-black text-xl bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all"
+              class="w-10 h-10 border-4 border-slate-800 rounded-full font-black text-lg bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all"
             >
               -
             </button>
@@ -715,35 +715,52 @@
               type="number"
               id="smInputQty"
               value="1"
-              class="w-24 text-center text-3xl font-black border-none focus:outline-none focus:ring-0 bg-transparent"
+              class="w-20 text-center text-3xl font-black border-none focus:outline-none focus:ring-0 bg-transparent"
             />
             <button
               onclick="adjSmartQty(1)"
-              class="w-12 h-12 border-4 border-slate-800 rounded-full font-black text-xl bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all"
+              class="w-10 h-10 border-4 border-slate-800 rounded-full font-black text-lg bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all"
             >
               +
             </button>
           </div>
 
-          <div class="flex gap-3">
+          <!-- TOMBOL WAREHOUSE (Hanya muncul untuk Gudang / Admin) -->
+          <div id="btnGroupWH" class="flex gap-2 mb-2 hidden">
             <button
               onclick="submitSmartAction('IN')"
-              class="flex-1 py-3 border-4 border-slate-800 bg-emerald-400 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] active:bg-emerald-500 transition-all flex flex-col items-center justify-center"
+              class="flex-1 py-2 border-4 border-slate-800 bg-emerald-400 font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
             >
-              <i class="fa-solid fa-box-open mb-1 text-lg"></i> MASUK (IN)
+              <i class="fa-solid fa-box-open mb-1 block text-sm"></i> MASUK
             </button>
             <button
               onclick="submitSmartAction('OUT')"
-              class="flex-1 py-3 border-4 border-slate-800 bg-red-400 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] active:bg-red-500 transition-all flex flex-col items-center justify-center"
+              class="flex-1 py-2 border-4 border-slate-800 bg-red-400 font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
             >
-              <i class="fa-solid fa-truck-fast mb-1 text-lg"></i> KELUAR (OUT)
+              <i class="fa-solid fa-truck-fast mb-1 block text-sm"></i> KELUAR
+            </button>
+          </div>
+
+          <!-- TOMBOL ASSY PRODUKSI (Hanya muncul untuk Produksi / Admin) -->
+          <div id="btnGroupAssy" class="flex gap-2 hidden">
+            <button
+              onclick="submitSmartAction('ASSY_ADD')"
+              class="flex-1 py-2 border-4 border-slate-800 bg-purple-400 font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
+            >
+              <i class="fa-solid fa-plus mb-1 block text-sm"></i> Tmbah Assy
+            </button>
+            <button
+              onclick="submitSmartAction('ASSY_SET')"
+              class="flex-1 py-2 border-4 border-slate-800 bg-amber-300 font-black text-[10px] uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
+            >
+              <i class="fa-solid fa-pen mb-1 block text-sm"></i> Set Total Assy
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- MODAL MASTER DATA (BARANG, CUSTOMER, USER, LOGIN) -->
+    <!-- MODALS MASTER DATA... -->
     <div
       id="modalMasterBarang"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -992,8 +1009,6 @@
               class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100"
             />
           </div>
-
-          <!-- FITUR BARU: Tambahan role Produksi di dropdown -->
           <div>
             <label class="block text-[10px] font-black uppercase mb-1"
               >Role Akses *</label
@@ -1008,7 +1023,6 @@
               <option value="Admin">Admin (Akses Penuh)</option>
             </select>
           </div>
-
           <div class="pt-3 flex gap-2">
             <button
               type="button"
@@ -1090,7 +1104,6 @@
           transform: translateY(0);
         }
       }
-
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -1108,6 +1121,6 @@
       }
     </style>
 
-    <script src="script.js?v=15"></script>
+    <script src="script.js?v=16"></script>
   </body>
 </html>
