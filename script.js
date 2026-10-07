@@ -29,10 +29,14 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
+  // 🔥 PERBAIKAN: AUTO-REFRESH KINI HANYA 3 DETIK DAN BERJALAN DIAM-DIAM
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     const riwayatTab = document.getElementById("tab-riwayat");
+
+    // Jangan ganggu kalau operator sedang nembak scanner
     if (isProcessing) return;
+
     if (
       (overviewTab && !overviewTab.classList.contains("hidden")) ||
       (riwayatTab && !riwayatTab.classList.contains("hidden"))
@@ -47,15 +51,11 @@ window.addEventListener("DOMContentLoaded", () => {
           appData.users = res.users || [];
           buildSeatAssyControlDataset();
           refreshAllUI();
-          const spinner = document.getElementById("syncSpinner");
-          if (spinner) {
-            spinner.classList.add("rotate-180");
-            setTimeout(() => spinner.classList.remove("rotate-180"), 1000);
-          }
+          // Spinner dimatikan di sini agar layar TV Andon tidak berkedip-kedip mengganggu
         }
       });
     }
-  }, 30000); // Otomatis refresh Papan Kontrol setiap 30 detik
+  }, 3000); // <-- JEDA HANYA 3 DETIK!
 });
 
 // =========================================================================
@@ -84,7 +84,6 @@ async function sendToBackend(action, payload = {}) {
         };
 
       case "apiLogin":
-        // Cek darurat: Jika tabel Users kosong, otomatis buatkan 1 Admin pertama
         const { data: cekUsers } = await _supabase.from("Users").select("*");
         if (!cekUsers || cekUsers.length === 0) {
           if (payload.username === "admin") {
@@ -368,7 +367,11 @@ function loadInitialOrMockData() {
 }
 
 function refreshAllUI() {
-  renderSeatAssyControlBoard();
+  // Ambil keyword pencarian agar tidak hilang saat auto-refresh
+  const searchInput = document.getElementById("globalSearchInput");
+  const keyword = searchInput ? searchInput.value : "";
+
+  renderSeatAssyControlBoard(keyword);
   renderRiwayatTable();
   renderMasterBarangTable();
   renderCustomerTable();
@@ -439,11 +442,12 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
       sendToBackend("apiUpdateAssyFsg", { partNumber: partNumber, qty: newVal })
         .then((res) => {
           isProcessing = false;
+          // 🔥 PERBAIKAN: Notif dipercepat jadi 0.8 detik (800ms)
           if (res.success) {
             Swal.fire({
               icon: "success",
               title: "Tersimpan!",
-              timer: 1000,
+              timer: 800,
               showConfirmButton: false,
             });
             refreshAllData();
@@ -486,7 +490,7 @@ function promptUpdateQtyDay(partNumber, currentQty) {
             Swal.fire({
               icon: "success",
               title: "Tersimpan!",
-              timer: 1000,
+              timer: 800,
               showConfirmButton: false,
             });
             refreshAllData();
@@ -516,7 +520,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
   }
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Belum ada barang di database Supabase Anda. Silakan tambah di menu Master Barang.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Belum ada barang di database.</td></tr>`;
     return;
   }
 
@@ -802,11 +806,12 @@ function submitSmartAction(tipeAction) {
     })
       .then((res) => {
         isProcessing = false;
+        // 🔥 PERBAIKAN: Notif dipercepat jadi 0.8 detik (800ms)
         if (res.success) {
           Swal.fire({
             icon: "success",
             title: "Tersimpan!",
-            timer: 1500,
+            timer: 800,
             showConfirmButton: false,
           });
           closeSmartAction();
@@ -846,11 +851,12 @@ function submitSmartAction(tipeAction) {
   })
     .then((res) => {
       isProcessing = false;
+      // 🔥 PERBAIKAN: Notif dipercepat jadi 0.8 detik (800ms)
       if (res.success) {
         Swal.fire({
           icon: "success",
           title: "Berhasil!",
-          timer: 1500,
+          timer: 800,
           showConfirmButton: false,
         });
         closeSmartAction();
