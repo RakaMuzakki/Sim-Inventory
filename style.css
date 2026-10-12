@@ -1,47 +1,57 @@
-body {
-  font-family: "Inter", sans-serif;
-  background-color: #f8fafc;
-  color: #1e293b;
-  -webkit-tap-highlight-color: transparent;
+/* =========================================================================
+   CUSTOM CSS & ANIMATIONS (SIM-INVENTORY)
+   Sebagian besar styling menggunakan Tailwind CSS. 
+   File ini hanya untuk custom scrollbar dan keyframes khusus.
+   ========================================================================= */
+
+/* Animasi Muncul dari Bawah (Untuk Modal Smart Scanner) */
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Kustomisasi Scrollbar agar terlihat modern */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
+
+/* Custom Scrollbar yang Keren & Industrial */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
+  border-left: 2px solid #1e293b;
+  border-top: 2px solid #1e293b;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 9999px;
+  background: #1e293b;
+  border: 2px solid #f1f5f9;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #334155;
 }
 
-/* Pengaturan khusus saat Cetak / Print Surat Jalan */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #printAreaSuratJalan,
-  #printAreaSuratJalan * {
-    visibility: visible;
-  }
-  #printAreaSuratJalan {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    display: block !important;
-  }
+/* Hilangkan panah atas/bawah pada input angka (spinner) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
-/* Membuat sudut kamera scanner menjadi melengkung */
-#interactiveScanner video,
-#singleReaderViewport video {
-  border-radius: 1.25rem;
-  object-fit: cover;
+/* Efek transisi halus untuk semua tombol */
+button {
+  transition: all 0.2s ease-in-out;
 }

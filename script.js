@@ -2,9 +2,8 @@
 // KONFIGURASI SUPABASE DATABASE
 // =========================================================================
 // ⚠️ GANTI DENGAN URL & KEY SUPABASE MILIK ANDA! ⚠️
-const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
+const SUPABASE_URL = "https://ISIKAN-URL-ANDA-DISINI.supabase.co";
+const SUPABASE_KEY = "ISIKAN-KUNCI-PUBLISHABLE-ANON-ANDA-DISINI";
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -29,12 +28,10 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
-  // 🔥 PERBAIKAN: AUTO-REFRESH KINI HANYA 3 DETIK DAN BERJALAN DIAM-DIAM
+  // AUTO-REFRESH SETIAP 3 DETIK SAJA
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     const riwayatTab = document.getElementById("tab-riwayat");
-
-    // Jangan ganggu kalau operator sedang nembak scanner
     if (isProcessing) return;
 
     if (
@@ -51,21 +48,20 @@ window.addEventListener("DOMContentLoaded", () => {
           appData.users = res.users || [];
           buildSeatAssyControlDataset();
           refreshAllUI();
-          // Spinner dimatikan di sini agar layar TV Andon tidak berkedip-kedip mengganggu
         }
       });
     }
-  }, 3000); // <-- JEDA HANYA 3 DETIK!
+  }, 3000);
 });
 
 // =========================================================================
-// CORE ENGINE: KOMUNIKASI KE SUPABASE
+// CORE ENGINE: KOMUNIKASI KE SUPABASE DENGAN ERROR CHECKER
 // =========================================================================
 async function sendToBackend(action, payload = {}) {
   try {
     switch (action) {
       case "apiGetMasterData":
-        const [b, c, o, m, k, u] = await Promise.all([
+        const [resB, resC, resO, resM, resK, resU] = await Promise.all([
           _supabase.from("Master_Barang").select("*"),
           _supabase.from("Master_Customer").select("*"),
           _supabase.from("List_Order").select("*"),
@@ -73,25 +69,43 @@ async function sendToBackend(action, payload = {}) {
           _supabase.from("Transaksi_Keluar").select("*"),
           _supabase.from("Users").select("*"),
         ]);
+
+        // Pengecekan Error Otomatis (Catcher)
+        if (resB.error)
+          throw new Error("Tabel Master_Barang error: " + resB.error.message);
+        if (resO.error)
+          throw new Error("Tabel List_Order error: " + resO.error.message);
+        if (resM.error)
+          throw new Error("Tabel Transaksi_Masuk error: " + resM.error.message);
+        if (resK.error)
+          throw new Error(
+            "Tabel Transaksi_Keluar error: " + resK.error.message,
+          );
+
         return {
           success: true,
-          barang: b.data,
-          customer: c.data,
-          orders: o.data,
-          masuk: m.data,
-          keluar: k.data,
-          users: u.data,
+          barang: resB.data,
+          customer: resC.data,
+          orders: resO.data,
+          masuk: resM.data,
+          keluar: resK.data,
+          users: resU.data,
         };
 
       case "apiLogin":
-        const { data: cekUsers } = await _supabase.from("Users").select("*");
+        const { data: cekUsers, error: errCek } = await _supabase
+          .from("Users")
+          .select("*");
+        if (errCek) throw new Error("Gagal baca Users: " + errCek.message);
+
         if (!cekUsers || cekUsers.length === 0) {
           if (payload.username === "admin") {
-            await _supabase
+            const { error: errIns } = await _supabase
               .from("Users")
               .insert([
                 { username: "admin", password: "admin", role: "Admin" },
               ]);
+            if (errIns) throw new Error(errIns.message);
             return {
               success: true,
               user: { username: "admin", role: "Admin" },
@@ -109,74 +123,94 @@ async function sendToBackend(action, payload = {}) {
         return { success: false, message: "Username atau password salah!" };
 
       case "apiSaveTransaksiMasuk":
-        const { data: bIn } = await _supabase
+        const { data: bIn, error: errBIn } = await _supabase
           .from("Master_Barang")
           .select("stok")
           .eq("Part_Number", payload.partNumber)
           .single();
+        if (errBIn) throw new Error(errBIn.message);
+
         const newStokIn = (Number(bIn?.stok) || 0) + Number(payload.qty);
-        await _supabase
+        const { error: errUpdIn } = await _supabase
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        if (errUpdIn) throw new Error(errUpdIn.message);
+
+        const { error: errLogIn } = await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
+        if (errLogIn) throw new Error(errLogIn.message);
         return { success: true };
 
       case "apiSaveTransaksiKeluar":
-        const { data: bOut } = await _supabase
+        const { data: bOut, error: errBOut } = await _supabase
           .from("Master_Barang")
           .select("stok")
           .eq("Part_Number", payload.partNumber)
           .single();
+        if (errBOut) throw new Error(errBOut.message);
+
         const currentStokOut = Number(bOut?.stok) || 0;
         if (currentStokOut < payload.qty)
           throw new Error("Stok sistem tidak cukup!");
-        await _supabase
+
+        const { error: errUpdOut } = await _supabase
           .from("Master_Barang")
           .update({ stok: currentStokOut - Number(payload.qty) })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Keluar").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        if (errUpdOut) throw new Error(errUpdOut.message);
+
+        const { error: errLogOut } = await _supabase
+          .from("Transaksi_Keluar")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
+        if (errLogOut) throw new Error(errLogOut.message);
         return { success: true };
 
       case "apiUpdateAssyFsg":
-        await _supabase
+        const { error: errAssy } = await _supabase
           .from("Master_Barang")
           .update({ assy_fsg: payload.qty })
           .eq("Part_Number", payload.partNumber);
+        if (errAssy) throw new Error(errAssy.message);
         return { success: true };
 
       case "apiUpdateQtyDay":
-        const { data: checkO } = await _supabase
+        const { data: checkO, error: errCheckO } = await _supabase
           .from("List_Order")
           .select("*")
           .eq("Part_Number", payload.partNumber);
+        if (errCheckO) throw new Error(errCheckO.message);
+
         if (checkO && checkO.length > 0) {
-          await _supabase
+          const { error: errUpdO } = await _supabase
             .from("List_Order")
             .update({ qty_order: payload.qty })
             .eq("Part_Number", payload.partNumber);
+          if (errUpdO) throw new Error(errUpdO.message);
         } else {
-          await _supabase
+          const { error: errInsO } = await _supabase
             .from("List_Order")
             .insert([
               { Part_Number: payload.partNumber, qty_order: payload.qty },
             ]);
+          if (errInsO) throw new Error(errInsO.message);
         }
         return { success: true };
 
@@ -186,12 +220,16 @@ async function sendToBackend(action, payload = {}) {
           .select("*")
           .eq("Part_Number", payload.item.Part_Number);
         if (checkB && checkB.length > 0) {
-          await _supabase
+          const { error: errUpdB } = await _supabase
             .from("Master_Barang")
             .update(payload.item)
             .eq("Part_Number", payload.item.Part_Number);
+          if (errUpdB) throw new Error(errUpdB.message);
         } else {
-          await _supabase.from("Master_Barang").insert([payload.item]);
+          const { error: errInsB } = await _supabase
+            .from("Master_Barang")
+            .insert([payload.item]);
+          if (errInsB) throw new Error(errInsB.message);
         }
         return { success: true, message: "Barang berhasil disimpan!" };
 
@@ -201,12 +239,16 @@ async function sendToBackend(action, payload = {}) {
           .select("*")
           .eq("id_customer", payload.cust.id_customer);
         if (checkC && checkC.length > 0) {
-          await _supabase
+          const { error: errUpdC } = await _supabase
             .from("Master_Customer")
             .update(payload.cust)
             .eq("id_customer", payload.cust.id_customer);
+          if (errUpdC) throw new Error(errUpdC.message);
         } else {
-          await _supabase.from("Master_Customer").insert([payload.cust]);
+          const { error: errInsC } = await _supabase
+            .from("Master_Customer")
+            .insert([payload.cust]);
+          if (errInsC) throw new Error(errInsC.message);
         }
         return { success: true, message: "Customer tersimpan!" };
 
@@ -216,21 +258,25 @@ async function sendToBackend(action, payload = {}) {
           .select("*")
           .eq("username", payload.userData.username);
         if (checkU && checkU.length > 0) throw new Error("Username sudah ada!");
-        await _supabase.from("Users").insert([payload.userData]);
+        const { error: errInsU } = await _supabase
+          .from("Users")
+          .insert([payload.userData]);
+        if (errInsU) throw new Error(errInsU.message);
         return { success: true, message: "User baru berhasil dibuat!" };
 
       case "apiDeleteUser":
-        await _supabase
+        const { error: errDel } = await _supabase
           .from("Users")
           .delete()
           .eq("username", payload.usernameTarget);
+        if (errDel) throw new Error(errDel.message);
         return { success: true, message: "User telah dihapus!" };
 
       default:
         return { success: false, message: "Aksi tidak dikenal." };
     }
   } catch (err) {
-    return { success: false, message: err.message };
+    return { success: false, message: err.message }; // Pesan error akurat dari Supabase akan dimunculkan di sini
   }
 }
 
@@ -358,7 +404,12 @@ function loadInitialOrMockData() {
         appData.users = res.users || [];
         buildSeatAssyControlDataset();
         refreshAllUI();
-      } else Swal.fire("Error", res.message || "Gagal memuat data", "error");
+      } else
+        Swal.fire(
+          "Gagal Memuat Data",
+          res.message || "Gagal memuat data dari Supabase",
+          "error",
+        );
     })
     .catch((err) => {
       showSyncSpinner(false);
@@ -367,10 +418,8 @@ function loadInitialOrMockData() {
 }
 
 function refreshAllUI() {
-  // Ambil keyword pencarian agar tidak hilang saat auto-refresh
   const searchInput = document.getElementById("globalSearchInput");
   const keyword = searchInput ? searchInput.value : "";
-
   renderSeatAssyControlBoard(keyword);
   renderRiwayatTable();
   renderMasterBarangTable();
@@ -442,7 +491,6 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
       sendToBackend("apiUpdateAssyFsg", { partNumber: partNumber, qty: newVal })
         .then((res) => {
           isProcessing = false;
-          // 🔥 PERBAIKAN: Notif dipercepat jadi 0.8 detik (800ms)
           if (res.success) {
             Swal.fire({
               icon: "success",
@@ -452,7 +500,7 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
             });
             refreshAllData();
           } else {
-            Swal.fire("Gagal", res.message, "error");
+            Swal.fire("Gagal Update", res.message, "error");
           }
         })
         .catch((err) => {
@@ -495,7 +543,7 @@ function promptUpdateQtyDay(partNumber, currentQty) {
             });
             refreshAllData();
           } else {
-            Swal.fire("Gagal", res.message, "error");
+            Swal.fire("Gagal Update", res.message, "error");
           }
         })
         .catch((err) => {
@@ -806,7 +854,6 @@ function submitSmartAction(tipeAction) {
     })
       .then((res) => {
         isProcessing = false;
-        // 🔥 PERBAIKAN: Notif dipercepat jadi 0.8 detik (800ms)
         if (res.success) {
           Swal.fire({
             icon: "success",
@@ -851,7 +898,6 @@ function submitSmartAction(tipeAction) {
   })
     .then((res) => {
       isProcessing = false;
-      // 🔥 PERBAIKAN: Notif dipercepat jadi 0.8 detik (800ms)
       if (res.success) {
         Swal.fire({
           icon: "success",
@@ -1123,7 +1169,7 @@ function handleLoginSubmit(e) {
       });
       switchTab("scanner");
     } else {
-      Swal.fire("Gagal", res.message, "error");
+      Swal.fire("Gagal Login", res.message, "error");
     }
   });
 }
