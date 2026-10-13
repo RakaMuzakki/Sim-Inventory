@@ -29,7 +29,7 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
-  // AUTO-REFRESH SETIAP 3 DETIK SAJA
+  // AUTO-REFRESH 3 DETIK
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     const riwayatTab = document.getElementById("tab-riwayat");
@@ -71,7 +71,6 @@ async function sendToBackend(action, payload = {}) {
           _supabase.from("Users").select("*"),
         ]);
 
-        // Pengecekan Error Otomatis (Catcher)
         if (resB.error)
           throw new Error("Tabel Master_Barang error: " + resB.error.message);
         if (resO.error)
@@ -277,7 +276,7 @@ async function sendToBackend(action, payload = {}) {
         return { success: false, message: "Aksi tidak dikenal." };
     }
   } catch (err) {
-    return { success: false, message: err.message }; // Pesan error akurat dari Supabase akan dimunculkan di sini
+    return { success: false, message: err.message };
   }
 }
 
@@ -698,7 +697,7 @@ function renderRiwayatTable() {
 }
 
 // =========================================================================
-// SMART SCANNER LOGIC
+// SMART SCANNER LOGIC (TERMASUK LABEL TUJUAN & PROMPT SURAT JALAN)
 // =========================================================================
 function handleScannerGun(event) {
   if (event.key === "Enter") {
@@ -787,6 +786,19 @@ function processSmartScan(scannedCode) {
   if (smartScanner) smartScanner.pause();
   activeScannedPart = foundData;
 
+  // MENCARI NAMA CUSTOMER BERDASARKAN ID
+  let namaCustFull = "-";
+  if (foundData.Customer !== "-") {
+    const cst = appData.customer.find(
+      (c) => String(c.id_customer).trim() === String(foundData.Customer).trim(),
+    );
+    if (cst) namaCustFull = cst.nama_customer;
+    else namaCustFull = foundData.Customer;
+  }
+
+  // MENAMPILKAN DATA KE LAYAR POPUP
+  document.getElementById("smInfoCustomer").innerText =
+    "TUJUAN: " + namaCustFull;
   document.getElementById("smInfoRell").innerText = foundData.No_Rel;
   document.getElementById("smInfoPart").innerText = foundData.Part_Number;
   document.getElementById("smInfoNama").innerText = foundData.nama_barang;
@@ -841,6 +853,8 @@ function submitSmartAction(tipeAction) {
   if (qty <= 0) return Swal.fire("Error", "Jumlah harus lebih dari 0", "error");
 
   isProcessing = true;
+
+  // LOGIKA 1: PERAKITAN ASSY
   if (tipeAction === "ASSY_ADD" || tipeAction === "ASSY_SET") {
     const finalQty =
       tipeAction === "ASSY_ADD" ? activeScannedPart.assy_fsg + qty : qty;
@@ -875,34 +889,86 @@ function submitSmartAction(tipeAction) {
     return;
   }
 
-  const actionName =
-    tipeAction === "IN" ? "apiSaveTransaksiMasuk" : "apiSaveTransaksiKeluar";
-  if (tipeAction === "OUT" && qty > activeScannedPart.stock) {
-    isProcessing = false;
-    return Swal.fire(
-      "Stok Kurang!",
-      `Stok hanya sisa ${activeScannedPart.stock} Pcs.`,
-      "error",
-    );
+  // LOGIKA 2: BARANG KELUAR (WAJIB ISI SURAT JALAN)
+  if (tipeAction === "OUT") {
+    if (qty > activeScannedPart.stock) {
+      isProcessing = false;
+      return Swal.fire(
+        "Stok Kurang!",
+        `Stok hanya sisa ${activeScannedPart.stock} Pcs.`,
+        "error",
+      );
+    }
+
+    isProcessing = false; // Buka kunci sebentar agar swal bisa diketik
+    Swal.fire({
+      title: "BARANG KELUAR",
+      text: "Ketik Nomor Surat Jalan / Plat Kendaraan:",
+      input: "text",
+      inputPlaceholder: "Contoh: SJ-099 / B 1234 CD",
+      showCancelButton: true,
+      confirmButtonText: "Keluarkan Barang",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#ef4444",
+      inputValidator: (value) => {
+        if (!value) return "Surat Jalan / Plat Mobil WAJIB diisi!";
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true; // Kunci lagi
+        Swal.fire({
+          title: "Mencatat ke Supabase...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiSaveTransaksiKeluar", {
+          partNumber: activeScannedPart.Part_Number,
+          qty: qty,
+          petugas: currentUser.username,
+          catatan: `SJ: ${result.value}`,
+        })
+          .then((res) => {
+            isProcessing = false;
+            if (res.success) {
+              Swal.fire({
+                icon: "success",
+                title: "Berhasil Keluar!",
+                timer: 800,
+                showConfirmButton: false,
+              });
+              closeSmartAction();
+              refreshAllData();
+            } else {
+              Swal.fire("Gagal", res.message, "error");
+            }
+          })
+          .catch((err) => {
+            isProcessing = false;
+            Swal.fire("Error", err.message, "error");
+          });
+      }
+    });
+    return;
   }
 
+  // LOGIKA 3: BARANG MASUK
   Swal.fire({
     title: "Mencatat ke Supabase...",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   });
-  sendToBackend(actionName, {
+  sendToBackend("apiSaveTransaksiMasuk", {
     partNumber: activeScannedPart.Part_Number,
     qty: qty,
     petugas: currentUser.username,
-    catatan: `Smart Scan`,
+    catatan: `Scan Barang Masuk`,
   })
     .then((res) => {
       isProcessing = false;
       if (res.success) {
         Swal.fire({
           icon: "success",
-          title: "Berhasil!",
+          title: "Berhasil Masuk!",
           timer: 800,
           showConfirmButton: false,
         });

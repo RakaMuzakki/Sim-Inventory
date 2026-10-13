@@ -637,6 +637,7 @@
       </div>
     </main>
 
+    <!-- MODAL POPUP SCANNER -->
     <div
       id="modalSmartAction"
       class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden transition-all"
@@ -660,13 +661,25 @@
           >
             A.00
           </div>
+
+          <!-- INFO NAMA CUSTOMER / TUJUAN PENGIRIMAN -->
+          <div
+            id="smInfoCustomer"
+            class="inline-block px-2 py-1 bg-slate-900 text-yellow-300 text-[10px] font-black uppercase mb-1 mt-1 shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+          >
+            TUJUAN: -
+          </div>
+
           <h2
             id="smInfoPart"
-            class="text-2xl font-black tracking-tighter uppercase mt-2"
+            class="text-2xl font-black tracking-tighter uppercase leading-none mt-1"
           >
             PART NUMBER
           </h2>
-          <p id="smInfoNama" class="text-xs font-bold text-slate-700 uppercase">
+          <p
+            id="smInfoNama"
+            class="text-xs font-bold text-slate-700 uppercase mt-1"
+          >
             Nama Barang
           </p>
         </div>
@@ -758,6 +771,7 @@
       </div>
     </div>
 
+    <!-- MODAL-MODAL LAINNYA -->
     <div
       id="modalMasterBarang"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1118,6 +1132,6 @@
       }
     </style>
 
-    <script src="script.js?v=25"></script>
+    <script src="script.js?v=26"></script>
   </body>
 </html>
