@@ -2,9 +2,8 @@
 // KONFIGURASI SUPABASE DATABASE
 // =========================================================================
 // ⚠️ GANTI DENGAN URL & KEY SUPABASE MILIK ANDA! ⚠️
-const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
+const SUPABASE_URL = "https://ISIKAN-URL-ANDA-DISINI.supabase.co";
+const SUPABASE_KEY = "ISIKAN-KUNCI-PUBLISHABLE-ANON-ANDA-DISINI";
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -29,7 +28,6 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
-  // AUTO-REFRESH 3 DETIK
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     const riwayatTab = document.getElementById("tab-riwayat");
@@ -56,7 +54,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 // =========================================================================
-// CORE ENGINE: KOMUNIKASI KE SUPABASE DENGAN ERROR CHECKER
+// CORE ENGINE: KOMUNIKASI KE SUPABASE
 // =========================================================================
 async function sendToBackend(action, payload = {}) {
   try {
@@ -697,7 +695,7 @@ function renderRiwayatTable() {
 }
 
 // =========================================================================
-// SMART SCANNER LOGIC (TERMASUK LABEL TUJUAN & PROMPT SURAT JALAN)
+// SMART SCANNER LOGIC
 // =========================================================================
 function handleScannerGun(event) {
   if (event.key === "Enter") {
@@ -786,7 +784,6 @@ function processSmartScan(scannedCode) {
   if (smartScanner) smartScanner.pause();
   activeScannedPart = foundData;
 
-  // MENCARI NAMA CUSTOMER BERDASARKAN ID
   let namaCustFull = "-";
   if (foundData.Customer !== "-") {
     const cst = appData.customer.find(
@@ -796,7 +793,6 @@ function processSmartScan(scannedCode) {
     else namaCustFull = foundData.Customer;
   }
 
-  // MENAMPILKAN DATA KE LAYAR POPUP
   document.getElementById("smInfoCustomer").innerText =
     "TUJUAN: " + namaCustFull;
   document.getElementById("smInfoRell").innerText = foundData.No_Rel;
@@ -854,7 +850,6 @@ function submitSmartAction(tipeAction) {
 
   isProcessing = true;
 
-  // LOGIKA 1: PERAKITAN ASSY
   if (tipeAction === "ASSY_ADD" || tipeAction === "ASSY_SET") {
     const finalQty =
       tipeAction === "ASSY_ADD" ? activeScannedPart.assy_fsg + qty : qty;
@@ -889,7 +884,6 @@ function submitSmartAction(tipeAction) {
     return;
   }
 
-  // LOGIKA 2: BARANG KELUAR (WAJIB ISI SURAT JALAN)
   if (tipeAction === "OUT") {
     if (qty > activeScannedPart.stock) {
       isProcessing = false;
@@ -900,7 +894,7 @@ function submitSmartAction(tipeAction) {
       );
     }
 
-    isProcessing = false; // Buka kunci sebentar agar swal bisa diketik
+    isProcessing = false;
     Swal.fire({
       title: "BARANG KELUAR",
       text: "Ketik Nomor Surat Jalan / Plat Kendaraan:",
@@ -915,7 +909,7 @@ function submitSmartAction(tipeAction) {
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        isProcessing = true; // Kunci lagi
+        isProcessing = true;
         Swal.fire({
           title: "Mencatat ke Supabase...",
           allowOutsideClick: false,
@@ -951,7 +945,6 @@ function submitSmartAction(tipeAction) {
     return;
   }
 
-  // LOGIKA 3: BARANG MASUK
   Swal.fire({
     title: "Mencatat ke Supabase...",
     allowOutsideClick: false,
@@ -985,21 +978,110 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// TABEL MASTER DATA & MANAJEMEN USER
+// TABEL MASTER DATA & MANAJEMEN USER & GENERATOR BARCODE
 // =========================================================================
 function renderMasterBarangTable() {
   const tbody = document.getElementById("tblMasterBarangBody");
   if (!tbody) return;
   if (appData.barang.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">Tidak ada barang.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">Tidak ada barang.</td></tr>`;
     return;
   }
   tbody.innerHTML = appData.barang
     .map(
-      (b) =>
-        `<tr class="hover:bg-yellow-50 transition-colors"><td class="py-2 px-3 border-2 border-slate-800">${b.Part_Number}</td><td class="py-2 px-3 border-2 border-slate-800 text-left">${b.nama_barang}</td><td class="py-2 px-3 border-2 border-slate-800 font-black text-blue-700">${b.stok}</td><td class="py-2 px-3 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${b.No_Rel || "-"}</td></tr>`,
+      (b) => `
+    <tr class="hover:bg-yellow-50 transition-colors">
+      <td class="py-2 px-3 border-2 border-slate-800 font-black">${b.Part_Number}</td>
+      <td class="py-2 px-3 border-2 border-slate-800 text-left font-bold text-slate-700">${b.nama_barang}</td>
+      <td class="py-2 px-3 border-2 border-slate-800 font-black text-blue-700 text-base">${b.stok}</td>
+      <td class="py-2 px-3 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${b.No_Rel || "-"}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 text-center">
+         <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-white rounded border-2 border-slate-900 shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:shadow-none transition-all mx-auto">
+            <i class="fa-solid fa-print"></i>
+         </button>
+      </td>
+    </tr>`,
     )
     .join("");
+}
+
+// 🖨️ FUNGSI GENERATOR CETAK BARCODE STIKER THERMAL
+function printBarcode(partNumber, namaBarang) {
+  const canvas = document.getElementById("hiddenBarcodeCanvas");
+
+  // Membersihkan part number dari karakter yang tidak didukung Barcode CODE128
+  const cleanPartNumber = String(partNumber).trim();
+
+  // Generate gambar barcode ke canvas yang tersembunyi
+  JsBarcode(canvas, cleanPartNumber, {
+    format: "CODE128",
+    width: 2,
+    height: 60,
+    displayValue: true,
+    fontSize: 16,
+    fontOptions: "bold",
+    textMargin: 4,
+    margin: 5,
+  });
+
+  // Mengubah canvas menjadi gambar (Base64)
+  const imgData = canvas.toDataURL("image/png");
+
+  // Membuka Jendela Print Baru
+  const printWindow = window.open("", "_blank", "width=400,height=400");
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Print Label - ${cleanPartNumber}</title>
+        <style>
+          /* Ukuran Kertas Stiker Thermal (Standar 50x30mm) */
+          @page { size: 50mm 30mm; margin: 0; }
+          body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 2mm; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            text-align: center; 
+            background: white; 
+            box-sizing: border-box;
+          }
+          .title { 
+            font-size: 10px; 
+            font-weight: bold; 
+            margin-bottom: 2px; 
+            text-transform: uppercase; 
+            width: 100%; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+          }
+          img { 
+            max-width: 100%; 
+            max-height: 22mm;
+            object-fit: contain;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="title">${namaBarang}</div>
+        <img src="${imgData}" />
+        <script>
+          // Otomatis memanggil dialog print saat gambar sudah dimuat
+          window.onload = function() {
+            setTimeout(() => {
+              window.print();
+              window.close(); // Otomatis menutup tab setelah di-print
+            }, 300);
+          };
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 function renderCustomerTable() {
@@ -1184,7 +1266,7 @@ function handleSaveUser(e) {
 }
 
 // =========================================================================
-// LOGIN - DENGAN AUTO CREATE ADMIN PERTAMA
+// LOGIN
 // =========================================================================
 function openLoginModal() {
   document.getElementById("modalLogin").classList.remove("hidden");

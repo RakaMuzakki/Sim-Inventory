@@ -33,8 +33,9 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- SUPABASE LIBRARY (WAJIB ADA) -->
+    <!-- SUPABASE & JSBARCODE LIBRARY (WAJIB ADA) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <link rel="stylesheet" href="style.css" />
   </head>
 
@@ -511,6 +512,9 @@
                     <th class="py-3 px-3 border-2 border-slate-800">
                       No. Rell
                     </th>
+                    <th class="py-3 px-3 border-2 border-slate-800 w-16">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody
@@ -519,7 +523,7 @@
                 >
                   <tr>
                     <td
-                      colspan="4"
+                      colspan="5"
                       class="py-6 text-center text-slate-400 font-medium"
                     >
                       Memuat data...
@@ -662,7 +666,6 @@
             A.00
           </div>
 
-          <!-- INFO NAMA CUSTOMER / TUJUAN PENGIRIMAN -->
           <div
             id="smInfoCustomer"
             class="inline-block px-2 py-1 bg-slate-900 text-yellow-300 text-[10px] font-black uppercase mb-1 mt-1 shadow-[2px_2px_0px_rgba(0,0,0,1)]"
@@ -1132,6 +1135,9 @@
       }
     </style>
 
-    <script src="script.js?v=26"></script>
+    <!-- CANVAS TERSEMBUNYI UNTUK GENERATE BARCODE -->
+    <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
+
+    <script src="script.js?v=28"></script>
   </body>
 </html>
