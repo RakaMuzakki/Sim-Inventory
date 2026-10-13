@@ -2,8 +2,9 @@
 // KONFIGURASI SUPABASE DATABASE
 // =========================================================================
 // ⚠️ GANTI DENGAN URL & KEY SUPABASE MILIK ANDA! ⚠️
-const SUPABASE_URL = "https://ISIKAN-URL-ANDA-DISINI.supabase.co";
-const SUPABASE_KEY = "ISIKAN-KUNCI-PUBLISHABLE-ANON-ANDA-DISINI";
+const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
