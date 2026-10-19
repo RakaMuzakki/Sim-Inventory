@@ -1,6 +1,7 @@
 // =========================================================================
 // KONFIGURASI SUPABASE DATABASE
 // =========================================================================
+// ⚠️ GANTI DENGAN URL & KEY SUPABASE MILIK ANDA! ⚠️
 const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
 const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
@@ -24,16 +25,23 @@ let isProcessing = false;
 // VARIABEL KERANJANG BATCH TROLLEY (KHUSUS SCANNER GUN)
 let batchTrolley = [];
 
+// Variabel Global untuk Grafik Analitik
 let chartFastMoving = null;
 let chartStock = null;
 
+// =========================================================================
+// LOGIKA WAKTU OPERASIONAL (GANTI HARI JAM 08:00 PAGI)
+// =========================================================================
 function getOperationalDayInfo() {
   const now = new Date();
   const opStart = new Date(now);
   opStart.setHours(8, 0, 0, 0);
+
+  // Jika waktu sekarang masih di bawah jam 08:00 pagi, masih dihitung hari operasional kemarin
   if (now < opStart) {
     opStart.setDate(opStart.getDate() - 1);
   }
+
   const yyyy = opStart.getFullYear();
   const mm = String(opStart.getMonth() + 1).padStart(2, "0");
   const dd = String(opStart.getDate()).padStart(2, "0");
@@ -47,6 +55,7 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
+  // Auto Refresh setiap 3 Detik
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     const riwayatTab = document.getElementById("tab-riwayat");
@@ -75,6 +84,9 @@ window.addEventListener("DOMContentLoaded", () => {
   }, 3000);
 });
 
+// =========================================================================
+// OTOMATIS ROLLOVER [ +/- ] KE STOCK SAAT JAM 08:00 PAGI
+// =========================================================================
 async function checkAndRunDailyRollover() {
   if (isProcessing || !appData.barang || appData.barang.length === 0) return;
   const { opKey } = getOperationalDayInfo();
@@ -104,6 +116,7 @@ async function checkAndRunDailyRollover() {
         .update({ password: opKey })
         .eq("username", "__SYSTEM_ROLLOVER__");
       markerUser.password = opKey;
+
       for (const itemBarang of appData.barang) {
         const partNum = String(itemBarang.Part_Number).trim();
         const relatedOrders = appData.orders.filter(
@@ -131,6 +144,72 @@ async function checkAndRunDailyRollover() {
   }
 }
 
+// =========================================================================
+// HELPER MULTI-CUSTOMER & EKSTRAKSI NAMA CUSTOMER DARI TRANSAKSI
+// =========================================================================
+function resolveCustomerDisplay(custCode) {
+  if (
+    !custCode ||
+    custCode === "-" ||
+    String(custCode) === "undefined" ||
+    String(custCode) === "null"
+  )
+    return "-";
+  const cleanCode = String(custCode).trim();
+  const found = (appData.customer || []).find(
+    (c) =>
+      String(c.id_customer).trim().toLowerCase() === cleanCode.toLowerCase() ||
+      String(c.nama_customer).trim().toLowerCase() === cleanCode.toLowerCase(),
+  );
+  return found ? found.nama_customer || found.id_customer : cleanCode;
+}
+
+function extractCustomerFromCatatan(catatan) {
+  if (!catatan) return null;
+  // Membaca pola "Kirim ke: NamaCustomer" dan membuang akhiran "(... Troli)" jika ada
+  const match = String(catatan).match(
+    /Kirim ke:\s*(.+?)(?:\s*\(\d+\s*Troli\))?$/i,
+  );
+  if (match && match[1]) {
+    const raw = match[1].trim();
+    if (raw && raw !== "-" && raw.toLowerCase() !== "undefined") {
+      return resolveCustomerDisplay(raw);
+    }
+  }
+  return null;
+}
+
+function getLocalMultiCustMap(partNum) {
+  try {
+    const raw = localStorage.getItem("multi_cust_orders_" + partNum);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveLocalMultiCustTarget(partNum, customerName, qtyOrder) {
+  const cName = resolveCustomerDisplay(customerName);
+  if (!cName || cName === "-") return;
+  const map = getLocalMultiCustMap(partNum);
+  if (qtyOrder !== undefined && qtyOrder !== null) {
+    map[cName] = Number(qtyOrder) || 0;
+  } else if (map[cName] === undefined) {
+    map[cName] = 0;
+  }
+  localStorage.setItem("multi_cust_orders_" + partNum, JSON.stringify(map));
+}
+
+function removeLocalMultiCustTarget(partNum, customerName) {
+  const cName = resolveCustomerDisplay(customerName);
+  const map = getLocalMultiCustMap(partNum);
+  delete map[cName];
+  localStorage.setItem("multi_cust_orders_" + partNum, JSON.stringify(map));
+}
+
+// =========================================================================
+// CORE ENGINE: KOMUNIKASI KE SUPABASE
+// =========================================================================
 async function sendToBackend(action, payload = {}) {
   try {
     switch (action) {
@@ -143,7 +222,16 @@ async function sendToBackend(action, payload = {}) {
           _supabase.from("Transaksi_Keluar").select("*"),
           _supabase.from("Users").select("*"),
         ]);
-        if (resB.error) throw new Error(resB.error.message);
+        if (resB.error)
+          throw new Error("Tabel Master_Barang error: " + resB.error.message);
+        if (resO.error)
+          throw new Error("Tabel List_Order error: " + resO.error.message);
+        if (resM.error)
+          throw new Error("Tabel Transaksi_Masuk error: " + resM.error.message);
+        if (resK.error)
+          throw new Error(
+            "Tabel Transaksi_Keluar error: " + resK.error.message,
+          );
         return {
           success: true,
           barang: resB.data,
@@ -155,14 +243,18 @@ async function sendToBackend(action, payload = {}) {
         };
 
       case "apiLogin":
-        const { data: cekUsers } = await _supabase.from("Users").select("*");
+        const { data: cekUsers, error: errCek } = await _supabase
+          .from("Users")
+          .select("*");
+        if (errCek) throw new Error("Gagal baca Users: " + errCek.message);
         const realUsers = (cekUsers || []).filter(
           (u) => u.username !== "__SYSTEM_ROLLOVER__",
         );
         if (realUsers.length === 0 && payload.username === "admin") {
-          await _supabase
+          const { error: errIns } = await _supabase
             .from("Users")
             .insert([{ username: "admin", password: "admin", role: "Admin" }]);
+          if (errIns) throw new Error(errIns.message);
           return { success: true, user: { username: "admin", role: "Admin" } };
         }
         const { data: loginData } = await _supabase
@@ -180,7 +272,12 @@ async function sendToBackend(action, payload = {}) {
         return { success: false, message: "Username atau password salah!" };
 
       case "apiSaveTransaksiKeluar":
+        // PERBAIKAN MULTI-CUSTOMER:
+        // Jika barang di-scan keluar untuk Customer baru (Customer ke-2, ke-3, dst), otomatis daftarkan baris baru!
         if (payload.customer && payload.customer !== "-") {
+          const cleanCust = resolveCustomerDisplay(payload.customer);
+          saveLocalMultiCustTarget(payload.partNumber, cleanCust);
+
           const { data: checkOrd } = await _supabase
             .from("List_Order")
             .select("*")
@@ -188,8 +285,9 @@ async function sendToBackend(action, payload = {}) {
           const existingSameCust = (checkOrd || []).find(
             (o) =>
               resolveCustomerDisplay(o.id_customer).toLowerCase() ===
-              resolveCustomerDisplay(payload.customer).toLowerCase(),
+              cleanCust.toLowerCase(),
           );
+
           if (!existingSameCust) {
             const emptySlot = (checkOrd || []).find(
               (o) =>
@@ -200,21 +298,21 @@ async function sendToBackend(action, payload = {}) {
             if (emptySlot && emptySlot.id !== undefined) {
               await _supabase
                 .from("List_Order")
-                .update({ id_customer: payload.customer })
+                .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
-            } else if (!checkOrd || checkOrd.length === 0) {
-              await _supabase
-                .from("List_Order")
-                .insert([
-                  {
-                    Part_Number: payload.partNumber,
-                    qty_order: 0,
-                    id_customer: payload.customer,
-                  },
-                ]);
+            } else {
+              // Insert baris order baru untuk Customer kedua/ketiga pada Part Number yang sama
+              await _supabase.from("List_Order").insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty_order: 0,
+                  id_customer: cleanCust,
+                },
+              ]);
             }
           }
         }
+
         const { error: errLogOut } = await _supabase
           .from("Transaksi_Keluar")
           .insert([
@@ -237,11 +335,12 @@ async function sendToBackend(action, payload = {}) {
           .single();
         if (errBIn) throw new Error(errBIn.message);
         const newStokIn = (Number(bIn?.stok) || 0) + Number(payload.qty);
-        await _supabase
+        const { error: errUpdIn } = await _supabase
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase
+        if (errUpdIn) throw new Error(errUpdIn.message);
+        const { error: errLogIn } = await _supabase
           .from("Transaksi_Masuk")
           .insert([
             {
@@ -252,30 +351,59 @@ async function sendToBackend(action, payload = {}) {
               tanggal: new Date().toISOString(),
             },
           ]);
+        if (errLogIn) throw new Error(errLogIn.message);
         return { success: true };
 
       case "apiUpdateAssyFsg":
-        await _supabase
+        const { error: errAssy } = await _supabase
           .from("Master_Barang")
           .update({ assy_fsg: payload.qty })
           .eq("Part_Number", payload.partNumber);
+        if (errAssy) throw new Error(errAssy.message);
         return { success: true };
 
       case "apiUpdateQtyDay":
-        const { data: checkO } = await _supabase
+        const custTarget = resolveCustomerDisplay(payload.customer);
+        if (custTarget && custTarget !== "-") {
+          saveLocalMultiCustTarget(payload.partNumber, custTarget, payload.qty);
+        }
+        const { data: checkO, error: errCheckO } = await _supabase
           .from("List_Order")
           .select("*")
           .eq("Part_Number", payload.partNumber);
-        if (checkO && checkO.length > 0) {
-          const targetRow =
-            checkO.find(
-              (o) => resolveCustomerDisplay(o.id_customer) === payload.customer,
-            ) || checkO[0];
-          if (targetRow.id !== undefined) {
+        if (errCheckO) throw new Error(errCheckO.message);
+
+        const matchedOrder = (checkO || []).find(
+          (o) =>
+            resolveCustomerDisplay(o.id_customer).toLowerCase() ===
+            custTarget.toLowerCase(),
+        );
+        if (matchedOrder) {
+          if (matchedOrder.id !== undefined) {
             await _supabase
               .from("List_Order")
               .update({ qty_order: payload.qty })
-              .eq("id", targetRow.id);
+              .eq("id", matchedOrder.id);
+          } else {
+            await _supabase
+              .from("List_Order")
+              .update({ qty_order: payload.qty })
+              .eq("Part_Number", payload.partNumber)
+              .eq("id_customer", matchedOrder.id_customer);
+          }
+        } else if (
+          checkO &&
+          checkO.length === 1 &&
+          (!checkO[0].id_customer || checkO[0].id_customer === "-")
+        ) {
+          if (checkO[0].id !== undefined) {
+            await _supabase
+              .from("List_Order")
+              .update({
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              })
+              .eq("id", checkO[0].id);
           } else {
             await _supabase
               .from("List_Order")
@@ -283,18 +411,13 @@ async function sendToBackend(action, payload = {}) {
               .eq("Part_Number", payload.partNumber);
           }
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: payload.qty,
-                id_customer:
-                  payload.customer && payload.customer !== "-"
-                    ? payload.customer
-                    : null,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: payload.qty,
+              id_customer: custTarget !== "-" ? custTarget : null,
+            },
+          ]);
         }
         return { success: true };
 
@@ -303,46 +426,72 @@ async function sendToBackend(action, payload = {}) {
           .from("List_Order")
           .select("*")
           .eq("Part_Number", payload.partNumber);
+        const newCustClean = resolveCustomerDisplay(payload.customer);
+        const oldCustClean = resolveCustomerDisplay(payload.oldCustomer);
+
         if (payload.mode === "ADD_NEW") {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: Number(payload.qtyOrder) || 0,
-                id_customer: payload.customer,
-              },
-            ]);
+          saveLocalMultiCustTarget(
+            payload.partNumber,
+            newCustClean,
+            Number(payload.qtyOrder) || 0,
+          );
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: Number(payload.qtyOrder) || 0,
+              id_customer: newCustClean,
+            },
+          ]);
           return { success: true };
         }
+
         if (payload.mode === "DELETE_ROW") {
+          removeLocalMultiCustTarget(payload.partNumber, oldCustClean);
           const rowToDelete = (checkOCust || []).find(
             (o) =>
-              resolveCustomerDisplay(o.id_customer) === payload.oldCustomer,
+              resolveCustomerDisplay(o.id_customer).toLowerCase() ===
+              oldCustClean.toLowerCase(),
           );
-          if (rowToDelete && rowToDelete.id !== undefined) {
-            await _supabase
-              .from("List_Order")
-              .delete()
-              .eq("id", rowToDelete.id);
+          if (rowToDelete) {
+            if (rowToDelete.id !== undefined) {
+              await _supabase
+                .from("List_Order")
+                .delete()
+                .eq("id", rowToDelete.id);
+            } else {
+              await _supabase
+                .from("List_Order")
+                .delete()
+                .eq("Part_Number", payload.partNumber)
+                .eq("id_customer", rowToDelete.id_customer);
+            }
           }
           return { success: true };
         }
+
+        // Mode UPDATE baris customer saat ini
+        const oldMap = getLocalMultiCustMap(payload.partNumber);
+        const prevQty = oldMap[oldCustClean] || 0;
+        removeLocalMultiCustTarget(payload.partNumber, oldCustClean);
+        if (newCustClean !== "-")
+          saveLocalMultiCustTarget(payload.partNumber, newCustClean, prevQty);
+
         if (checkOCust && checkOCust.length > 0) {
           const targetRow =
             checkOCust.find(
               (o) =>
-                resolveCustomerDisplay(o.id_customer) === payload.oldCustomer,
+                resolveCustomerDisplay(o.id_customer).toLowerCase() ===
+                oldCustClean.toLowerCase(),
             ) || checkOCust[0];
           if (targetRow.id !== undefined) {
             await _supabase
               .from("List_Order")
-              .update({ id_customer: payload.customer })
+              .update({ id_customer: newCustClean })
               .eq("id", targetRow.id);
           } else {
             await _supabase
               .from("List_Order")
-              .update({ id_customer: payload.customer })
+              .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
           }
         } else {
@@ -352,14 +501,11 @@ async function sendToBackend(action, payload = {}) {
               {
                 Part_Number: payload.partNumber,
                 qty_order: 0,
-                id_customer: payload.customer,
+                id_customer: newCustClean,
               },
             ]);
         }
-        localStorage.setItem(
-          "cust_map_" + payload.partNumber,
-          payload.customer,
-        );
+        localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
 
       case "apiSaveBarang":
@@ -368,18 +514,21 @@ async function sendToBackend(action, payload = {}) {
           .select("*")
           .eq("Part_Number", payload.item.Part_Number);
         if (checkB && checkB.length > 0) {
-          await _supabase
+          const { error: errUpdB } = await _supabase
             .from("Master_Barang")
             .update(payload.item)
             .eq("Part_Number", payload.item.Part_Number);
+          if (errUpdB) throw new Error(errUpdB.message);
         } else {
-          await _supabase.from("Master_Barang").insert([payload.item]);
+          const { error: errInsB } = await _supabase
+            .from("Master_Barang")
+            .insert([payload.item]);
+          if (errInsB) throw new Error(errInsB.message);
         }
         if (payload.customer && payload.customer !== "-") {
-          localStorage.setItem(
-            "cust_map_" + payload.item.Part_Number,
-            payload.customer,
-          );
+          const cClean = resolveCustomerDisplay(payload.customer);
+          localStorage.setItem("cust_map_" + payload.item.Part_Number, cClean);
+          saveLocalMultiCustTarget(payload.item.Part_Number, cClean, 0);
           const { data: checkOrdB } = await _supabase
             .from("List_Order")
             .select("*")
@@ -391,7 +540,7 @@ async function sendToBackend(action, payload = {}) {
                 {
                   Part_Number: payload.item.Part_Number,
                   qty_order: 0,
-                  id_customer: payload.customer,
+                  id_customer: cClean,
                 },
               ]);
           }
@@ -404,12 +553,16 @@ async function sendToBackend(action, payload = {}) {
           .select("*")
           .eq("id_customer", payload.cust.id_customer);
         if (checkC && checkC.length > 0) {
-          await _supabase
+          const { error: errUpdC } = await _supabase
             .from("Master_Customer")
             .update(payload.cust)
             .eq("id_customer", payload.cust.id_customer);
+          if (errUpdC) throw new Error(errUpdC.message);
         } else {
-          await _supabase.from("Master_Customer").insert([payload.cust]);
+          const { error: errInsC } = await _supabase
+            .from("Master_Customer")
+            .insert([payload.cust]);
+          if (errInsC) throw new Error(errInsC.message);
         }
         return { success: true, message: "Customer tersimpan!" };
 
@@ -419,14 +572,18 @@ async function sendToBackend(action, payload = {}) {
           .select("*")
           .eq("username", payload.userData.username);
         if (checkU && checkU.length > 0) throw new Error("Username sudah ada!");
-        await _supabase.from("Users").insert([payload.userData]);
+        const { error: errInsU } = await _supabase
+          .from("Users")
+          .insert([payload.userData]);
+        if (errInsU) throw new Error(errInsU.message);
         return { success: true, message: "User baru berhasil dibuat!" };
 
       case "apiDeleteUser":
-        await _supabase
+        const { error: errDel } = await _supabase
           .from("Users")
           .delete()
           .eq("username", payload.usernameTarget);
+        if (errDel) throw new Error(errDel.message);
         return { success: true, message: "User telah dihapus!" };
 
       default:
@@ -548,7 +705,7 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// DASHBOARD & PAPAN KONTROL
+// DASHBOARD & PAPAN KONTROL (OTOMATIS PECAH BARIS JIKA BEDA CUSTOMER)
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
@@ -603,24 +760,6 @@ function refreshAllUI() {
     renderAnalitikCharts();
 }
 
-function resolveCustomerDisplay(custCode) {
-  if (
-    !custCode ||
-    custCode === "-" ||
-    String(custCode) === "undefined" ||
-    String(custCode) === "null"
-  )
-    return "-";
-  const found = (appData.customer || []).find(
-    (c) =>
-      String(c.id_customer).trim().toLowerCase() ===
-        String(custCode).trim().toLowerCase() ||
-      String(c.nama_customer).trim().toLowerCase() ===
-        String(custCode).trim().toLowerCase(),
-  );
-  return found ? found.nama_customer || found.id_customer : String(custCode);
-}
-
 function buildSeatAssyControlDataset() {
   const list = [];
   const { opStart } = getOperationalDayInfo();
@@ -633,83 +772,129 @@ function buildSeatAssyControlDataset() {
     const currentStock = Number(itemBarang.stok) || 0;
     const assyFsg = Number(itemBarang.assy_fsg) || 0;
 
-    const partOutLogs = appData.keluar.filter(
-      (k) =>
-        String(k.Part_Number).trim() === partNum &&
-        new Date(k.tanggal || k.created_at) >= opStart,
-    );
-    const totalQtyDayPart = relatedOrders.reduce(
-      (sum, o) => sum + (Number(o.qty_order) || 0),
-      0,
-    );
-    const totalQtyOutPart = partOutLogs.reduce(
-      (sum, k) => sum + (Number(k.qty) || 0),
-      0,
-    );
-    const variancePart = currentStock + assyFsg - totalQtyDayPart;
+    // Ambil seluruh transaksi keluar untuk Part Number ini sejak jam 08:00 pagi hari operasional berjalan
+    const partOutLogs = appData.keluar.filter((k) => {
+      if (String(k.Part_Number).trim() !== partNum) return false;
+      const tgl = new Date(k.tanggal || k.created_at);
+      return tgl >= opStart;
+    });
 
-    if (relatedOrders.length <= 1) {
-      let custRaw = "-";
+    // Kumpulkan semua Customer yang terkait dengan Part Number ini (dari List_Order, LocalStorage, maupun Transaksi_Keluar hari ini)
+    const customerMap = new Map(); // Key: lowercase customer name -> { name, qty_day }
+
+    // 1. Dari Tabel List_Order di Supabase
+    relatedOrders.forEach((ord) => {
+      const cName = resolveCustomerDisplay(ord.id_customer);
+      if (cName && cName !== "-") {
+        const key = cName.toLowerCase();
+        const prev = customerMap.get(key);
+        customerMap.set(key, {
+          name: cName,
+          qty_day: (prev ? prev.qty_day : 0) + (Number(ord.qty_order) || 0),
+        });
+      }
+    });
+
+    // 2. Dari Penyimpanan Multi-Customer Lokal (jika tabel List_Order di Supabase dibatasi Primary Key)
+    const localMap = getLocalMultiCustMap(partNum);
+    Object.keys(localMap).forEach((cRaw) => {
+      const cName = resolveCustomerDisplay(cRaw);
+      if (cName && cName !== "-") {
+        const key = cName.toLowerCase();
+        if (!customerMap.has(key)) {
+          customerMap.set(key, {
+            name: cName,
+            qty_day: Number(localMap[cRaw]) || 0,
+          });
+        } else if (
+          customerMap.get(key).qty_day === 0 &&
+          Number(localMap[cRaw]) > 0
+        ) {
+          customerMap.get(key).qty_day = Number(localMap[cRaw]);
+        }
+      }
+    });
+
+    // 3. Dari Riwayat Scan Transaksi Keluar Hari Ini (Otomatis membuat baris baru jika di-scan ke Customer berbeda!)
+    partOutLogs.forEach((k) => {
+      const extractedCust = extractCustomerFromCatatan(k.catatan);
+      if (extractedCust && extractedCust !== "-") {
+        const key = extractedCust.toLowerCase();
+        if (!customerMap.has(key)) {
+          customerMap.set(key, {
+            name: extractedCust,
+            qty_day: Number(localMap[extractedCust]) || 0,
+          });
+        }
+      }
+    });
+
+    // 4. Jika belum ada di ketiganya, cek fallback default customer barang
+    if (customerMap.size === 0) {
+      let fallbackCust = "-";
       if (
-        relatedOrders.length === 1 &&
-        relatedOrders[0].id_customer &&
-        String(relatedOrders[0].id_customer) !== "undefined"
-      ) {
-        custRaw = relatedOrders[0].id_customer;
-      } else if (
         itemBarang.id_customer &&
         String(itemBarang.id_customer) !== "undefined"
       ) {
-        custRaw = itemBarang.id_customer;
+        fallbackCust = resolveCustomerDisplay(itemBarang.id_customer);
       } else if (localStorage.getItem("cust_map_" + partNum)) {
-        custRaw = localStorage.getItem("cust_map_" + partNum);
+        fallbackCust = resolveCustomerDisplay(
+          localStorage.getItem("cust_map_" + partNum),
+        );
       }
+      const fallbackQtyDay = relatedOrders.reduce(
+        (s, o) => s + (Number(o.qty_order) || 0),
+        0,
+      );
+      customerMap.set(fallbackCust.toLowerCase(), {
+        name: fallbackCust,
+        qty_day: fallbackQtyDay,
+      });
+    }
 
-      const custDisplay = resolveCustomerDisplay(custRaw);
-      const qtyDay =
-        relatedOrders.length === 1
-          ? Number(relatedOrders[0].qty_order) || 0
-          : 0;
+    // Hitung Total QTY/DAY gabungan semua customer untuk rumus [ +/- ]
+    let totalQtyDayAllCust = 0;
+    customerMap.forEach((val) => {
+      totalQtyDayAllCust += val.qty_day;
+    });
+    const variancePart = currentStock + assyFsg - totalQtyDayAllCust;
+
+    // Buat baris di Papan Kontrol untuk masing-masing Customer
+    const custEntries = Array.from(customerMap.values());
+    custEntries.forEach((custObj, idx) => {
+      const cName = custObj.name;
+      const qtyDayCust = custObj.qty_day;
+
+      // Hitung QTY/OUT khusus untuk Customer pada baris ini saja
+      const qtyOutCust = partOutLogs
+        .filter((k) => {
+          const logCust = extractCustomerFromCatatan(k.catatan);
+          if (logCust) {
+            return logCust.toLowerCase() === cName.toLowerCase();
+          }
+          // Jika transaksi lama tidak mencantumkan nama customer, masukkan ke baris customer pertama
+          return idx === 0;
+        })
+        .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
+
+      const sisaDelCust = Math.max(0, qtyDayCust - qtyOutCust);
+
       list.push({
-        Customer: custDisplay,
-        CustomerCount: 1,
+        Customer: cName,
+        CustomerCount: custEntries.length,
         No_Rel: itemBarang.No_Rel || "-",
         Part_Number: partNum,
         nama_barang: itemBarang.nama_barang || "-",
         stock: currentStock,
-        qty_day: qtyDay,
-        qty_out: totalQtyOutPart,
-        sisa_del: Math.max(0, qtyDay - totalQtyOutPart),
+        qty_day: qtyDayCust,
+        qty_out: qtyOutCust,
+        sisa_del: sisaDelCust,
         assy_fsg: assyFsg,
         variance: variancePart,
       });
-    } else {
-      relatedOrders.forEach((ord) => {
-        const custDisplay = resolveCustomerDisplay(ord.id_customer);
-        const qtyDayCust = Number(ord.qty_order) || 0;
-        const qtyOutCust = partOutLogs
-          .filter(
-            (k) =>
-              k.catatan &&
-              k.catatan.toLowerCase().includes(custDisplay.toLowerCase()),
-          )
-          .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
-        list.push({
-          Customer: custDisplay,
-          CustomerCount: relatedOrders.length,
-          No_Rel: itemBarang.No_Rel || "-",
-          Part_Number: partNum,
-          nama_barang: itemBarang.nama_barang || "-",
-          stock: currentStock,
-          qty_day: qtyDayCust,
-          qty_out: qtyOutCust,
-          sisa_del: Math.max(0, qtyDayCust - qtyOutCust),
-          assy_fsg: assyFsg,
-          variance: variancePart,
-        });
-      });
-    }
+    });
   });
+
   appData.seatAssyControl = list;
 }
 
@@ -749,7 +934,7 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
           <label class="block text-[10px] font-black uppercase mb-1">Mode Pengaturan:</label>
           <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full bg-yellow-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold">
             <option value="UPDATE">Ubah Customer pada Baris Ini</option>
-            <option value="ADD_NEW">+ Tambah Customer Baru (2 Customer Beli Barang Sama)</option>
+            <option value="ADD_NEW">+ Tambah Customer Baru (Beda Customer Beli Barang Sama)</option>
             ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Customer (${currentCust}) Ini</option>` : ""}
           </select>
         </div>
@@ -914,7 +1099,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         : "";
 
       return `<tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words ${custClass}" ${custAction}>${row.Customer}</td>
+      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words ${custClass}" ${custAction} title="Klik untuk ubah/tambah Customer">${row.Customer}</td>
       <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left">
         <div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div>
@@ -973,7 +1158,17 @@ function handleScannerGun(event) {
 }
 
 function addToBatchTrolley(item) {
-  const existing = batchTrolley.find((b) => b.Part_Number === item.Part_Number);
+  const selectedBatchCust = document.getElementById(
+    "batchSelectCustomer",
+  )?.value;
+  const custToUse =
+    selectedBatchCust && selectedBatchCust !== "-"
+      ? selectedBatchCust
+      : item.Customer;
+
+  const existing = batchTrolley.find(
+    (b) => b.Part_Number === item.Part_Number && b.Customer === custToUse,
+  );
   if (existing) {
     existing.trolleyCount += 1;
   } else {
@@ -981,7 +1176,7 @@ function addToBatchTrolley(item) {
       Part_Number: item.Part_Number,
       nama_barang: item.nama_barang,
       No_Rel: item.No_Rel,
-      Customer: item.Customer,
+      Customer: custToUse,
       stock: item.stock,
       assy_fsg: item.assy_fsg,
       trolleyCount: 1,
@@ -1021,14 +1216,16 @@ function updateBatchTrolleyUI() {
           <span class="font-black text-xs text-slate-900">${b.Part_Number}</span>
         </div>
         <div class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">${b.nama_barang}</div>
-        <div class="text-[10px] font-black text-blue-700 mt-0.5">Ditembak: ${b.trolleyCount}x Troli</div>
+        <div class="text-[10px] font-black text-blue-700 mt-0.5">Ditembak: ${b.trolleyCount}x Troli | Cust: <span class="text-slate-900">${b.Customer}</span></div>
       </div>
       <div class="flex items-center gap-2">
         <div>
           <label class="block text-[8px] font-black uppercase text-slate-500 text-center">Total Qty (Pcs)</label>
           <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="w-20 bg-white border-2 border-slate-800 px-2 py-1 text-center font-black text-sm rounded focus:bg-yellow-100" />
         </div>
-        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-7 h-7 bg-red-400 hover:bg-red-500 border-2 border-slate-800 rounded font-black text-xs flex items-center justify-center">✕</button>
+        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-7 h-7 bg-red-400 hover:bg-red-500 border-2 border-slate-800 rounded font-black text-xs flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
     </div>
   `,
@@ -1066,7 +1263,7 @@ async function submitBatchTrolley(tipeAction) {
       if (!targetCust || targetCust === "-") {
         return Swal.fire(
           "Pilih Customer!",
-          `Pilih Customer Tujuan untuk pengiriman barang keluar!`,
+          `Silakan pilih Customer Tujuan pada dropdown di atas terlebih dahulu!`,
           "warning",
         );
       }
@@ -1098,7 +1295,7 @@ async function submitBatchTrolley(tipeAction) {
           qty: qty,
           petugas: currentUser.username,
           customer: targetCust,
-          catatan: `Kirim ke: ${targetCust} (${item.trolleyCount} Troli)`,
+          catatan: `Kirim ke: ${targetCust}`,
         });
       } else if (tipeAction === "ASSY_ADD") {
         const currentBarang = appData.barang.find(
@@ -1173,7 +1370,7 @@ function stopSmartScanner() {
 function populateCustomerDropdown(selectEl, selectedVal = "-") {
   if (!selectEl) return;
   const isBatch = selectEl.id === "batchSelectCustomer";
-  let html = `<option value="-">${isBatch ? "-- Sesuai Default Barang --" : "-- Pilih Customer --"}</option>`;
+  let html = `<option value="-">${isBatch ? "-- Pilih Customer Tujuan --" : "-- Pilih Customer --"}</option>`;
   (appData.customer || []).forEach((c) => {
     const val = c.nama_customer || c.id_customer;
     const label = c.nama_customer
@@ -1202,6 +1399,8 @@ function handleChangeScannerCustomer(val) {
     if (matchingRow) {
       activeScannedPart = matchingRow;
       document.getElementById("smInfoTarget").innerText = matchingRow.sisa_del;
+    } else {
+      document.getElementById("smInfoTarget").innerText = 0;
     }
   }
 }
@@ -1419,7 +1618,7 @@ function renderUsersTable() {
     .filter((u) => u.username !== "__SYSTEM_ROLLOVER__")
     .map(
       (u) =>
-        `<tr class="hover:bg-yellow-50"><td class="py-2 px-3 border-2 border-slate-800 font-black">${u.username}</td><td class="py-2 px-3 border-2 border-slate-800">${u.role}</td><td class="py-2 px-3 border-2 border-slate-800"><button onclick="sendToBackend('apiDeleteUser',{usernameTarget:'${u.username}'}).then(()=>refreshAllData())" class="bg-red-400 px-2 py-1 border-2 border-slate-800 rounded font-black text-xs">Hapus</button></td></tr>`,
+        `<tr class="hover:bg-yellow-50"><td class="py-2 px-3 border-2 border-slate-800 font-black">${u.username}</td><td class="py-2 px-3 border-2 border-slate-800">${u.role}</td><td class="py-2 px-3 border-2 border-slate-800"><button onclick="sendToBackend('apiDeleteUser',{usernameTarget:'${u.username}'}).then(()=>refreshAllData())" class="bg-red-400 px-2 py-1 border-2 border-slate-800 rounded font-black text-xs"><i class="fa-solid fa-trash-can"></i></button></td></tr>`,
     )
     .join("");
 }

@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <title>Sistem Informasi Inventory (SIM-INVENTORY)</title>
-    <!-- Library & Fonts -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -27,14 +27,20 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap"
       rel="stylesheet"
     />
+
+    <!-- PERBAIKAN IKON: Menggunakan Server jsDelivr & unpkg agar Ikon Tidak Hilang -->
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
     />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
+    />
+
+    <!-- Library Pendukung -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-
-    <!-- SUPABASE, JSBARCODE & CHART.JS LIBRARY -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -175,6 +181,7 @@
           <button
             onclick="logoutAction()"
             class="hover:text-red-600 font-black"
+            title="Keluar"
           >
             <i class="fa-solid fa-power-off"></i>
           </button>
@@ -199,7 +206,7 @@
             onclick="toggleSidebar()"
             class="w-10 h-10 rounded bg-yellow-300 hover:bg-yellow-400 border-2 border-slate-800 flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"
           >
-            <i class="fa-solid fa-bars font-black"></i>
+            <i class="fa-solid fa-bars text-slate-900 text-lg"></i>
           </button>
           <div>
             <h2 id="greetingTitle" class="text-lg font-black uppercase">
@@ -217,14 +224,15 @@
           <div
             class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded border-2 border-slate-800 bg-slate-100 font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]"
           >
-            <i class="fa-solid fa-clock"></i
+            <i class="fa-solid fa-clock text-slate-700"></i
             ><span id="liveClock">--:--:--</span>
           </div>
           <button
             onclick="refreshAllData()"
             class="w-9 h-9 rounded border-2 border-slate-800 flex items-center justify-center shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-emerald-400 hover:bg-emerald-500 transition-all"
+            title="Refresh Data"
           >
-            <i class="fa-solid fa-rotate font-black" id="syncSpinner"></i>
+            <i class="fa-solid fa-rotate text-slate-900" id="syncSpinner"></i>
           </button>
         </div>
       </header>
@@ -277,7 +285,7 @@
                   >
                     <th
                       rowspan="2"
-                      class="py-3 px-2 border-2 border-slate-800 w-24 text-[10px]"
+                      class="py-3 px-2 border-2 border-slate-800 w-28 text-[10px]"
                     >
                       CUST
                     </th>
@@ -383,7 +391,7 @@
           </div>
         </section>
 
-        <!-- TAB SCANNER (KAMERA HP = POPUP LANGSUNG | GUN SCANNER = KERANJANG BATCH TROLLEY) -->
+        <!-- TAB SCANNER (KAMERA HP = POPUP LANGSUNG | GUN SCANNER = KERANJANG BATCH TROLI) -->
         <section id="tab-scanner" class="tab-pane hidden space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
             <!-- KOTAK KIRI: INPUT SCANNER -->
@@ -430,8 +438,8 @@
 
               <div class="mt-6 pt-6 border-t-2 border-slate-800">
                 <p class="text-[10px] font-black uppercase mb-1 text-slate-700">
-                  <i class="fa-solid fa-gun mr-1"></i> Mode Gun Scanner (Masuk
-                  Daftar Troli)
+                  <i class="fa-solid fa-barcode mr-1"></i> Mode Gun Scanner
+                  (Masuk Daftar Troli)
                 </p>
                 <p class="text-[10px] text-slate-500 font-semibold mb-3">
                   Tembak semua barang ke sini dulu, lalu isi jumlahnya sekaligus
@@ -465,8 +473,7 @@
                 >
                   <div>
                     <h3 class="text-lg font-black uppercase tracking-tighter">
-                      <i class="fa-solid fa-cart-flatbed-boxes mr-1"></i> Daftar
-                      Scan Troli
+                      <i class="fa-solid fa-dolly mr-1"></i> Daftar Scan Troli
                     </h3>
                     <p class="text-[10px] font-bold text-slate-500 uppercase">
                       Scan beberapa troli dulu, baru input Qty sekaligus
@@ -480,20 +487,22 @@
                   </button>
                 </div>
 
-                <!-- Pilihan Customer untuk Transaksi Keluar di Batch -->
+                <!-- Pilihan Customer Tujuan untuk Transaksi Keluar di Batch -->
                 <div
                   id="batchCustWrapper"
-                  class="mb-3 bg-slate-100 p-2.5 rounded border-2 border-slate-800"
+                  class="mb-3 bg-yellow-100 p-2.5 rounded border-2 border-slate-800"
                 >
                   <label
-                    class="block text-[10px] font-black uppercase text-slate-700 mb-1"
-                    >Customer Tujuan (Jika Barang Keluar):</label
+                    class="block text-[10px] font-black uppercase text-slate-800 mb-1"
                   >
+                    <i class="fa-solid fa-building mr-1"></i> Pilih Customer
+                    Tujuan Pengiriman:
+                  </label>
                   <select
                     id="batchSelectCustomer"
                     class="w-full bg-white border-2 border-slate-800 rounded px-2.5 py-1.5 font-black text-xs uppercase"
                   >
-                    <option value="-">-- Sesuai Default Barang --</option>
+                    <option value="-">-- Pilih Customer Tujuan --</option>
                   </select>
                 </div>
 
@@ -1314,6 +1323,6 @@
     <!-- CANVAS TERSEMBUNYI UNTUK GENERATOR BARCODE -->
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=33"></script>
+    <script src="script.js?v=34"></script>
   </body>
 </html>
