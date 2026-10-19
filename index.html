@@ -236,7 +236,7 @@
             class="bg-white p-5 sm:p-7 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
           >
             <div
-              class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b-4 border-slate-800 mb-5"
+              class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b-4 border-slate-800 mb-5 gap-3"
             >
               <div>
                 <h3 class="text-2xl font-black uppercase tracking-tighter">
@@ -245,13 +245,15 @@
                 <p
                   class="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1"
                 >
-                  Monitoring Live Stok & Delivery (Cut-Off Jam 08:00 WIB)
+                  Monitoring Live Stok & Delivery (Rollover Otomatis Jam 08:00)
                 </p>
               </div>
-              <div
-                class="mt-3 sm:mt-0 px-3 py-1.5 border-2 border-slate-800 bg-yellow-300 font-black text-sm shadow-[2px_2px_0px_rgba(0,0,0,1)]"
-              >
-                Total Item: <span id="cntTotalSeatAssy">0</span>
+              <div class="flex items-center gap-2">
+                <div
+                  class="px-3 py-1.5 border-2 border-slate-800 bg-yellow-300 font-black text-sm shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                >
+                  Total Item: <span id="cntTotalSeatAssy">0</span>
+                </div>
               </div>
             </div>
 
@@ -275,7 +277,7 @@
                   >
                     <th
                       rowspan="2"
-                      class="py-3 px-2 border-2 border-slate-800 w-16 text-[9px]"
+                      class="py-3 px-2 border-2 border-slate-800 w-24 text-[10px]"
                     >
                       CUST
                     </th>
@@ -503,7 +505,7 @@
                       Petugas
                     </th>
                     <th class="py-3 px-3 border-2 border-slate-800 text-left">
-                      Catatan
+                      Customer / Catatan
                     </th>
                   </tr>
                 </thead>
@@ -743,7 +745,7 @@
         >
           <div class="p-3 text-center bg-slate-50">
             <p class="text-[9px] font-black uppercase text-slate-500">
-              Stok Sistem
+              Stok Awal
             </p>
             <p id="smInfoStok" class="text-2xl font-black text-blue-600 mt-1">
               0
@@ -751,7 +753,7 @@
           </div>
           <div class="p-3 text-center bg-red-50">
             <p class="text-[9px] font-black uppercase text-slate-500">
-              Sisa Kirim
+              Sisa Del
             </p>
             <p id="smInfoTarget" class="text-2xl font-black text-red-600 mt-1">
               0
@@ -768,6 +770,22 @@
         </div>
 
         <div class="p-5 bg-white">
+          <!-- DROPDOWN PILIH CUSTOMER TUJUAN -->
+          <div id="wrapperSelectCustomer" class="mb-4 text-left">
+            <label
+              class="block text-[10px] font-black uppercase text-slate-600 mb-1"
+            >
+              <i class="fa-solid fa-building mr-1"></i> Pilih Customer Tujuan:
+            </label>
+            <select
+              id="smSelectCustomer"
+              onchange="handleChangeScannerCustomer(this.value)"
+              class="w-full bg-yellow-100 border-2 border-slate-800 rounded px-3 py-2 font-black text-xs uppercase focus:outline-none shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+            >
+              <option value="-">-- Pilih Customer --</option>
+            </select>
+          </div>
+
           <p class="text-[10px] font-black uppercase text-center mb-3">
             Tentukan Jumlah (Pcs)
           </p>
@@ -868,6 +886,17 @@
               required
               class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100"
             />
+          </div>
+          <div>
+            <label class="block text-[10px] font-black uppercase mb-1"
+              >Customer Tujuan</label
+            >
+            <select
+              id="mbCustomer"
+              class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100"
+            >
+              <option value="-">-- Pilih Customer --</option>
+            </select>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
