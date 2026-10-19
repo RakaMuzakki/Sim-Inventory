@@ -34,7 +34,7 @@ function getOperationalDayInfo() {
   const opStart = new Date(now);
   opStart.setHours(8, 0, 0, 0);
 
-  // Jika waktu saat ini masih di bawah jam 08:00 pagi, maka masih terhitung hari kerja kemarin (mulai 08:00 kemarin)
+  // Jika waktu sekarang masih di bawah jam 08:00 pagi, masih terhitung hari kerja kemarin (mulai 08:00 kemarin)
   if (now < opStart) {
     opStart.setDate(opStart.getDate() - 1);
   }
@@ -42,7 +42,7 @@ function getOperationalDayInfo() {
   const yyyy = opStart.getFullYear();
   const mm = String(opStart.getMonth() + 1).padStart(2, "0");
   const dd = String(opStart.getDate()).padStart(2, "0");
-  const opKey = `${yyyy}-${mm}-${dd}`; // Penanda tanggal operasional (berubah setiap jam 08:00 pagi)
+  const opKey = `${yyyy}-${mm}-${dd}`;
 
   return { opKey, opStart };
 }
@@ -95,7 +95,6 @@ async function checkAndRunDailyRollover() {
     (u) => u.username === "__SYSTEM_ROLLOVER__",
   );
 
-  // Jika belum ada penanda sama sekali di database, buat penanda hari ini agar mulai rollover besok jam 08:00
   if (!markerUser) {
     await _supabase
       .from("Users")
@@ -110,31 +109,28 @@ async function checkAndRunDailyRollover() {
     return;
   }
 
-  // Jika opKey sekarang berbeda dengan yang tercatat di database (artinya sudah lewat jam 08:00 di hari baru!)
   if (markerUser.password !== opKey) {
     isProcessing = true;
     try {
-      // Kunci terlebih dahulu tanggal baru di database agar tidak dijalankan ganda oleh komputer lain
       await _supabase
         .from("Users")
         .update({ password: opKey })
         .eq("username", "__SYSTEM_ROLLOVER__");
       markerUser.password = opKey;
 
-      // Pindahkan nilai [ +/- ] kemarin menjadi STOCK hari ini, dan reset ASSY ke 0
       for (const itemBarang of appData.barang) {
         const partNum = String(itemBarang.Part_Number).trim();
         const relatedOrders = appData.orders.filter(
           (o) => String(o.Part_Number).trim() === partNum,
         );
-        const qtyDay = relatedOrders.reduce(
+        const totalQtyDay = relatedOrders.reduce(
           (sum, o) => sum + (Number(o.qty_order) || 0),
           0,
         );
 
         const currentStock = Number(itemBarang.stok) || 0;
         const assyFsg = Number(itemBarang.assy_fsg) || 0;
-        const newOpeningStock = currentStock + assyFsg - qtyDay;
+        const newOpeningStock = currentStock + assyFsg - totalQtyDay;
 
         await _supabase
           .from("Master_Barang")
@@ -259,26 +255,40 @@ async function sendToBackend(action, payload = {}) {
         return { success: true };
 
       case "apiSaveTransaksiKeluar":
-        // Saat barang keluar di hari berjalan, TIDAK memotong Master_Barang.stok secara langsung agar tidak terpotong 2 kali.
-        // Barang keluar akan menambah QTY/OUT hari ini, dan nanti jam 08:00 pagi saldo [ +/- ] otomatis pindah menjadi STOCK baru.
+        // Pastikan bila customer belum terdaftar di List_Order untuk part ini, otomatis didaftarkan
         if (payload.customer && payload.customer !== "-") {
           const { data: checkOrd } = await _supabase
             .from("List_Order")
             .select("*")
             .eq("Part_Number", payload.partNumber);
-          if (checkOrd && checkOrd.length > 0) {
-            await _supabase
-              .from("List_Order")
-              .update({ id_customer: payload.customer })
-              .eq("Part_Number", payload.partNumber);
-          } else {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: 0,
-                id_customer: payload.customer,
-              },
-            ]);
+          const existingSameCust = (checkOrd || []).find(
+            (o) =>
+              resolveCustomerDisplay(o.id_customer).toLowerCase() ===
+              resolveCustomerDisplay(payload.customer).toLowerCase(),
+          );
+
+          if (!existingSameCust) {
+            const emptySlot = (checkOrd || []).find(
+              (o) =>
+                !o.id_customer ||
+                o.id_customer === "-" ||
+                o.id_customer === "undefined",
+            );
+            if (emptySlot) {
+              await _supabase
+                .from("List_Order")
+                .update({ id_customer: payload.customer })
+                .eq("Part_Number", payload.partNumber)
+                .is("id_customer", emptySlot.id_customer || null);
+            } else if (!checkOrd || checkOrd.length === 0) {
+              await _supabase.from("List_Order").insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty_order: 0,
+                  id_customer: payload.customer,
+                },
+              ]);
+            }
           }
         }
 
@@ -312,17 +322,35 @@ async function sendToBackend(action, payload = {}) {
         if (errCheckO) throw new Error(errCheckO.message);
 
         if (checkO && checkO.length > 0) {
-          const { error: errUpdO } = await _supabase
+          const targetRow =
+            checkO.find(
+              (o) => resolveCustomerDisplay(o.id_customer) === payload.customer,
+            ) || checkO[0];
+          let query = _supabase
             .from("List_Order")
             .update({ qty_order: payload.qty })
             .eq("Part_Number", payload.partNumber);
+          if (targetRow.id !== undefined) {
+            query = _supabase
+              .from("List_Order")
+              .update({ qty_order: payload.qty })
+              .eq("id", targetRow.id);
+          } else if (targetRow.id_customer) {
+            query = query.eq("id_customer", targetRow.id_customer);
+          }
+          const { error: errUpdO } = await query;
           if (errUpdO) throw new Error(errUpdO.message);
         } else {
-          const { error: errInsO } = await _supabase
-            .from("List_Order")
-            .insert([
-              { Part_Number: payload.partNumber, qty_order: payload.qty },
-            ]);
+          const { error: errInsO } = await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: payload.qty,
+              id_customer:
+                payload.customer && payload.customer !== "-"
+                  ? payload.customer
+                  : null,
+            },
+          ]);
           if (errInsO) throw new Error(errInsO.message);
         }
         return { success: true };
@@ -332,11 +360,69 @@ async function sendToBackend(action, payload = {}) {
           .from("List_Order")
           .select("*")
           .eq("Part_Number", payload.partNumber);
-        if (checkOCust && checkOCust.length > 0) {
-          await _supabase
+
+        // Mode 1: Tambah Customer Baru untuk Barang yang Sama (Multi-Customer)
+        if (payload.mode === "ADD_NEW") {
+          const { error: errAddCust } = await _supabase
             .from("List_Order")
-            .update({ id_customer: payload.customer })
-            .eq("Part_Number", payload.partNumber);
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: payload.customer,
+              },
+            ]);
+          if (errAddCust) throw new Error(errAddCust.message);
+          return { success: true };
+        }
+
+        // Mode 2: Hapus Baris Customer Tertentu
+        if (payload.mode === "DELETE_ROW") {
+          const rowToDelete = (checkOCust || []).find(
+            (o) =>
+              resolveCustomerDisplay(o.id_customer) === payload.oldCustomer,
+          );
+          if (rowToDelete) {
+            if (rowToDelete.id !== undefined) {
+              await _supabase
+                .from("List_Order")
+                .delete()
+                .eq("id", rowToDelete.id);
+            } else {
+              await _supabase
+                .from("List_Order")
+                .delete()
+                .eq("Part_Number", payload.partNumber)
+                .eq("id_customer", rowToDelete.id_customer);
+            }
+          }
+          return { success: true };
+        }
+
+        // Mode 3: Ganti Customer pada Baris Saat Ini
+        if (checkOCust && checkOCust.length > 0) {
+          const targetRow =
+            checkOCust.find(
+              (o) =>
+                resolveCustomerDisplay(o.id_customer) === payload.oldCustomer,
+            ) || checkOCust[0];
+          if (targetRow.id !== undefined) {
+            await _supabase
+              .from("List_Order")
+              .update({ id_customer: payload.customer })
+              .eq("id", targetRow.id);
+          } else if (targetRow.id_customer) {
+            await _supabase
+              .from("List_Order")
+              .update({ id_customer: payload.customer })
+              .eq("Part_Number", payload.partNumber)
+              .eq("id_customer", targetRow.id_customer);
+          } else {
+            await _supabase
+              .from("List_Order")
+              .update({ id_customer: payload.customer })
+              .eq("Part_Number", payload.partNumber);
+          }
         } else {
           await _supabase.from("List_Order").insert([
             {
@@ -378,12 +464,7 @@ async function sendToBackend(action, payload = {}) {
             .from("List_Order")
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
-          if (checkOrdB && checkOrdB.length > 0) {
-            await _supabase
-              .from("List_Order")
-              .update({ id_customer: payload.customer })
-              .eq("Part_Number", payload.item.Part_Number);
-          } else {
+          if (!checkOrdB || checkOrdB.length === 0) {
             await _supabase.from("List_Order").insert([
               {
                 Part_Number: payload.item.Part_Number,
@@ -539,7 +620,7 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// DASHBOARD & PERHITUNGAN PAPAN KONTROL
+// DASHBOARD & PERHITUNGAN PAPAN KONTROL (MENDUKUNG MULTI-CUSTOMER)
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
@@ -597,7 +678,6 @@ function refreshAllUI() {
   }
 }
 
-// Helper mencari nama lengkap customer dari ID atau Nama
 function resolveCustomerDisplay(custCode) {
   if (
     !custCode ||
@@ -618,7 +698,7 @@ function resolveCustomerDisplay(custCode) {
 
 function buildSeatAssyControlDataset() {
   const list = [];
-  const { opStart } = getOperationalDayInfo(); // Batas jam 08:00 pagi hari operasional aktif
+  const { opStart } = getOperationalDayInfo();
 
   appData.barang.forEach((itemBarang) => {
     const partNum = String(itemBarang.Part_Number).trim();
@@ -626,80 +706,102 @@ function buildSeatAssyControlDataset() {
       (o) => String(o.Part_Number).trim() === partNum,
     );
 
-    // Penentuan Customer (Anti-Undefined)
-    let custName = "-";
-    const validOrderCust = relatedOrders.find(
-      (o) =>
-        o.id_customer &&
-        String(o.id_customer) !== "undefined" &&
-        String(o.id_customer) !== "null",
-    );
-    if (validOrderCust) {
-      custName = validOrderCust.id_customer;
-    } else if (
-      itemBarang.id_customer &&
-      String(itemBarang.id_customer) !== "undefined"
-    ) {
-      custName = itemBarang.id_customer;
-    } else if (localStorage.getItem("cust_map_" + partNum)) {
-      custName = localStorage.getItem("cust_map_" + partNum);
-    } else {
-      // Cek dari riwayat transaksi keluar terakhir
-      const lastOut = [...(appData.keluar || [])]
-        .filter(
-          (k) =>
-            String(k.Part_Number).trim() === partNum &&
-            k.catatan &&
-            k.catatan.includes("Kirim ke:"),
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.tanggal || b.created_at) -
-            new Date(a.tanggal || a.created_at),
-        )[0];
-      if (lastOut) {
-        custName = lastOut.catatan.replace("Kirim ke:", "").trim();
-      }
-    }
+    const currentStock = Number(itemBarang.stok) || 0;
+    const assyFsg = Number(itemBarang.assy_fsg) || 0;
 
-    const qtyDay = relatedOrders.reduce(
+    // Transaksi keluar untuk Part Number ini sejak jam 08:00 pagi hari operasional berjalan
+    const partOutLogs = appData.keluar.filter((k) => {
+      if (String(k.Part_Number).trim() !== partNum) return false;
+      const tgl = new Date(k.tanggal || k.created_at);
+      return tgl >= opStart;
+    });
+
+    // Total QTY/DAY gabungan semua customer yang membeli Part Number ini
+    const totalQtyDayPart = relatedOrders.reduce(
       (sum, o) => sum + (Number(o.qty_order) || 0),
       0,
     );
+    const totalQtyOutPart = partOutLogs.reduce(
+      (sum, k) => sum + (Number(k.qty) || 0),
+      0,
+    );
+    const variancePart = currentStock + assyFsg - totalQtyDayPart;
 
-    // Hanya menghitung QTY/OUT sejak jam 08:00 pagi hari operasional berjalan
-    const qtyOut = appData.keluar
-      .filter((k) => {
-        if (String(k.Part_Number).trim() !== partNum) return false;
-        const tgl = new Date(k.tanggal || k.created_at);
-        return tgl >= opStart;
-      })
-      .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
+    if (relatedOrders.length <= 1) {
+      let custRaw = "-";
+      if (
+        relatedOrders.length === 1 &&
+        relatedOrders[0].id_customer &&
+        String(relatedOrders[0].id_customer) !== "undefined"
+      ) {
+        custRaw = relatedOrders[0].id_customer;
+      } else if (
+        itemBarang.id_customer &&
+        String(itemBarang.id_customer) !== "undefined"
+      ) {
+        custRaw = itemBarang.id_customer;
+      } else if (localStorage.getItem("cust_map_" + partNum)) {
+        custRaw = localStorage.getItem("cust_map_" + partNum);
+      }
 
-    const sisaDel = Math.max(0, qtyDay - qtyOut);
+      const custDisplay = resolveCustomerDisplay(custRaw);
+      const qtyDay =
+        relatedOrders.length === 1
+          ? Number(relatedOrders[0].qty_order) || 0
+          : 0;
+      const sisaDel = Math.max(0, qtyDay - totalQtyOutPart);
 
-    const currentStock = Number(itemBarang.stok) || 0;
-    const assyFsg = Number(itemBarang.assy_fsg) || 0;
-    const variance = currentStock + assyFsg - qtyDay;
+      list.push({
+        Customer: custDisplay,
+        CustomerCount: 1,
+        No_Rel: itemBarang.No_Rel || "-",
+        Part_Number: partNum,
+        nama_barang: itemBarang.nama_barang || "-",
+        stock: currentStock,
+        qty_day: qtyDay,
+        qty_out: totalQtyOutPart,
+        sisa_del: sisaDel,
+        assy_fsg: assyFsg,
+        variance: variancePart,
+      });
+    } else {
+      // JIKA ADA 2 ATAU LEBIH CUSTOMER MEMBELI BARANG YANG SAMA:
+      // Tampilkan baris terpisah untuk masing-masing Customer di Papan Kontrol
+      relatedOrders.forEach((ord) => {
+        const custDisplay = resolveCustomerDisplay(ord.id_customer);
+        const qtyDayCust = Number(ord.qty_order) || 0;
 
-    list.push({
-      Customer: resolveCustomerDisplay(custName),
-      No_Rel: itemBarang.No_Rel || "-",
-      Part_Number: partNum,
-      nama_barang: itemBarang.nama_barang || "-",
-      stock: currentStock,
-      qty_day: qtyDay,
-      qty_out: qtyOut,
-      sisa_del: sisaDel,
-      assy_fsg: assyFsg,
-      variance: variance,
-    });
+        // Hitung QTY/OUT khusus untuk customer ini berdasarkan catatan pengiriman
+        const qtyOutCust = partOutLogs
+          .filter((k) => {
+            if (!k.catatan) return false;
+            return k.catatan.toLowerCase().includes(custDisplay.toLowerCase());
+          })
+          .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
+
+        const sisaDelCust = Math.max(0, qtyDayCust - qtyOutCust);
+
+        list.push({
+          Customer: custDisplay,
+          CustomerCount: relatedOrders.length,
+          No_Rel: itemBarang.No_Rel || "-",
+          Part_Number: partNum,
+          nama_barang: itemBarang.nama_barang || "-",
+          stock: currentStock,
+          qty_day: qtyDayCust,
+          qty_out: qtyOutCust,
+          sisa_del: sisaDelCust,
+          assy_fsg: assyFsg,
+          variance: variancePart,
+        });
+      });
+    }
   });
   appData.seatAssyControl = list;
 }
 
-// Popup Pilih Customer langsung dari Papan Kontrol
-function promptUpdateCustomerPart(partNumber, currentCust) {
+// Popup Kelola Customer (Bisa Ganti Customer atau Tambah Customer ke-2 untuk Barang yang Sama)
+function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   if (isProcessing) return;
   if (!appData.customer || appData.customer.length === 0) {
     return Swal.fire(
@@ -709,26 +811,65 @@ function promptUpdateCustomerPart(partNumber, currentCust) {
     );
   }
 
-  const inputOptions = { "-": "-- Tidak Ada / Kosongkan --" };
+  let optionsHtml = `<option value="-">-- Tidak Ada / Kosongkan --</option>`;
   appData.customer.forEach((c) => {
+    const val = c.nama_customer || c.id_customer;
     const label = c.nama_customer
       ? `${c.nama_customer} (${c.id_customer})`
       : c.id_customer;
-    const val = c.nama_customer || c.id_customer;
-    inputOptions[val] = label;
+    const sel =
+      String(val).toLowerCase() === String(currentCust).toLowerCase()
+        ? "selected"
+        : "";
+    optionsHtml += `<option value="${val}" ${sel}>${label}</option>`;
   });
 
   Swal.fire({
-    title: "PILIH CUSTOMER TUJUAN",
-    html: `<p class="text-xs mb-2">Tentukan Customer untuk Part:<br><b class="text-base">${partNumber}</b></p>`,
-    input: "select",
-    inputOptions: inputOptions,
-    inputValue: currentCust,
+    title: "ATUR CUSTOMER TUJUAN",
+    html: `
+      <div class="text-left space-y-3">
+        <p class="text-xs text-slate-600">Part Number: <b class="text-slate-900">${partNumber}</b></p>
+        <div>
+          <label class="block text-[10px] font-black uppercase mb-1">Pilih Perusahaan Customer:</label>
+          <select id="swalSelectCust" class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold">
+            ${optionsHtml}
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-black uppercase mb-1">Mode Pengaturan:</label>
+          <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full bg-yellow-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold">
+            <option value="UPDATE">Ubah Customer pada Baris Ini</option>
+            <option value="ADD_NEW">+ Tambah Customer Baru (2 Customer Beli Barang Sama)</option>
+            ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Customer (${currentCust}) Ini</option>` : ""}
+          </select>
+        </div>
+        <div id="swalWrapQtyBaru" class="hidden">
+          <label class="block text-[10px] font-black uppercase mb-1">Target QTY/DAY Customer Baru:</label>
+          <input type="number" id="swalQtyOrderBaru" value="100" min="0" class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold" />
+        </div>
+      </div>
+    `,
     showCancelButton: true,
-    confirmButtonText: "Simpan Customer",
+    confirmButtonText: "Simpan",
+    cancelButtonText: "Batal",
     confirmButtonColor: "#2563eb",
+    preConfirm: () => {
+      return {
+        customer: document.getElementById("swalSelectCust").value,
+        mode: document.getElementById("swalModeCust").value,
+        qtyOrder: document.getElementById("swalQtyOrderBaru").value,
+      };
+    },
   }).then((result) => {
     if (result.isConfirmed) {
+      const { customer, mode, qtyOrder } = result.value;
+      if (mode === "ADD_NEW" && (!customer || customer === "-")) {
+        return Swal.fire(
+          "Pilih Customer",
+          "Pilih nama Customer baru yang ingin ditambahkan!",
+          "warning",
+        );
+      }
       isProcessing = true;
       Swal.fire({
         title: "Menyimpan...",
@@ -737,7 +878,10 @@ function promptUpdateCustomerPart(partNumber, currentCust) {
       });
       sendToBackend("apiUpdateCustomerPart", {
         partNumber: partNumber,
-        customer: result.value,
+        oldCustomer: currentCust,
+        customer: customer,
+        mode: mode,
+        qtyOrder: qtyOrder,
       }).then((res) => {
         isProcessing = false;
         if (res.success) {
@@ -799,11 +943,11 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
   });
 }
 
-function promptUpdateQtyDay(partNumber, currentQty) {
+function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
   if (isProcessing) return;
   Swal.fire({
     title: "SET TARGET (QTY/DAY)",
-    html: `<p class="text-sm mb-3">Target Harian untuk Part:<br><b class="text-lg">${partNumber}</b></p>`,
+    html: `<p class="text-sm mb-3">Target Harian untuk Part:<br><b class="text-lg">${partNumber}</b><br><span class="text-xs text-slate-500">Customer: ${customerName}</span></p>`,
     input: "number",
     inputValue: currentQty > 0 ? currentQty : "",
     inputAttributes: { min: 0, step: 1 },
@@ -819,7 +963,11 @@ function promptUpdateQtyDay(partNumber, currentQty) {
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading(),
       });
-      sendToBackend("apiUpdateQtyDay", { partNumber: partNumber, qty: newVal })
+      sendToBackend("apiUpdateQtyDay", {
+        partNumber: partNumber,
+        qty: newVal,
+        customer: customerName,
+      })
         .then((res) => {
           isProcessing = false;
           if (res.success) {
@@ -887,14 +1035,14 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         ? "cursor-pointer hover:bg-blue-100 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-all"
         : "";
       const custAction = canEditCust
-        ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}')"`
+        ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
         : "";
 
       const qtyDayClass = isAdmin
         ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-all"
         : "";
       const qtyDayAction = isAdmin
-        ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day})"`
+        ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
         : "";
 
       const assyClass = canEditAssy
@@ -905,7 +1053,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         : "";
 
       return `<tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words ${custClass}" ${custAction} title="Klik untuk pilih Customer">${row.Customer}</td>
+      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words ${custClass}" ${custAction} title="Klik untuk atur / tambah Customer">${row.Customer}</td>
       <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left">
         <div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div>
@@ -1101,7 +1249,7 @@ function renderAnalitikCharts() {
 }
 
 // =========================================================================
-// SMART SCANNER LOGIC (PILIH CUSTOMER & TANPA SURAT JALAN)
+// SMART SCANNER LOGIC (MENDUKUNG PILIH MULTI-CUSTOMER & TANPA SURAT JALAN)
 // =========================================================================
 function handleScannerGun(event) {
   if (event.key === "Enter") {
@@ -1178,9 +1326,23 @@ function populateCustomerDropdown(selectEl, selectedVal = "-") {
   selectEl.innerHTML = html;
 }
 
+// Saat Customer diubah di popup scanner, otomatis perbarui tampilan Sisa Del untuk Customer tersebut
 function handleChangeScannerCustomer(val) {
   const badge = document.getElementById("smInfoCustomer");
   if (badge) badge.innerText = "TUJUAN: " + (val && val !== "-" ? val : "-");
+
+  if (activeScannedPart) {
+    const matchingRow = appData.seatAssyControl.find(
+      (item) =>
+        item.Part_Number.toLowerCase() ===
+          activeScannedPart.Part_Number.toLowerCase() &&
+        item.Customer.toLowerCase() === String(val).toLowerCase(),
+    );
+    if (matchingRow) {
+      activeScannedPart = matchingRow;
+      document.getElementById("smInfoTarget").innerText = matchingRow.sisa_del;
+    }
+  }
 }
 
 function processSmartScan(scannedCode) {
@@ -1191,11 +1353,11 @@ function processSmartScan(scannedCode) {
   }
 
   const part = scannedCode.trim();
-  const foundData = appData.seatAssyControl.find(
+  const matchingRows = appData.seatAssyControl.filter(
     (item) => item.Part_Number.toLowerCase() === part.toLowerCase(),
   );
 
-  if (!foundData) {
+  if (matchingRows.length === 0) {
     Swal.fire({
       icon: "warning",
       title: "Tidak Dikenali!",
@@ -1211,6 +1373,8 @@ function processSmartScan(scannedCode) {
   }
 
   if (smartScanner) smartScanner.pause();
+  // Utamakan baris customer yang masih punya Sisa Del > 0
+  const foundData = matchingRows.find((r) => r.sisa_del > 0) || matchingRows[0];
   activeScannedPart = foundData;
 
   const custDisplay =
@@ -1335,10 +1499,19 @@ function submitSmartAction(tipeAction) {
       );
     }
 
+    const { opStart } = getOperationalDayInfo();
+    const totalOutTodayAllCust = (appData.keluar || [])
+      .filter(
+        (k) =>
+          String(k.Part_Number).trim() === activeScannedPart.Part_Number &&
+          new Date(k.tanggal || k.created_at) >= opStart,
+      )
+      .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
+
     const totalTersedia =
       (Number(activeScannedPart.stock) || 0) +
       (Number(activeScannedPart.assy_fsg) || 0) -
-      (Number(activeScannedPart.qty_out) || 0);
+      totalOutTodayAllCust;
     if (qty > totalTersedia) {
       isProcessing = false;
       return Swal.fire(
