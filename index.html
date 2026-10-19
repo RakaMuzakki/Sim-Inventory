@@ -383,69 +383,164 @@
           </div>
         </section>
 
-        <!-- TAB SCANNER -->
+        <!-- TAB SCANNER (KAMERA HP = POPUP LANGSUNG | GUN SCANNER = KERANJANG BATCH TROLLEY) -->
         <section id="tab-scanner" class="tab-pane hidden space-y-6">
-          <div
-            class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] max-w-lg mx-auto text-center"
-          >
-            <h3 class="text-2xl font-black uppercase tracking-tighter mb-1">
-              Smart Scanner
-            </h3>
-            <p
-              class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6"
-            >
-              Gunakan Kamera atau Gun Scanner Fisik
-            </p>
-
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            <!-- KOTAK KIRI: INPUT SCANNER -->
             <div
-              id="smartReaderWrapper"
-              class="bg-slate-800 rounded border-4 border-slate-800 p-2 mb-6 hidden relative"
+              class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] text-center flex flex-col justify-between"
             >
-              <div
-                id="smartReaderViewport"
-                class="w-full aspect-square rounded overflow-hidden"
-              ></div>
-            </div>
-
-            <div class="flex flex-col gap-3">
-              <button
-                id="btnStartScan"
-                onclick="startSmartScanner()"
-                class="w-full py-4 rounded border-2 border-slate-800 bg-emerald-400 text-slate-900 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"
-              >
-                <i class="fa-solid fa-camera mr-2"></i> Aktifkan Kamera
-              </button>
-              <button
-                id="btnStopScan"
-                onclick="stopSmartScanner()"
-                class="hidden w-full py-3 rounded border-2 border-slate-800 bg-red-400 text-slate-900 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all"
-              >
-                <i class="fa-solid fa-stop mr-2"></i> Matikan Kamera
-              </button>
-            </div>
-
-            <div class="mt-6 pt-6 border-t-2 border-slate-800">
-              <p class="text-[10px] font-black uppercase mb-2">
-                Mode Gun Scanner / Manual Input
-              </p>
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  id="manualSmartInput"
-                  onkeypress="handleScannerGun(event)"
-                  placeholder="Ketik atau Tembak Barcode di sini..."
-                  class="flex-1 bg-yellow-100 border-2 border-slate-800 rounded px-3 py-2 font-black text-sm uppercase focus:outline-none focus:ring-2 ring-slate-800"
-                />
-                <button
-                  onclick="
-                    processSmartScan(
-                      document.getElementById('manualSmartInput').value,
-                    )
-                  "
-                  class="px-4 border-2 border-slate-800 bg-yellow-400 font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:bg-yellow-500"
+              <div>
+                <h3 class="text-2xl font-black uppercase tracking-tighter mb-1">
+                  Smart Scanner
+                </h3>
+                <p
+                  class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6"
                 >
-                  CARI
-                </button>
+                  Kamera HP (Popup Satuan) / Gun Scanner (Batch Troli)
+                </p>
+
+                <div
+                  id="smartReaderWrapper"
+                  class="bg-slate-800 rounded border-4 border-slate-800 p-2 mb-6 hidden relative"
+                >
+                  <div
+                    id="smartReaderViewport"
+                    class="w-full aspect-square rounded overflow-hidden"
+                  ></div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                  <button
+                    id="btnStartScan"
+                    onclick="startSmartScanner()"
+                    class="w-full py-4 rounded border-2 border-slate-800 bg-emerald-400 text-slate-900 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"
+                  >
+                    <i class="fa-solid fa-camera mr-2"></i> Aktifkan Kamera HP
+                  </button>
+                  <button
+                    id="btnStopScan"
+                    onclick="stopSmartScanner()"
+                    class="hidden w-full py-3 rounded border-2 border-slate-800 bg-red-400 text-slate-900 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all"
+                  >
+                    <i class="fa-solid fa-stop mr-2"></i> Matikan Kamera
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-6 pt-6 border-t-2 border-slate-800">
+                <p class="text-[10px] font-black uppercase mb-1 text-slate-700">
+                  <i class="fa-solid fa-gun mr-1"></i> Mode Gun Scanner (Masuk
+                  Daftar Troli)
+                </p>
+                <p class="text-[10px] text-slate-500 font-semibold mb-3">
+                  Tembak semua barang ke sini dulu, lalu isi jumlahnya sekaligus
+                  di tabel samping/bawah.
+                </p>
+                <div class="flex gap-2">
+                  <input
+                    type="text"
+                    id="manualSmartInput"
+                    onkeypress="handleScannerGun(event)"
+                    placeholder="Tembak Barcode Gun di sini..."
+                    class="flex-1 bg-yellow-100 border-2 border-slate-800 rounded px-3 py-2 font-black text-sm uppercase focus:outline-none focus:ring-2 ring-slate-800"
+                  />
+                  <button
+                    onclick="triggerManualGunButton()"
+                    class="px-4 border-2 border-slate-800 bg-yellow-400 font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:bg-yellow-500 uppercase"
+                  >
+                    + TROLI
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- KOTAK KANAN: DAFTAR KERANJANG BATCH TROLI (KHUSUS GUN SCANNER) -->
+            <div
+              class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex flex-col justify-between"
+            >
+              <div>
+                <div
+                  class="flex items-center justify-between border-b-4 border-slate-800 pb-3 mb-4"
+                >
+                  <div>
+                    <h3 class="text-lg font-black uppercase tracking-tighter">
+                      <i class="fa-solid fa-cart-flatbed-boxes mr-1"></i> Daftar
+                      Scan Troli
+                    </h3>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">
+                      Scan beberapa troli dulu, baru input Qty sekaligus
+                    </p>
+                  </div>
+                  <button
+                    onclick="clearBatchTrolley()"
+                    class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-700 border-2 border-slate-800 rounded text-[10px] font-black uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                  >
+                    Reset
+                  </button>
+                </div>
+
+                <!-- Pilihan Customer untuk Transaksi Keluar di Batch -->
+                <div
+                  id="batchCustWrapper"
+                  class="mb-3 bg-slate-100 p-2.5 rounded border-2 border-slate-800"
+                >
+                  <label
+                    class="block text-[10px] font-black uppercase text-slate-700 mb-1"
+                    >Customer Tujuan (Jika Barang Keluar):</label
+                  >
+                  <select
+                    id="batchSelectCustomer"
+                    class="w-full bg-white border-2 border-slate-800 rounded px-2.5 py-1.5 font-black text-xs uppercase"
+                  >
+                    <option value="-">-- Sesuai Default Barang --</option>
+                  </select>
+                </div>
+
+                <div
+                  id="batchTrolleyInlineList"
+                  class="space-y-2 max-h-72 overflow-y-auto pr-1"
+                >
+                  <div
+                    class="py-12 text-center text-slate-400 font-bold text-xs border-2 border-dashed border-slate-300 rounded"
+                  >
+                    Belum ada barang yang ditembak dengan Scanner Gun.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tombol Eksekusi Sekaligus -->
+              <div class="pt-4 mt-4 border-t-2 border-slate-800 space-y-2">
+                <p
+                  class="text-[10px] font-black uppercase text-center text-slate-500"
+                >
+                  Pilih Aksi untuk Semua Barang di Atas:
+                </p>
+                <div id="batchBtnGroupWH" class="grid grid-cols-2 gap-2">
+                  <button
+                    onclick="submitBatchTrolley('IN')"
+                    class="py-3 border-2 border-slate-800 bg-emerald-400 hover:bg-emerald-500 font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-all"
+                  >
+                    <i class="fa-solid fa-box-open mr-1"></i> Semua MASUK
+                  </button>
+                  <button
+                    onclick="submitBatchTrolley('OUT')"
+                    class="py-3 border-2 border-slate-800 bg-red-400 hover:bg-red-500 font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-all"
+                  >
+                    <i class="fa-solid fa-truck-fast mr-1"></i> Semua KELUAR
+                  </button>
+                </div>
+                <div
+                  id="batchBtnGroupAssy"
+                  class="grid grid-cols-1 gap-2 hidden"
+                >
+                  <button
+                    onclick="submitBatchTrolley('ASSY_ADD')"
+                    class="py-3 border-2 border-slate-800 bg-purple-400 hover:bg-purple-500 font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] transition-all"
+                  >
+                    <i class="fa-solid fa-plus mr-1"></i> Tambah Semua ke ASSY
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -696,7 +791,7 @@
       </div>
     </main>
 
-    <!-- MODAL POPUP SCANNER -->
+    <!-- MODAL POPUP SCANNER (KHUSUS KAMERA HP) -->
     <div
       id="modalSmartAction"
       class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden transition-all"
@@ -770,7 +865,6 @@
         </div>
 
         <div class="p-5 bg-white">
-          <!-- DROPDOWN PILIH CUSTOMER TUJUAN -->
           <div id="wrapperSelectCustomer" class="mb-4 text-left">
             <label
               class="block text-[10px] font-black uppercase text-slate-600 mb-1"
@@ -1220,6 +1314,6 @@
     <!-- CANVAS TERSEMBUNYI UNTUK GENERATOR BARCODE -->
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=32"></script>
+    <script src="script.js?v=33"></script>
   </body>
 </html>
