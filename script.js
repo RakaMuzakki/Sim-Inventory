@@ -1,7 +1,6 @@
 // =========================================================================
 // KONFIGURASI SUPABASE DATABASE
 // =========================================================================
-// ⚠️ GANTI DENGAN URL & KEY SUPABASE MILIK ANDA! ⚠️
 const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
 const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
@@ -22,6 +21,31 @@ let smartScanner = null;
 let activeScannedPart = null;
 let isProcessing = false;
 
+// Variabel Global untuk Grafik Analitik
+let chartFastMoving = null;
+let chartStock = null;
+
+// =========================================================================
+// LOGIKA WAKTU OPERASIONAL (GANTI HARI JAM 08:00 PAGI)
+// =========================================================================
+function getOperationalDayInfo() {
+  const now = new Date();
+  const opStart = new Date(now);
+  opStart.setHours(8, 0, 0, 0);
+
+  // Jika waktu saat ini masih di bawah jam 08:00 pagi, maka masih terhitung hari kerja kemarin (mulai 08:00 kemarin)
+  if (now < opStart) {
+    opStart.setDate(opStart.getDate() - 1);
+  }
+
+  const yyyy = opStart.getFullYear();
+  const mm = String(opStart.getMonth() + 1).padStart(2, "0");
+  const dd = String(opStart.getDate()).padStart(2, "0");
+  const opKey = `${yyyy}-${mm}-${dd}`; // Penanda tanggal operasional (berubah setiap jam 08:00 pagi)
+
+  return { opKey, opStart };
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   startLiveClock();
   const savedUser = sessionStorage.getItem("sim_inventory_user");
@@ -29,16 +53,19 @@ window.addEventListener("DOMContentLoaded", () => {
   applyRbacUI();
   loadInitialOrMockData();
 
+  // Auto Refresh setiap 3 Detik & Cek Pergantian Hari Jam 08:00
   setInterval(() => {
     const overviewTab = document.getElementById("tab-overview");
     const riwayatTab = document.getElementById("tab-riwayat");
+    const analitikTab = document.getElementById("tab-analitik");
     if (isProcessing) return;
 
     if (
       (overviewTab && !overviewTab.classList.contains("hidden")) ||
-      (riwayatTab && !riwayatTab.classList.contains("hidden"))
+      (riwayatTab && !riwayatTab.classList.contains("hidden")) ||
+      (analitikTab && !analitikTab.classList.contains("hidden"))
     ) {
-      sendToBackend("apiGetMasterData").then((res) => {
+      sendToBackend("apiGetMasterData").then(async (res) => {
         if (res && res.success) {
           appData.barang = res.barang || [];
           appData.customer = res.customer || [];
@@ -46,6 +73,8 @@ window.addEventListener("DOMContentLoaded", () => {
           appData.masuk = res.masuk || [];
           appData.keluar = res.keluar || [];
           appData.users = res.users || [];
+
+          await checkAndRunDailyRollover();
           buildSeatAssyControlDataset();
           refreshAllUI();
         }
@@ -53,6 +82,76 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }, 3000);
 });
+
+// =========================================================================
+// OTOMATIS ROLLOVER [ +/- ] KE STOCK SAAT JAM 08:00 PAGI
+// =========================================================================
+async function checkAndRunDailyRollover() {
+  if (isProcessing || !appData.barang || appData.barang.length === 0) return;
+
+  const { opKey } = getOperationalDayInfo();
+  const markerUser = (appData.users || []).find(
+    (u) => u.username === "__SYSTEM_ROLLOVER__",
+  );
+
+  // Jika belum ada penanda sama sekali di database, buat penanda hari ini agar mulai rollover besok jam 08:00
+  if (!markerUser) {
+    await _supabase
+      .from("Users")
+      .insert([
+        { username: "__SYSTEM_ROLLOVER__", password: opKey, role: "SYSTEM" },
+      ]);
+    appData.users.push({
+      username: "__SYSTEM_ROLLOVER__",
+      password: opKey,
+      role: "SYSTEM",
+    });
+    return;
+  }
+
+  // Jika opKey sekarang berbeda dengan yang tercatat di database (artinya sudah lewat jam 08:00 di hari baru!)
+  if (markerUser.password !== opKey) {
+    isProcessing = true;
+    try {
+      // Kunci terlebih dahulu tanggal baru di database agar tidak dijalankan ganda oleh komputer lain
+      await _supabase
+        .from("Users")
+        .update({ password: opKey })
+        .eq("username", "__SYSTEM_ROLLOVER__");
+      markerUser.password = opKey;
+
+      // Pindahkan nilai [ +/- ] kemarin menjadi STOCK hari ini, dan reset ASSY ke 0
+      for (const itemBarang of appData.barang) {
+        const partNum = String(itemBarang.Part_Number).trim();
+        const relatedOrders = appData.orders.filter(
+          (o) => String(o.Part_Number).trim() === partNum,
+        );
+        const qtyDay = relatedOrders.reduce(
+          (sum, o) => sum + (Number(o.qty_order) || 0),
+          0,
+        );
+
+        const currentStock = Number(itemBarang.stok) || 0;
+        const assyFsg = Number(itemBarang.assy_fsg) || 0;
+        const newOpeningStock = currentStock + assyFsg - qtyDay;
+
+        await _supabase
+          .from("Master_Barang")
+          .update({
+            stok: newOpeningStock,
+            assy_fsg: 0,
+          })
+          .eq("Part_Number", itemBarang.Part_Number);
+
+        itemBarang.stok = newOpeningStock;
+        itemBarang.assy_fsg = 0;
+      }
+    } catch (e) {
+      console.error("Rollover 08:00 error:", e);
+    }
+    isProcessing = false;
+  }
+}
 
 // =========================================================================
 // CORE ENGINE: KOMUNIKASI KE SUPABASE
@@ -97,7 +196,10 @@ async function sendToBackend(action, payload = {}) {
           .select("*");
         if (errCek) throw new Error("Gagal baca Users: " + errCek.message);
 
-        if (!cekUsers || cekUsers.length === 0) {
+        const realUsers = (cekUsers || []).filter(
+          (u) => u.username !== "__SYSTEM_ROLLOVER__",
+        );
+        if (realUsers.length === 0) {
           if (payload.username === "admin") {
             const { error: errIns } = await _supabase
               .from("Users")
@@ -117,8 +219,13 @@ async function sendToBackend(action, payload = {}) {
           .select("*")
           .eq("username", payload.username)
           .eq("password", payload.password);
-        if (loginData && loginData.length > 0)
+        if (
+          loginData &&
+          loginData.length > 0 &&
+          loginData[0].username !== "__SYSTEM_ROLLOVER__"
+        ) {
           return { success: true, user: loginData[0] };
+        }
         return { success: false, message: "Username atau password salah!" };
 
       case "apiSaveTransaksiMasuk":
@@ -151,22 +258,28 @@ async function sendToBackend(action, payload = {}) {
         return { success: true };
 
       case "apiSaveTransaksiKeluar":
-        const { data: bOut, error: errBOut } = await _supabase
-          .from("Master_Barang")
-          .select("stok")
-          .eq("Part_Number", payload.partNumber)
-          .single();
-        if (errBOut) throw new Error(errBOut.message);
-
-        const currentStokOut = Number(bOut?.stok) || 0;
-        if (currentStokOut < payload.qty)
-          throw new Error("Stok sistem tidak cukup!");
-
-        const { error: errUpdOut } = await _supabase
-          .from("Master_Barang")
-          .update({ stok: currentStokOut - Number(payload.qty) })
-          .eq("Part_Number", payload.partNumber);
-        if (errUpdOut) throw new Error(errUpdOut.message);
+        // Saat barang keluar di hari berjalan, TIDAK memotong Master_Barang.stok secara langsung agar tidak terpotong 2 kali.
+        // Barang keluar akan menambah QTY/OUT hari ini, dan nanti jam 08:00 pagi saldo [ +/- ] otomatis pindah menjadi STOCK baru.
+        if (payload.customer && payload.customer !== "-") {
+          const { data: checkOrd } = await _supabase
+            .from("List_Order")
+            .select("*")
+            .eq("Part_Number", payload.partNumber);
+          if (checkOrd && checkOrd.length > 0) {
+            await _supabase
+              .from("List_Order")
+              .update({ id_customer: payload.customer })
+              .eq("Part_Number", payload.partNumber);
+          } else {
+            await _supabase.from("List_Order").insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: payload.customer,
+              },
+            ]);
+          }
+        }
 
         const { error: errLogOut } = await _supabase
           .from("Transaksi_Keluar")
@@ -213,6 +326,31 @@ async function sendToBackend(action, payload = {}) {
         }
         return { success: true };
 
+      case "apiUpdateCustomerPart":
+        const { data: checkOCust } = await _supabase
+          .from("List_Order")
+          .select("*")
+          .eq("Part_Number", payload.partNumber);
+        if (checkOCust && checkOCust.length > 0) {
+          await _supabase
+            .from("List_Order")
+            .update({ id_customer: payload.customer })
+            .eq("Part_Number", payload.partNumber);
+        } else {
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: 0,
+              id_customer: payload.customer,
+            },
+          ]);
+        }
+        localStorage.setItem(
+          "cust_map_" + payload.partNumber,
+          payload.customer,
+        );
+        return { success: true };
+
       case "apiSaveBarang":
         const { data: checkB } = await _supabase
           .from("Master_Barang")
@@ -229,6 +367,30 @@ async function sendToBackend(action, payload = {}) {
             .from("Master_Barang")
             .insert([payload.item]);
           if (errInsB) throw new Error(errInsB.message);
+        }
+        if (payload.customer && payload.customer !== "-") {
+          localStorage.setItem(
+            "cust_map_" + payload.item.Part_Number,
+            payload.customer,
+          );
+          const { data: checkOrdB } = await _supabase
+            .from("List_Order")
+            .select("*")
+            .eq("Part_Number", payload.item.Part_Number);
+          if (checkOrdB && checkOrdB.length > 0) {
+            await _supabase
+              .from("List_Order")
+              .update({ id_customer: payload.customer })
+              .eq("Part_Number", payload.item.Part_Number);
+          } else {
+            await _supabase.from("List_Order").insert([
+              {
+                Part_Number: payload.item.Part_Number,
+                qty_order: 0,
+                id_customer: payload.customer,
+              },
+            ]);
+          }
         }
         return { success: true, message: "Barang berhasil disimpan!" };
 
@@ -330,6 +492,7 @@ function switchTab(tabId) {
 
   if (tabId === "overview") renderSeatAssyControlBoard();
   if (tabId === "riwayat") renderRiwayatTable();
+  if (tabId === "analitik") renderAnalitikCharts();
   if (tabId !== "scanner") stopSmartScanner();
 
   if (tabId === "scanner") {
@@ -375,7 +538,7 @@ function applyRbacUI() {
 }
 
 // =========================================================================
-// DASHBOARD LOGIC
+// DASHBOARD & PERHITUNGAN PAPAN KONTROL
 // =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
@@ -392,7 +555,7 @@ function refreshAllData() {
 function loadInitialOrMockData() {
   showSyncSpinner(true);
   sendToBackend("apiGetMasterData")
-    .then((res) => {
+    .then(async (res) => {
       showSyncSpinner(false);
       if (res && res.success) {
         appData.barang = res.barang || [];
@@ -401,6 +564,8 @@ function loadInitialOrMockData() {
         appData.masuk = res.masuk || [];
         appData.keluar = res.keluar || [];
         appData.users = res.users || [];
+
+        await checkAndRunDailyRollover();
         buildSeatAssyControlDataset();
         refreshAllUI();
       } else
@@ -424,27 +589,92 @@ function refreshAllUI() {
   renderMasterBarangTable();
   renderCustomerTable();
   renderUsersTable();
+
+  const analitikTab = document.getElementById("tab-analitik");
+  if (analitikTab && !analitikTab.classList.contains("hidden")) {
+    renderAnalitikCharts();
+  }
+}
+
+// Helper mencari nama lengkap customer dari ID atau Nama
+function resolveCustomerDisplay(custCode) {
+  if (
+    !custCode ||
+    custCode === "-" ||
+    String(custCode) === "undefined" ||
+    String(custCode) === "null"
+  )
+    return "-";
+  const found = (appData.customer || []).find(
+    (c) =>
+      String(c.id_customer).trim().toLowerCase() ===
+        String(custCode).trim().toLowerCase() ||
+      String(c.nama_customer).trim().toLowerCase() ===
+        String(custCode).trim().toLowerCase(),
+  );
+  return found ? found.nama_customer || found.id_customer : String(custCode);
 }
 
 function buildSeatAssyControlDataset() {
   const list = [];
+  const { opStart } = getOperationalDayInfo(); // Batas jam 08:00 pagi hari operasional aktif
+
   appData.barang.forEach((itemBarang) => {
     const partNum = String(itemBarang.Part_Number).trim();
     const relatedOrders = appData.orders.filter(
       (o) => String(o.Part_Number).trim() === partNum,
     );
 
+    // Penentuan Customer (Anti-Undefined)
     let custName = "-";
-    if (relatedOrders.length > 0) custName = relatedOrders[0].id_customer;
-    else if (itemBarang.id_customer) custName = itemBarang.id_customer;
+    const validOrderCust = relatedOrders.find(
+      (o) =>
+        o.id_customer &&
+        String(o.id_customer) !== "undefined" &&
+        String(o.id_customer) !== "null",
+    );
+    if (validOrderCust) {
+      custName = validOrderCust.id_customer;
+    } else if (
+      itemBarang.id_customer &&
+      String(itemBarang.id_customer) !== "undefined"
+    ) {
+      custName = itemBarang.id_customer;
+    } else if (localStorage.getItem("cust_map_" + partNum)) {
+      custName = localStorage.getItem("cust_map_" + partNum);
+    } else {
+      // Cek dari riwayat transaksi keluar terakhir
+      const lastOut = [...(appData.keluar || [])]
+        .filter(
+          (k) =>
+            String(k.Part_Number).trim() === partNum &&
+            k.catatan &&
+            k.catatan.includes("Kirim ke:"),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.tanggal || b.created_at) -
+            new Date(a.tanggal || a.created_at),
+        )[0];
+      if (lastOut) {
+        custName = lastOut.catatan.replace("Kirim ke:", "").trim();
+      }
+    }
 
     const qtyDay = relatedOrders.reduce(
       (sum, o) => sum + (Number(o.qty_order) || 0),
       0,
     );
+
+    // Hanya menghitung QTY/OUT sejak jam 08:00 pagi hari operasional berjalan
     const qtyOut = appData.keluar
-      .filter((k) => String(k.Part_Number).trim() === partNum)
+      .filter((k) => {
+        if (String(k.Part_Number).trim() !== partNum) return false;
+        const tgl = new Date(k.tanggal || k.created_at);
+        return tgl >= opStart;
+      })
       .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
+
     const sisaDel = Math.max(0, qtyDay - qtyOut);
 
     const currentStock = Number(itemBarang.stok) || 0;
@@ -452,7 +682,7 @@ function buildSeatAssyControlDataset() {
     const variance = currentStock + assyFsg - qtyDay;
 
     list.push({
-      Customer: custName,
+      Customer: resolveCustomerDisplay(custName),
       No_Rel: itemBarang.No_Rel || "-",
       Part_Number: partNum,
       nama_barang: itemBarang.nama_barang || "-",
@@ -465,6 +695,64 @@ function buildSeatAssyControlDataset() {
     });
   });
   appData.seatAssyControl = list;
+}
+
+// Popup Pilih Customer langsung dari Papan Kontrol
+function promptUpdateCustomerPart(partNumber, currentCust) {
+  if (isProcessing) return;
+  if (!appData.customer || appData.customer.length === 0) {
+    return Swal.fire(
+      "Info",
+      "Tambahkan data di menu Master Customer terlebih dahulu!",
+      "info",
+    );
+  }
+
+  const inputOptions = { "-": "-- Tidak Ada / Kosongkan --" };
+  appData.customer.forEach((c) => {
+    const label = c.nama_customer
+      ? `${c.nama_customer} (${c.id_customer})`
+      : c.id_customer;
+    const val = c.nama_customer || c.id_customer;
+    inputOptions[val] = label;
+  });
+
+  Swal.fire({
+    title: "PILIH CUSTOMER TUJUAN",
+    html: `<p class="text-xs mb-2">Tentukan Customer untuk Part:<br><b class="text-base">${partNumber}</b></p>`,
+    input: "select",
+    inputOptions: inputOptions,
+    inputValue: currentCust,
+    showCancelButton: true,
+    confirmButtonText: "Simpan Customer",
+    confirmButtonColor: "#2563eb",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      isProcessing = true;
+      Swal.fire({
+        title: "Menyimpan...",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+      sendToBackend("apiUpdateCustomerPart", {
+        partNumber: partNumber,
+        customer: result.value,
+      }).then((res) => {
+        isProcessing = false;
+        if (res.success) {
+          Swal.fire({
+            icon: "success",
+            title: "Tersimpan!",
+            timer: 800,
+            showConfirmButton: false,
+          });
+          refreshAllData();
+        } else {
+          Swal.fire("Gagal", res.message, "error");
+        }
+      });
+    }
+  });
 }
 
 function promptUpdateAssyFsg(partNumber, currentQty) {
@@ -562,7 +850,8 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     dataset = dataset.filter(
       (d) =>
         d.Part_Number.toLowerCase().includes(kw) ||
-        d.No_Rel.toLowerCase().includes(kw),
+        d.No_Rel.toLowerCase().includes(kw) ||
+        d.Customer.toLowerCase().includes(kw),
     );
   }
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
@@ -572,6 +861,9 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
   }
 
   const isAdmin = currentUser && currentUser.role === "Admin";
+  const canEditCust =
+    currentUser &&
+    (currentUser.role === "Admin" || currentUser.role === "Warehouse");
   const canEditAssy =
     currentUser &&
     (currentUser.role === "Admin" || currentUser.role === "Produksi");
@@ -590,6 +882,13 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         varFormat = "-";
       }
 
+      const custClass = canEditCust
+        ? "cursor-pointer hover:bg-blue-100 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-all"
+        : "";
+      const custAction = canEditCust
+        ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}')"`
+        : "";
+
       const qtyDayClass = isAdmin
         ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-all"
         : "";
@@ -605,7 +904,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         : "";
 
       return `<tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-500 break-words">${row.Customer}</td>
+      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words ${custClass}" ${custAction} title="Klik untuk pilih Customer">${row.Customer}</td>
       <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left">
         <div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div>
@@ -689,14 +988,119 @@ function renderRiwayatTable() {
       <td class="py-2 px-3 border-2 border-slate-800 text-left font-black text-slate-900 text-sm tracking-tight">${r.part}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-base ${colorQty}">${signQty}${r.qty}</td>
       <td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-black uppercase text-slate-700">${r.petugas || "-"}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 text-left text-[10px] text-slate-500 italic max-w-xs truncate">${r.catatan || "-"}</td>
+      <td class="py-2 px-3 border-2 border-slate-800 text-left text-[10px] font-bold text-slate-700 max-w-xs truncate">${r.catatan || "-"}</td>
     </tr>`;
     })
     .join("");
 }
 
 // =========================================================================
-// SMART SCANNER LOGIC
+// RENDER GRAFIK ANALITIK (CHART.JS)
+// =========================================================================
+function renderAnalitikCharts() {
+  if (typeof Chart === "undefined") return;
+
+  let keluarMap = {};
+  (appData.keluar || []).forEach((k) => {
+    let part = String(k.Part_Number).trim();
+    keluarMap[part] = (keluarMap[part] || 0) + Number(k.qty);
+  });
+
+  let sortedKeluar = Object.entries(keluarMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  let fmLabels = sortedKeluar.map((item) => item[0]);
+  let fmData = sortedKeluar.map((item) => item[1]);
+
+  const ctxFM = document.getElementById("fastMovingChart").getContext("2d");
+  if (chartFastMoving) chartFastMoving.destroy();
+  chartFastMoving = new Chart(ctxFM, {
+    type: "bar",
+    data: {
+      labels: fmLabels.length > 0 ? fmLabels : ["Belum ada data"],
+      datasets: [
+        {
+          label: "Total Qty Keluar",
+          data: fmData.length > 0 ? fmData : [0],
+          backgroundColor: "#facc15",
+          borderColor: "#1e293b",
+          borderWidth: 2,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: "#e2e8f0" },
+          ticks: { font: { weight: "bold" } },
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 10 } },
+        },
+      },
+    },
+  });
+
+  let sortedBarang = [...(appData.barang || [])]
+    .sort((a, b) => Number(a.stok) - Number(b.stok))
+    .slice(0, 10);
+  let stLabels = sortedBarang.map((b) => b.Part_Number);
+  let stCurrent = sortedBarang.map((b) => Number(b.stok));
+  let stMin = sortedBarang.map((b) => Number(b.stok_minimum || 0));
+
+  const ctxStock = document.getElementById("stockStatusChart").getContext("2d");
+  if (chartStock) chartStock.destroy();
+  chartStock = new Chart(ctxStock, {
+    type: "bar",
+    data: {
+      labels: stLabels.length > 0 ? stLabels : ["Belum ada data"],
+      datasets: [
+        {
+          label: "Stok Minimum",
+          data: stMin.length > 0 ? stMin : [0],
+          type: "line",
+          borderColor: "#ef4444",
+          backgroundColor: "#ef4444",
+          borderWidth: 3,
+          pointRadius: 4,
+          tension: 0.3,
+        },
+        {
+          label: "Stok Saat Ini",
+          data: stCurrent.length > 0 ? stCurrent : [0],
+          backgroundColor: "#34d399",
+          borderColor: "#1e293b",
+          borderWidth: 2,
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: "#e2e8f0" },
+          ticks: { font: { weight: "bold" } },
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { weight: "bold", size: 10 } },
+        },
+      },
+    },
+  });
+}
+
+// =========================================================================
+// SMART SCANNER LOGIC (PILIH CUSTOMER & TANPA SURAT JALAN)
 // =========================================================================
 function handleScannerGun(event) {
   if (event.key === "Enter") {
@@ -755,6 +1159,29 @@ function stopSmartScanner() {
   document.getElementById("btnStopScan").classList.add("hidden");
 }
 
+function populateCustomerDropdown(selectEl, selectedVal = "-") {
+  if (!selectEl) return;
+  let html = `<option value="-">-- Pilih Customer --</option>`;
+  (appData.customer || []).forEach((c) => {
+    const val = c.nama_customer || c.id_customer;
+    const label = c.nama_customer
+      ? `${c.nama_customer} (${c.id_customer})`
+      : c.id_customer;
+    const isSel =
+      String(val).toLowerCase() === String(selectedVal).toLowerCase() ||
+      String(c.id_customer).toLowerCase() === String(selectedVal).toLowerCase()
+        ? "selected"
+        : "";
+    html += `<option value="${val}" ${isSel}>${label}</option>`;
+  });
+  selectEl.innerHTML = html;
+}
+
+function handleChangeScannerCustomer(val) {
+  const badge = document.getElementById("smInfoCustomer");
+  if (badge) badge.innerText = "TUJUAN: " + (val && val !== "-" ? val : "-");
+}
+
 function processSmartScan(scannedCode) {
   if (!scannedCode) {
     isProcessing = false;
@@ -785,17 +1212,18 @@ function processSmartScan(scannedCode) {
   if (smartScanner) smartScanner.pause();
   activeScannedPart = foundData;
 
-  let namaCustFull = "-";
-  if (foundData.Customer !== "-") {
-    const cst = appData.customer.find(
-      (c) => String(c.id_customer).trim() === String(foundData.Customer).trim(),
-    );
-    if (cst) namaCustFull = cst.nama_customer;
-    else namaCustFull = foundData.Customer;
-  }
+  const custDisplay =
+    foundData.Customer &&
+    foundData.Customer !== "-" &&
+    foundData.Customer !== "undefined"
+      ? foundData.Customer
+      : "-";
+  const selectCust = document.getElementById("smSelectCustomer");
+  populateCustomerDropdown(selectCust, custDisplay);
 
   document.getElementById("smInfoCustomer").innerText =
-    "TUJUAN: " + namaCustFull;
+    "TUJUAN: " +
+    (selectCust && selectCust.value !== "-" ? selectCust.value : custDisplay);
   document.getElementById("smInfoRell").innerText = foundData.No_Rel;
   document.getElementById("smInfoPart").innerText = foundData.Part_Number;
   document.getElementById("smInfoNama").innerText = foundData.nama_barang;
@@ -806,15 +1234,20 @@ function processSmartScan(scannedCode) {
 
   const btnWH = document.getElementById("btnGroupWH");
   const btnAssy = document.getElementById("btnGroupAssy");
+  const wrapCust = document.getElementById("wrapperSelectCustomer");
+
   if (currentUser.role === "Admin") {
     btnWH.classList.remove("hidden");
     btnAssy.classList.remove("hidden");
+    if (wrapCust) wrapCust.classList.remove("hidden");
   } else if (currentUser.role === "Produksi") {
     btnWH.classList.add("hidden");
     btnAssy.classList.remove("hidden");
+    if (wrapCust) wrapCust.classList.add("hidden");
   } else {
     btnWH.classList.remove("hidden");
     btnAssy.classList.add("hidden");
+    if (wrapCust) wrapCust.classList.remove("hidden");
   }
 
   document.getElementById("modalSmartAction").classList.remove("hidden");
@@ -851,6 +1284,7 @@ function submitSmartAction(tipeAction) {
 
   isProcessing = true;
 
+  // 1. INPUT ASSY (PRODUKSI)
   if (tipeAction === "ASSY_ADD" || tipeAction === "ASSY_SET") {
     const finalQty =
       tipeAction === "ASSY_ADD" ? activeScannedPart.assy_fsg + qty : qty;
@@ -885,67 +1319,73 @@ function submitSmartAction(tipeAction) {
     return;
   }
 
+  // 2. BARANG KELUAR (LANGSUNG KIRIM KE CUSTOMER TANPA SURAT JALAN / PLAT NOMOR)
   if (tipeAction === "OUT") {
-    if (qty > activeScannedPart.stock) {
+    const selectedCustomer =
+      document.getElementById("smSelectCustomer")?.value ||
+      activeScannedPart.Customer ||
+      "-";
+    if (!selectedCustomer || selectedCustomer === "-") {
+      isProcessing = false;
+      return Swal.fire(
+        "Pilih Customer!",
+        "Silakan pilih Customer tujuan pengiriman terlebih dahulu pada kolom pilihan di atas.",
+        "warning",
+      );
+    }
+
+    const totalTersedia =
+      (Number(activeScannedPart.stock) || 0) +
+      (Number(activeScannedPart.assy_fsg) || 0) -
+      (Number(activeScannedPart.qty_out) || 0);
+    if (qty > totalTersedia) {
       isProcessing = false;
       return Swal.fire(
         "Stok Kurang!",
-        `Stok hanya sisa ${activeScannedPart.stock} Pcs.`,
+        `Stok tersedia hari ini sisa ${Math.max(0, totalTersedia)} Pcs.`,
         "error",
       );
     }
 
-    isProcessing = false;
+    localStorage.setItem(
+      "cust_map_" + activeScannedPart.Part_Number,
+      selectedCustomer,
+    );
     Swal.fire({
-      title: "BARANG KELUAR",
-      text: "Ketik Nomor Surat Jalan / Plat Kendaraan:",
-      input: "text",
-      inputPlaceholder: "Contoh: SJ-099 / B 1234 CD",
-      showCancelButton: true,
-      confirmButtonText: "Keluarkan Barang",
-      cancelButtonText: "Batal",
-      confirmButtonColor: "#ef4444",
-      inputValidator: (value) => {
-        if (!value) return "Surat Jalan / Plat Mobil WAJIB diisi!";
-      },
-    }).then((result) => {
-      if (result.isConfirmed) {
-        isProcessing = true;
-        Swal.fire({
-          title: "Mencatat ke Supabase...",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-        });
-        sendToBackend("apiSaveTransaksiKeluar", {
-          partNumber: activeScannedPart.Part_Number,
-          qty: qty,
-          petugas: currentUser.username,
-          catatan: `SJ: ${result.value}`,
-        })
-          .then((res) => {
-            isProcessing = false;
-            if (res.success) {
-              Swal.fire({
-                icon: "success",
-                title: "Berhasil Keluar!",
-                timer: 800,
-                showConfirmButton: false,
-              });
-              closeSmartAction();
-              refreshAllData();
-            } else {
-              Swal.fire("Gagal", res.message, "error");
-            }
-          })
-          .catch((err) => {
-            isProcessing = false;
-            Swal.fire("Error", err.message, "error");
-          });
-      }
+      title: "Mencatat Barang Keluar...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
     });
+    sendToBackend("apiSaveTransaksiKeluar", {
+      partNumber: activeScannedPart.Part_Number,
+      qty: qty,
+      petugas: currentUser.username,
+      customer: selectedCustomer,
+      catatan: `Kirim ke: ${selectedCustomer}`,
+    })
+      .then((res) => {
+        isProcessing = false;
+        if (res.success) {
+          Swal.fire({
+            icon: "success",
+            title: "Berhasil Keluar!",
+            timer: 800,
+            showConfirmButton: false,
+          });
+          closeSmartAction();
+          refreshAllData();
+        } else {
+          Swal.fire("Gagal", res.message, "error");
+        }
+      })
+      .catch((err) => {
+        isProcessing = false;
+        Swal.fire("Error", err.message, "error");
+      });
     return;
   }
 
+  // 3. BARANG MASUK
   Swal.fire({
     title: "Mencatat ke Supabase...",
     allowOutsideClick: false,
@@ -1006,14 +1446,9 @@ function renderMasterBarangTable() {
     .join("");
 }
 
-// 🖨️ FUNGSI GENERATOR CETAK BARCODE STIKER THERMAL
 function printBarcode(partNumber, namaBarang) {
   const canvas = document.getElementById("hiddenBarcodeCanvas");
-
-  // Membersihkan part number dari karakter yang tidak didukung Barcode CODE128
   const cleanPartNumber = String(partNumber).trim();
-
-  // Generate gambar barcode ke canvas yang tersembunyi
   JsBarcode(canvas, cleanPartNumber, {
     format: "CODE128",
     width: 2,
@@ -1024,61 +1459,23 @@ function printBarcode(partNumber, namaBarang) {
     textMargin: 4,
     margin: 5,
   });
-
-  // Mengubah canvas menjadi gambar (Base64)
   const imgData = canvas.toDataURL("image/png");
 
-  // Membuka Jendela Print Baru
   const printWindow = window.open("", "_blank", "width=400,height=400");
   printWindow.document.write(`
     <html>
       <head>
         <title>Print Label - ${cleanPartNumber}</title>
         <style>
-          /* Ukuran Kertas Stiker Thermal (Standar 50x30mm) */
           @page { size: 50mm 30mm; margin: 0; }
-          body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 2mm; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            text-align: center; 
-            background: white; 
-            box-sizing: border-box;
-          }
-          .title { 
-            font-size: 10px; 
-            font-weight: bold; 
-            margin-bottom: 2px; 
-            text-transform: uppercase; 
-            width: 100%; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-          }
-          img { 
-            max-width: 100%; 
-            max-height: 22mm;
-            object-fit: contain;
-          }
+          body { font-family: Arial, sans-serif; margin: 0; padding: 2mm; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; background: white; box-sizing: border-box; }
+          .title { font-size: 10px; font-weight: bold; margin-bottom: 2px; text-transform: uppercase; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          img { max-width: 100%; max-height: 22mm; object-fit: contain; }
         </style>
       </head>
       <body>
-        <div class="title">${namaBarang}</div>
-        <img src="${imgData}" />
-        <script>
-          // Otomatis memanggil dialog print saat gambar sudah dimuat
-          window.onload = function() {
-            setTimeout(() => {
-              window.print();
-              window.close(); // Otomatis menutup tab setelah di-print
-            }, 300);
-          };
-        </script>
+        <div class="title">${namaBarang}</div><img src="${imgData}" />
+        <script>window.onload = function() { setTimeout(() => { window.print(); window.close(); }, 300); };</script>
       </body>
     </html>
   `);
@@ -1103,7 +1500,9 @@ function renderCustomerTable() {
 function renderUsersTable() {
   const tbody = document.getElementById("tblUsersBody");
   if (!tbody) return;
-  const usersList = appData.users || [];
+  const usersList = (appData.users || []).filter(
+    (u) => u.username !== "__SYSTEM_ROLLOVER__",
+  );
   if (usersList.length === 0) {
     tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400">Tidak ada data.</td></tr>`;
     return;
@@ -1155,6 +1554,7 @@ function deleteUser(usernameTarget) {
 }
 
 function openModalBarang() {
+  populateCustomerDropdown(document.getElementById("mbCustomer"), "-");
   document.getElementById("modalMasterBarang").classList.remove("hidden");
 }
 function closeModalBarang() {
@@ -1180,7 +1580,11 @@ function handleSaveBarang(e) {
   e.preventDefault();
   if (isProcessing) return;
   isProcessing = true;
+  const selectedCust = document.getElementById("mbCustomer")
+    ? document.getElementById("mbCustomer").value
+    : "-";
   const payload = {
+    customer: selectedCust,
     item: {
       Part_Number: document.getElementById("mbPartNumber").value.trim(),
       nama_barang: document.getElementById("mbNamaBarang").value.trim(),

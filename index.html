@@ -33,9 +33,12 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- SUPABASE & JSBARCODE LIBRARY (WAJIB ADA) -->
+
+    <!-- SUPABASE, JSBARCODE & CHART.JS LIBRARY -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <link rel="stylesheet" href="style.css" />
   </head>
 
@@ -92,6 +95,14 @@
                 class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded border-2 border-slate-800 font-black text-xs transition-all bg-slate-800 text-white shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
               >
                 <i class="fa-solid fa-table"></i><span>Papan Kontrol</span>
+              </button>
+              <button
+                onclick="switchTab('analitik')"
+                id="btn-tab-analitik"
+                class="nav-item w-full flex items-center gap-3.5 px-4 py-3 rounded border-2 border-slate-800 font-black text-xs transition-all bg-white text-slate-800 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+              >
+                <i class="fa-solid fa-chart-pie"></i
+                ><span>Analitik Visual</span>
               </button>
               <button
                 onclick="switchTab('scanner')"
@@ -198,7 +209,7 @@
               <span
                 class="w-2 h-2 inline-block rounded-full bg-emerald-500 animate-pulse mr-1"
               ></span
-              >LIVE ANDON
+              >LIVE ANDON (RESET 08:00)
             </p>
           </div>
         </div>
@@ -219,6 +230,7 @@
       </header>
 
       <div class="p-4 sm:p-8 space-y-6 flex-1">
+        <!-- TAB PAPAN KONTROL -->
         <section id="tab-overview" class="tab-pane block space-y-6">
           <div
             class="bg-white p-5 sm:p-7 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -233,7 +245,7 @@
                 <p
                   class="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1"
                 >
-                  Monitoring Live Stok & Delivery
+                  Monitoring Live Stok & Delivery (Cut-Off Jam 08:00 WIB)
                 </p>
               </div>
               <div
@@ -311,7 +323,7 @@
                       QTY/DAY
                     </th>
                     <th class="py-1.5 px-1 border-2 border-slate-800">
-                      QTY OUT
+                      QTY/OUT
                     </th>
                     <th class="py-1.5 px-1 border-2 border-slate-800">
                       SISA DEL
@@ -333,6 +345,43 @@
           </div>
         </section>
 
+        <!-- TAB ANALITIK VISUAL (CHART.JS) -->
+        <section id="tab-analitik" class="tab-pane hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div
+              class="bg-white p-5 sm:p-7 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex flex-col"
+            >
+              <h3 class="text-xl font-black uppercase tracking-tighter mb-1">
+                Top 5 Fast-Moving
+              </h3>
+              <p
+                class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6"
+              >
+                Barang Paling Sering Keluar (Berdasarkan Riwayat)
+              </p>
+              <div class="relative w-full h-72 flex-1">
+                <canvas id="fastMovingChart"></canvas>
+              </div>
+            </div>
+            <div
+              class="bg-white p-5 sm:p-7 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex flex-col"
+            >
+              <h3 class="text-xl font-black uppercase tracking-tighter mb-1">
+                Radar Stok Kritis
+              </h3>
+              <p
+                class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6"
+              >
+                Posisi Stok Saat Ini VS Batas Stok Minimum
+              </p>
+              <div class="relative w-full h-72 flex-1">
+                <canvas id="stockStatusChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB SCANNER -->
         <section id="tab-scanner" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] max-w-lg mx-auto text-center"
@@ -400,6 +449,7 @@
           </div>
         </section>
 
+        <!-- TAB RIWAYAT -->
         <section id="tab-riwayat" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -475,6 +525,7 @@
           </div>
         </section>
 
+        <!-- TAB MASTER BARANG -->
         <section id="tab-barang" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -535,6 +586,7 @@
           </div>
         </section>
 
+        <!-- TAB MASTER CUSTOMER -->
         <section id="tab-customer" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -587,6 +639,7 @@
           </div>
         </section>
 
+        <!-- TAB KELOLA PENGGUNA -->
         <section id="tab-users" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -665,14 +718,12 @@
           >
             A.00
           </div>
-
           <div
             id="smInfoCustomer"
             class="inline-block px-2 py-1 bg-slate-900 text-yellow-300 text-[10px] font-black uppercase mb-1 mt-1 shadow-[2px_2px_0px_rgba(0,0,0,1)]"
           >
             TUJUAN: -
           </div>
-
           <h2
             id="smInfoPart"
             class="text-2xl font-black tracking-tighter uppercase leading-none mt-1"
@@ -774,7 +825,7 @@
       </div>
     </div>
 
-    <!-- MODAL-MODAL LAINNYA -->
+    <!-- MODAL MASTER BARANG -->
     <div
       id="modalMasterBarang"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -900,6 +951,7 @@
       </div>
     </div>
 
+    <!-- MODAL MASTER CUSTOMER -->
     <div
       id="modalMasterCustomer"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -980,6 +1032,7 @@
       </div>
     </div>
 
+    <!-- MODAL MASTER USER -->
     <div
       id="modalMasterUser"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1135,9 +1188,9 @@
       }
     </style>
 
-    <!-- CANVAS TERSEMBUNYI UNTUK GENERATE BARCODE -->
+    <!-- CANVAS TERSEMBUNYI UNTUK GENERATOR BARCODE -->
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=28"></script>
+    <script src="script.js?v=31"></script>
   </body>
 </html>
