@@ -33,6 +33,88 @@ let chartFastMoving = null;
 let chartStock = null;
 
 // =========================================================================
+// GAYA VISUAL BARU (CUSTOM TOAST NOTIFICATION & NEO-BRUTALISM MODAL)
+// =========================================================================
+// 1. Suntik Animasi CSS untuk Notifikasi HP (Toast) ke dalam halaman
+const style = document.createElement("style");
+style.innerHTML = `
+  @keyframes toastSlideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes toastSlideUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+  .animate-toast-in { animation: toastSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-toast-out { animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+`;
+document.head.appendChild(style);
+
+// 2. Fungsi Utama: Menampilkan Notifikasi ala HP dari atas layar
+function showToast(type, title, message = "") {
+  let container = document.getElementById("toastContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    // Posisi di atas tengah agar seperti notifikasi smartphone
+    container.className =
+      "fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  let bgColor = "bg-emerald-400";
+  let icon = '<i class="fa-solid fa-circle-check text-xl"></i>';
+
+  if (type === "error") {
+    bgColor = "bg-red-400";
+    icon = '<i class="fa-solid fa-triangle-exclamation text-xl"></i>';
+  } else if (type === "warning") {
+    bgColor = "bg-yellow-400";
+    icon = '<i class="fa-solid fa-circle-exclamation text-xl"></i>';
+  } else if (type === "info") {
+    bgColor = "bg-blue-400";
+    icon = '<i class="fa-solid fa-circle-info text-xl"></i>';
+  }
+
+  // Gaya UI sesuai dengan Neo-Brutalism (Garis tebal, shadow solid)
+  toast.className = `flex items-start gap-3 ${bgColor} border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] p-3 rounded pointer-events-auto animate-toast-in`;
+
+  toast.innerHTML = `
+    <div class="text-slate-900 mt-0.5">${icon}</div>
+    <div class="flex-1">
+      <h4 class="font-black text-sm uppercase text-slate-900 leading-tight">${title}</h4>
+      ${message ? `<p class="text-[10px] font-bold text-slate-800 mt-0.5 leading-tight">${message}</p>` : ""}
+    </div>
+    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-slate-900 hover:text-white transition-colors">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+  `;
+
+  container.appendChild(toast);
+
+  // Otomatis hilang dalam 3 detik
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.classList.replace("animate-toast-in", "animate-toast-out");
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 3000);
+}
+
+// 3. Konfigurasi Global SweetAlert agar desainnya menyatu dengan UI web (Neo-Brutalism)
+const swalUI = Swal.mixin({
+  customClass: {
+    popup:
+      "border-4 border-slate-800 rounded shadow-[8px_8px_0px_rgba(0,0,0,1)] bg-white",
+    title: "font-black uppercase tracking-tighter text-slate-900 text-xl",
+    htmlContainer: "font-bold text-xs text-slate-700",
+    confirmButton:
+      "px-4 py-2 border-4 border-slate-800 bg-emerald-400 font-black text-xs uppercase text-slate-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-emerald-500 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all mx-1",
+    cancelButton:
+      "px-4 py-2 border-4 border-slate-800 bg-slate-200 font-black text-xs uppercase text-slate-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-slate-300 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all mx-1",
+    input:
+      "w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-sm font-bold focus:bg-yellow-100 mt-2 text-center",
+  },
+  buttonsStyling: false,
+});
+
+// =========================================================================
 // LOGIKA WAKTU OPERASIONAL (GANTI HARI JAM 08:00 PAGI)
 // =========================================================================
 function getOperationalDayInfo() {
@@ -218,7 +300,16 @@ async function sendToBackend(action, payload = {}) {
           _supabase.from("Transaksi_Keluar").select("*"),
           _supabase.from("Users").select("*"),
         ]);
-        if (resB.error) throw new Error(resB.error.message);
+        if (resB.error)
+          throw new Error("Tabel Master_Barang error: " + resB.error.message);
+        if (resO.error)
+          throw new Error("Tabel List_Order error: " + resO.error.message);
+        if (resM.error)
+          throw new Error("Tabel Transaksi_Masuk error: " + resM.error.message);
+        if (resK.error)
+          throw new Error(
+            "Tabel Transaksi_Keluar error: " + resK.error.message,
+          );
         return {
           success: true,
           barang: resB.data,
@@ -230,14 +321,18 @@ async function sendToBackend(action, payload = {}) {
         };
 
       case "apiLogin":
-        const { data: cekUsers } = await _supabase.from("Users").select("*");
+        const { data: cekUsers, error: errCek } = await _supabase
+          .from("Users")
+          .select("*");
+        if (errCek) throw new Error("Gagal baca Users: " + errCek.message);
         const realUsers = (cekUsers || []).filter(
           (u) => u.username !== "__SYSTEM_ROLLOVER__",
         );
         if (realUsers.length === 0 && payload.username === "admin") {
-          await _supabase
+          const { error: errIns } = await _supabase
             .from("Users")
             .insert([{ username: "admin", password: "admin", role: "Admin" }]);
+          if (errIns) throw new Error(errIns.message);
           return { success: true, user: { username: "admin", role: "Admin" } };
         }
         const { data: loginData } = await _supabase
@@ -281,15 +376,13 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase
-                .from("List_Order")
-                .insert([
-                  {
-                    Part_Number: payload.partNumber,
-                    qty_order: 0,
-                    id_customer: cleanCust,
-                  },
-                ]);
+              await _supabase.from("List_Order").insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty_order: 0,
+                  id_customer: cleanCust,
+                },
+              ]);
             }
           }
         }
@@ -315,17 +408,15 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase
-          .from("Transaksi_Masuk")
-          .insert([
-            {
-              Part_Number: payload.partNumber,
-              qty: payload.qty,
-              petugas: payload.petugas,
-              catatan: payload.catatan,
-              tanggal: new Date().toISOString(),
-            },
-          ]);
+        await _supabase.from("Transaksi_Masuk").insert([
+          {
+            Part_Number: payload.partNumber,
+            qty: payload.qty,
+            petugas: payload.petugas,
+            catatan: payload.catatan,
+            tanggal: new Date().toISOString(),
+          },
+        ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -380,15 +471,13 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: payload.qty,
-                id_customer: custTarget !== "-" ? custTarget : null,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: payload.qty,
+              id_customer: custTarget !== "-" ? custTarget : null,
+            },
+          ]);
         }
         return { success: true };
 
@@ -406,15 +495,13 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: Number(payload.qtyOrder) || 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: Number(payload.qtyOrder) || 0,
+              id_customer: newCustClean,
+            },
+          ]);
           return { success: true };
         }
 
@@ -457,15 +544,13 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: 0,
+              id_customer: newCustClean,
+            },
+          ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -496,15 +581,13 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase
-              .from("List_Order")
-              .insert([
-                {
-                  Part_Number: payload.item.Part_Number,
-                  qty_order: 0,
-                  id_customer: cClean,
-                },
-              ]);
+            await _supabase.from("List_Order").insert([
+              {
+                Part_Number: payload.item.Part_Number,
+                qty_order: 0,
+                id_customer: cClean,
+              },
+            ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -522,7 +605,7 @@ async function sendToBackend(action, payload = {}) {
           success: true,
           message: payload.isEdit
             ? "Data barang berhasil diubah!"
-            : "Barang baru berhasil disimpan!",
+            : "Barang baru berhasil ditambahkan!",
         };
 
       case "apiDeleteBarang":
@@ -549,16 +632,17 @@ async function sendToBackend(action, payload = {}) {
             .update(payload.cust)
             .eq("id_customer", payload.cust.id_customer);
         else await _supabase.from("Master_Customer").insert([payload.cust]);
-        return { success: true, message: "Customer tersimpan!" };
+        return { success: true, message: "Data Customer berhasil disimpan!" };
 
       case "apiSaveUser":
         const { data: checkU } = await _supabase
           .from("Users")
           .select("*")
           .eq("username", payload.userData.username);
-        if (checkU && checkU.length > 0) throw new Error("Username sudah ada!");
+        if (checkU && checkU.length > 0)
+          throw new Error("Username sudah terdaftar!");
         await _supabase.from("Users").insert([payload.userData]);
-        return { success: true, message: "User baru berhasil dibuat!" };
+        return { success: true, message: "User baru berhasil didaftarkan!" };
 
       case "apiDeleteUser":
         await _supabase
@@ -598,10 +682,9 @@ function toggleSidebar() {
 }
 function closeSidebar() {
   document.getElementById("mainSidebar").classList.add("-translate-x-full");
-  document
-    .getElementById("sidebarBackdrop")
-    .classList.add("opacity-0", "pointer-events-none");
-  document.getElementById("sidebarBackdrop").classList.remove("opacity-100");
+  const bd = document.getElementById("sidebarBackdrop");
+  bd.classList.add("opacity-0", "pointer-events-none");
+  bd.classList.remove("opacity-100");
 }
 
 function switchTab(tabId) {
@@ -713,9 +796,17 @@ function loadInitialOrMockData() {
         await checkAndRunDailyRollover();
         buildSeatAssyControlDataset();
         refreshAllUI();
-      }
+      } else
+        showToast(
+          "error",
+          "Koneksi Gagal",
+          res.message || "Gagal memuat data dari Supabase",
+        );
     })
-    .catch(() => showSyncSpinner(false));
+    .catch((err) => {
+      showSyncSpinner(false);
+      showToast("error", "Error", err.message);
+    });
 }
 
 function refreshAllUI() {
@@ -849,7 +940,7 @@ function buildSeatAssyControlDataset() {
 function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   if (isProcessing) return;
   if (!appData.customer || appData.customer.length === 0)
-    return Swal.fire("Info", "Tambahkan data di Master Customer dulu!", "info");
+    return showToast("info", "Info", "Tambahkan data di Master Customer dulu!");
 
   let optionsHtml = `<option value="-">-- Kosongkan --</option>`;
   appData.customer.forEach((c) => {
@@ -857,9 +948,10 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
     optionsHtml += `<option value="${val}" ${String(val).toLowerCase() === String(currentCust).toLowerCase() ? "selected" : ""}>${c.nama_customer ? `${c.nama_customer} (${c.id_customer})` : c.id_customer}</option>`;
   });
 
-  Swal.fire({
-    title: "ATUR CUSTOMER TUJUAN",
-    html: `<div class="text-left space-y-3"><p class="text-xs">Part Number: <b>${partNumber}</b></p>
+  swalUI
+    .fire({
+      title: "ATUR CUSTOMER TUJUAN",
+      html: `<div class="text-left space-y-3"><p class="text-xs">Part Number: <b>${partNumber}</b></p>
       <div><label class="block text-[10px] font-black uppercase mb-1">Customer:</label><select id="swalSelectCust" class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold">${optionsHtml}</select></div>
       <div><label class="block text-[10px] font-black uppercase mb-1">Mode:</label>
         <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full bg-yellow-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold">
@@ -869,90 +961,97 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
       </div>
       <div id="swalWrapQtyBaru" class="hidden"><label class="block text-[10px] font-black uppercase mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold" /></div>
     </div>`,
-    showCancelButton: true,
-    confirmButtonText: "Simpan",
-    confirmButtonColor: "#2563eb",
-    preConfirm: () => ({
-      customer: document.getElementById("swalSelectCust").value,
-      mode: document.getElementById("swalModeCust").value,
-      qtyOrder: document.getElementById("swalQtyOrderBaru").value,
-    }),
-  }).then((res) => {
-    if (res.isConfirmed) {
-      if (
-        res.value.mode === "ADD_NEW" &&
-        (!res.value.customer || res.value.customer === "-")
-      )
-        return Swal.fire(
-          "Pilih Customer",
-          "Pilih nama Customer baru!",
-          "warning",
-        );
-      isProcessing = true;
-      Swal.fire({
-        title: "Menyimpan...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
-      sendToBackend("apiUpdateCustomerPart", {
-        partNumber,
-        oldCustomer: currentCust,
-        ...res.value,
-      }).then((r) => {
-        isProcessing = false;
-        if (r.success) {
-          Swal.fire({
-            icon: "success",
-            title: "Tersimpan!",
-            timer: 800,
-            showConfirmButton: false,
-          });
-          refreshAllData();
-        } else Swal.fire("Gagal", r.message, "error");
-      });
-    }
-  });
+      showCancelButton: true,
+      confirmButtonText: "Simpan",
+      cancelButtonText: "Batal",
+      preConfirm: () => ({
+        customer: document.getElementById("swalSelectCust").value,
+        mode: document.getElementById("swalModeCust").value,
+        qtyOrder: document.getElementById("swalQtyOrderBaru").value,
+      }),
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        if (
+          res.value.mode === "ADD_NEW" &&
+          (!res.value.customer || res.value.customer === "-")
+        )
+          return showToast(
+            "warning",
+            "Pilih Customer!",
+            "Pilih nama Customer baru yang ingin ditambahkan.",
+          );
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menyimpan...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiUpdateCustomerPart", {
+          partNumber,
+          oldCustomer: currentCust,
+          ...res.value,
+        }).then((r) => {
+          isProcessing = false;
+          Swal.close();
+          if (r.success) {
+            showToast("success", "Tersimpan!");
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", r.message);
+          }
+        });
+      }
+    });
 }
 
 function promptUpdateAssyFsg(partNumber, currentQty) {
   if (isProcessing) return;
-  Swal.fire({
-    title: "UPDATE STOK ASSY",
-    html: `<p class="text-sm mb-3">Part:<br><b class="text-lg">${partNumber}</b></p>`,
-    input: "number",
-    inputValue: currentQty > 0 ? currentQty : "",
-    showCancelButton: true,
-    confirmButtonText: "Simpan",
-    confirmButtonColor: "#9333ea",
-  }).then((res) => {
-    if (res.isConfirmed) {
-      sendToBackend("apiUpdateAssyFsg", {
-        partNumber,
-        qty: Number(res.value) || 0,
-      }).then(() => refreshAllData());
-    }
-  });
+  swalUI
+    .fire({
+      title: "UPDATE STOK ASSY",
+      html: `<p class="text-sm mb-3">Part:<br><b class="text-lg">${partNumber}</b></p>`,
+      input: "number",
+      inputValue: currentQty > 0 ? currentQty : "",
+      showCancelButton: true,
+      confirmButtonText: "Simpan",
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        sendToBackend("apiUpdateAssyFsg", {
+          partNumber,
+          qty: Number(res.value) || 0,
+        }).then(() => {
+          showToast("success", "Assy Diupdate");
+          refreshAllData();
+        });
+      }
+    });
 }
 
 function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
   if (isProcessing) return;
-  Swal.fire({
-    title: "SET TARGET (QTY/DAY)",
-    html: `<p class="text-sm mb-3">Part:<br><b class="text-lg">${partNumber}</b><br><span class="text-xs text-slate-500">Customer: ${customerName}</span></p>`,
-    input: "number",
-    inputValue: currentQty > 0 ? currentQty : "",
-    showCancelButton: true,
-    confirmButtonText: "Simpan",
-    confirmButtonColor: "#10b981",
-  }).then((res) => {
-    if (res.isConfirmed) {
-      sendToBackend("apiUpdateQtyDay", {
-        partNumber,
-        qty: Number(res.value) || 0,
-        customer: customerName,
-      }).then(() => refreshAllData());
-    }
-  });
+  swalUI
+    .fire({
+      title: "SET TARGET (QTY/DAY)",
+      html: `<p class="text-sm mb-3">Part:<br><b class="text-lg">${partNumber}</b><br><span class="text-xs text-slate-500">Customer: ${customerName}</span></p>`,
+      input: "number",
+      inputValue: currentQty > 0 ? currentQty : "",
+      showCancelButton: true,
+      confirmButtonText: "Simpan",
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        sendToBackend("apiUpdateQtyDay", {
+          partNumber,
+          qty: Number(res.value) || 0,
+          customer: customerName,
+        }).then(() => {
+          showToast("success", "Target Disimpan");
+          refreshAllData();
+        });
+      }
+    });
 }
 
 function renderSeatAssyControlBoard(filterKeyword = "") {
@@ -1018,7 +1117,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         : "";
 
       return `<tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words ${custClass}" ${custAction}>${row.Customer}</td>
+      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words ${custClass}" ${custAction} title="Klik untuk ubah/tambah Customer">${row.Customer}</td>
       <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left"><div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div><div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div></td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-700 text-base bg-blue-50/50">${formatNum(row.stock)}</td>
@@ -1054,13 +1153,7 @@ function handleScannerGun(event) {
       (item) => item.Part_Number.toLowerCase() === code.toLowerCase(),
     );
     if (matchingRows.length === 0) {
-      Swal.fire({
-        icon: "warning",
-        title: "Tidak Dikenali!",
-        text: `Part ${code} tidak terdaftar.`,
-        timer: 1500,
-        showConfirmButton: false,
-      });
+      showToast("error", "Tidak Dikenali", `Part ${code} tidak ada.`);
       inputField.value = "";
       return;
     }
@@ -1138,10 +1231,10 @@ function updateBatchTrolleyUI() {
 async function submitBatchTrolley(tipeAction) {
   if (!currentUser) return openLoginModal();
   if (batchTrolley.length === 0)
-    return Swal.fire(
+    return showToast(
+      "warning",
       "Troli Kosong!",
       "Silakan scan barang terlebih dahulu.",
-      "warning",
     );
   if (isProcessing) return;
 
@@ -1149,10 +1242,10 @@ async function submitBatchTrolley(tipeAction) {
     (b) => !b.qtyInput || Number(b.qtyInput) <= 0,
   );
   if (invalidQty)
-    return Swal.fire(
+    return showToast(
+      "error",
       "Qty Tidak Valid",
-      `Masukkan jumlah Qty > 0 untuk Part ${invalidQty.Part_Number}`,
-      "warning",
+      `Cek jumlah Qty untuk ${invalidQty.Part_Number}`,
     );
 
   const overrideCust =
@@ -1162,16 +1255,16 @@ async function submitBatchTrolley(tipeAction) {
       const targetCust =
         overrideCust && overrideCust !== "-" ? overrideCust : item.Customer;
       if (!targetCust || targetCust === "-")
-        return Swal.fire(
-          "Pilih Customer!",
-          `Pilih Customer Tujuan pada dropdown!`,
+        return showToast(
           "warning",
+          "Pilih Customer!",
+          "Pilih Tujuan pada dropdown atas!",
         );
     }
   }
 
   isProcessing = true;
-  Swal.fire({
+  swalUI.fire({
     title: "Memproses Troli...",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
@@ -1209,15 +1302,16 @@ async function submitBatchTrolley(tipeAction) {
     }
     batchTrolley = [];
     updateBatchTrolleyUI();
-    Swal.fire({
-      icon: "success",
-      title: "Troli Tersimpan!",
-      timer: 1200,
-      showConfirmButton: false,
-    });
+    Swal.close();
+    showToast(
+      "success",
+      "Troli Tersimpan!",
+      "Semua transaksi berhasil dicatat.",
+    );
     refreshAllData();
   } catch (err) {
-    Swal.fire("Error", err.message, "error");
+    Swal.close();
+    showToast("error", "Gagal", err.message);
   }
   isProcessing = false;
 }
@@ -1305,13 +1399,7 @@ function processSmartScanCamera(scannedCode) {
     (item) => item.Part_Number.toLowerCase() === part.toLowerCase(),
   );
   if (matchingRows.length === 0) {
-    Swal.fire({
-      icon: "warning",
-      title: "Tidak Dikenali!",
-      text: `Part ${part} tidak terdaftar.`,
-      timer: 2000,
-      showConfirmButton: false,
-    });
+    showToast("error", "Tidak Dikenali", `Part ${part} tidak terdaftar.`);
     return;
   }
 
@@ -1372,7 +1460,7 @@ function adjSmartQty(amt) {
 function submitSmartAction(tipeAction) {
   if (!activeScannedPart || !currentUser) return;
   const qty = parseInt(document.getElementById("smInputQty").value) || 0;
-  if (qty <= 0) return Swal.fire("Error", "Jumlah harus > 0", "error");
+  if (qty <= 0) return showToast("error", "Error", "Jumlah harus > 0");
 
   isProcessing = true;
   if (tipeAction === "OUT") {
@@ -1381,13 +1469,13 @@ function submitSmartAction(tipeAction) {
       activeScannedPart.Customer;
     if (!selectedCustomer || selectedCustomer === "-") {
       isProcessing = false;
-      return Swal.fire(
-        "Pilih Customer!",
-        "Pilih Customer tujuan terlebih dahulu.",
+      return showToast(
         "warning",
+        "Pilih Customer!",
+        "Pilih tujuan pengiriman terlebih dahulu.",
       );
     }
-    Swal.fire({
+    swalUI.fire({
       title: "Menyimpan...",
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading(),
@@ -1398,19 +1486,17 @@ function submitSmartAction(tipeAction) {
       petugas: currentUser.username,
       customer: selectedCustomer,
       catatan: `Kirim ke: ${selectedCustomer}`,
-    }).then(() => {
+    }).then((res) => {
       isProcessing = false;
-      closeSmartAction();
-      refreshAllData();
-      Swal.fire({
-        icon: "success",
-        title: "Berhasil Keluar!",
-        timer: 800,
-        showConfirmButton: false,
-      });
+      Swal.close();
+      if (res.success) {
+        closeSmartAction();
+        refreshAllData();
+        showToast("success", "Berhasil Keluar!");
+      } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "IN") {
-    Swal.fire({
+    swalUI.fire({
       title: "Menyimpan...",
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading(),
@@ -1420,21 +1506,19 @@ function submitSmartAction(tipeAction) {
       qty,
       petugas: currentUser.username,
       catatan: "Scan Kamera Masuk",
-    }).then(() => {
+    }).then((res) => {
       isProcessing = false;
-      closeSmartAction();
-      refreshAllData();
-      Swal.fire({
-        icon: "success",
-        title: "Berhasil Masuk!",
-        timer: 800,
-        showConfirmButton: false,
-      });
+      Swal.close();
+      if (res.success) {
+        closeSmartAction();
+        refreshAllData();
+        showToast("success", "Berhasil Masuk!");
+      } else showToast("error", "Gagal", res.message);
     });
   } else {
     const finalQty =
       tipeAction === "ASSY_ADD" ? activeScannedPart.assy_fsg + qty : qty;
-    Swal.fire({
+    swalUI.fire({
       title: "Menyimpan...",
       allowOutsideClick: false,
       didOpen: () => Swal.showLoading(),
@@ -1442,16 +1526,14 @@ function submitSmartAction(tipeAction) {
     sendToBackend("apiUpdateAssyFsg", {
       partNumber: activeScannedPart.Part_Number,
       qty: finalQty,
-    }).then(() => {
+    }).then((res) => {
       isProcessing = false;
-      closeSmartAction();
-      refreshAllData();
-      Swal.fire({
-        icon: "success",
-        title: "Assy Tersimpan!",
-        timer: 800,
-        showConfirmButton: false,
-      });
+      Swal.close();
+      if (res.success) {
+        closeSmartAction();
+        refreshAllData();
+        showToast("success", "Assy Tersimpan!");
+      } else showToast("error", "Gagal", res.message);
     });
   }
 }
@@ -1656,8 +1738,7 @@ function editBarang(partNum) {
   const barang = appData.barang.find(
     (b) => String(b.Part_Number) === String(partNum),
   );
-  if (!barang)
-    return Swal.fire("Error", "Data barang tidak ditemukan", "error");
+  if (!barang) return showToast("error", "Data tidak ditemukan");
 
   currentEditPart = partNum;
 
@@ -1701,38 +1782,36 @@ function editBarang(partNum) {
 }
 
 function deleteBarang(partNum, namaBarang) {
-  Swal.fire({
-    title: "Hapus Permanen?",
-    html: `Anda yakin ingin menghapus Part Number <br><b class="text-red-600">${partNum}</b> (${namaBarang})?<br><br><span class="text-xs">Data stok dan daftar customer untuk barang ini akan ikut terhapus.</span>`,
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    confirmButtonText: "Ya, Hapus!",
-    cancelButtonText: "Batal",
-  }).then((result) => {
-    if (result.isConfirmed) {
-      isProcessing = true;
-      Swal.fire({
-        title: "Menghapus...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
-      sendToBackend("apiDeleteBarang", { partNumber: partNum }).then((res) => {
-        isProcessing = false;
-        if (res.success) {
-          Swal.fire({
-            icon: "success",
-            title: "Terhapus!",
-            timer: 1200,
-            showConfirmButton: false,
-          });
-          refreshAllData();
-        } else {
-          Swal.fire("Gagal", res.message, "error");
-        }
-      });
-    }
-  });
+  swalUI
+    .fire({
+      title: "Hapus Permanen?",
+      html: `Anda yakin ingin menghapus Part Number <br><b class="text-red-600">${partNum}</b>?<br><br><span class="text-xs">Data stok dan daftar customer untuk barang ini akan terhapus.</span>`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus!",
+      cancelButtonText: "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiDeleteBarang", { partNumber: partNum }).then(
+          (res) => {
+            isProcessing = false;
+            Swal.close();
+            if (res.success) {
+              showToast("success", "Terhapus!");
+              refreshAllData();
+            } else {
+              showToast("error", "Gagal", res.message);
+            }
+          },
+        );
+      }
+    });
 }
 
 function handleSaveBarang(e) {
@@ -1756,18 +1835,19 @@ function handleSaveBarang(e) {
     },
   };
 
-  Swal.fire({
+  swalUI.fire({
     title: "Menyimpan...",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   });
   sendToBackend("apiSaveBarang", payload).then((res) => {
     isProcessing = false;
+    Swal.close();
     if (res.success) {
       closeModalBarang();
       refreshAllData();
-      Swal.fire("Berhasil", res.message, "success");
-    } else Swal.fire("Gagal", res.message, "error");
+      showToast("success", res.message);
+    } else showToast("error", "Gagal Menyimpan", res.message);
   });
 }
 
@@ -1798,6 +1878,7 @@ function handleSaveCustomer(e) {
   }).then(() => {
     closeModalCustomer();
     refreshAllData();
+    showToast("success", "Customer Disimpan");
   });
 }
 
@@ -1812,6 +1893,7 @@ function handleSaveUser(e) {
   }).then(() => {
     closeModalUser();
     refreshAllData();
+    showToast("success", "User Disimpan");
   });
 }
 
@@ -1822,23 +1904,41 @@ function closeLoginModal() {
   document.getElementById("modalLogin").classList.add("hidden");
 }
 function logoutAction() {
-  currentUser = null;
-  sessionStorage.removeItem("sim_inventory_user");
-  applyRbacUI();
-  switchTab("overview");
+  swalUI
+    .fire({
+      title: "Keluar Sistem?",
+      showCancelButton: true,
+      confirmButtonText: "Keluar",
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        currentUser = null;
+        sessionStorage.removeItem("sim_inventory_user");
+        applyRbacUI();
+        switchTab("overview");
+        showToast("info", "Anda Berhasil Keluar");
+      }
+    });
 }
 function handleLoginSubmit(e) {
   e.preventDefault();
+  swalUI.fire({
+    title: "Menghubungkan...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
   sendToBackend("apiLogin", {
     username: document.getElementById("loginUsername").value.trim(),
     password: document.getElementById("loginPassword").value.trim(),
   }).then((res) => {
+    Swal.close();
     if (res.success) {
       currentUser = res.user;
       sessionStorage.setItem("sim_inventory_user", JSON.stringify(currentUser));
       applyRbacUI();
       closeLoginModal();
       switchTab("scanner");
-    } else Swal.fire("Gagal", res.message, "error");
+      showToast("success", `Halo, ${currentUser.username}!`);
+    } else showToast("error", "Login Gagal", res.message);
   });
 }
