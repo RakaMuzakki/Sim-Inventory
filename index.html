@@ -28,7 +28,7 @@
       rel="stylesheet"
     />
 
-    <!-- PERBAIKAN IKON: Menggunakan Server jsDelivr agar Ikon Tidak Hilang -->
+    <!-- PERBAIKAN IKON -->
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
@@ -623,7 +623,7 @@
           </div>
         </section>
 
-        <!-- TAB MASTER BARANG (Sekarang Punya Edit & Hapus) -->
+        <!-- TAB MASTER BARANG -->
         <section id="tab-barang" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -717,6 +717,9 @@
                       Nama Perusahaan
                     </th>
                     <th class="py-3 px-3 border-2 border-slate-800">Alamat</th>
+                    <th class="py-3 px-3 border-2 border-slate-800 w-24">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody
@@ -725,7 +728,7 @@
                 >
                   <tr>
                     <td
-                      colspan="3"
+                      colspan="4"
                       class="py-6 text-center text-slate-400 font-medium"
                     >
                       Memuat data...
@@ -938,7 +941,7 @@
       </div>
     </div>
 
-    <!-- MODAL MASTER BARANG (SEKARANG MENDUKUNG EDIT) -->
+    <!-- MODAL MASTER BARANG -->
     <div
       id="modalMasterBarang"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1091,6 +1094,7 @@
           <i class="fa-solid fa-xmark"></i>
         </button>
         <h3
+          id="modalMasterCustomerTitle"
           class="text-xl font-black uppercase border-b-4 border-slate-800 pb-2 mb-4"
         >
           Form Customer
@@ -1172,6 +1176,7 @@
           <i class="fa-solid fa-xmark"></i>
         </button>
         <h3
+          id="modalMasterUserTitle"
           class="text-xl font-black uppercase border-b-4 border-slate-800 pb-2 mb-4"
         >
           Akun Baru
@@ -1313,9 +1318,9 @@
       }
     </style>
 
-    <!-- CANVAS TERSEMBUNYI UNTUK GENERATOR BARCODE -->
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=35"></script>
+    <!-- MENGHANCURKAN CACHE BROWSER LAMA -->
+    <script src="script.js?v=9999"></script>
   </body>
 </html>

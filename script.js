@@ -25,8 +25,10 @@ let isProcessing = false;
 // VARIABEL KERANJANG BATCH TROLLEY (KHUSUS SCANNER GUN)
 let batchTrolley = [];
 
-// VARIABEL EDIT BARANG
+// VARIABEL EDIT MASTER DATA
 let currentEditPart = null;
+let currentEditCustomer = null;
+let currentEditUser = null;
 
 // Variabel Global untuk Grafik Analitik
 let chartFastMoving = null;
@@ -35,7 +37,6 @@ let chartStock = null;
 // =========================================================================
 // GAYA VISUAL BARU (CUSTOM TOAST NOTIFICATION & NEO-BRUTALISM MODAL)
 // =========================================================================
-// 1. Suntik Animasi CSS untuk Notifikasi HP (Toast) ke dalam halaman
 const style = document.createElement("style");
 style.innerHTML = `
   @keyframes toastSlideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -45,13 +46,11 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 
-// 2. Fungsi Utama: Menampilkan Notifikasi ala HP dari atas layar
 function showToast(type, title, message = "") {
   let container = document.getElementById("toastContainer");
   if (!container) {
     container = document.createElement("div");
     container.id = "toastContainer";
-    // Posisi di atas tengah agar seperti notifikasi smartphone
     container.className =
       "fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
     document.body.appendChild(container);
@@ -72,7 +71,6 @@ function showToast(type, title, message = "") {
     icon = '<i class="fa-solid fa-circle-info text-xl"></i>';
   }
 
-  // Gaya UI sesuai dengan Neo-Brutalism (Garis tebal, shadow solid)
   toast.className = `flex items-start gap-3 ${bgColor} border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] p-3 rounded pointer-events-auto animate-toast-in`;
 
   toast.innerHTML = `
@@ -87,8 +85,6 @@ function showToast(type, title, message = "") {
   `;
 
   container.appendChild(toast);
-
-  // Otomatis hilang dalam 3 detik
   setTimeout(() => {
     if (toast.parentElement) {
       toast.classList.replace("animate-toast-in", "animate-toast-out");
@@ -97,7 +93,6 @@ function showToast(type, title, message = "") {
   }, 3000);
 }
 
-// 3. Konfigurasi Global SweetAlert agar desainnya menyatu dengan UI web (Neo-Brutalism)
 const swalUI = Swal.mixin({
   customClass: {
     popup:
@@ -622,27 +617,55 @@ async function sendToBackend(action, payload = {}) {
         return { success: true, message: "Barang terhapus permanen!" };
 
       case "apiSaveCustomer":
-        const { data: checkC } = await _supabase
-          .from("Master_Customer")
-          .select("*")
-          .eq("id_customer", payload.cust.id_customer);
-        if (checkC && checkC.length > 0)
+        if (payload.isEdit) {
           await _supabase
             .from("Master_Customer")
             .update(payload.cust)
             .eq("id_customer", payload.cust.id_customer);
-        else await _supabase.from("Master_Customer").insert([payload.cust]);
-        return { success: true, message: "Data Customer berhasil disimpan!" };
+        } else {
+          const { data: checkC } = await _supabase
+            .from("Master_Customer")
+            .select("*")
+            .eq("id_customer", payload.cust.id_customer);
+          if (checkC && checkC.length > 0)
+            throw new Error("ID Customer sudah ada!");
+          await _supabase.from("Master_Customer").insert([payload.cust]);
+        }
+        return {
+          success: true,
+          message: payload.isEdit
+            ? "Data Customer diperbarui!"
+            : "Customer baru tersimpan!",
+        };
+
+      case "apiDeleteCustomer":
+        await _supabase
+          .from("Master_Customer")
+          .delete()
+          .eq("id_customer", payload.id_customer);
+        return { success: true, message: "Customer terhapus!" };
 
       case "apiSaveUser":
-        const { data: checkU } = await _supabase
-          .from("Users")
-          .select("*")
-          .eq("username", payload.userData.username);
-        if (checkU && checkU.length > 0)
-          throw new Error("Username sudah terdaftar!");
-        await _supabase.from("Users").insert([payload.userData]);
-        return { success: true, message: "User baru berhasil didaftarkan!" };
+        if (payload.isEdit) {
+          await _supabase
+            .from("Users")
+            .update(payload.userData)
+            .eq("username", payload.userData.username);
+        } else {
+          const { data: checkU } = await _supabase
+            .from("Users")
+            .select("*")
+            .eq("username", payload.userData.username);
+          if (checkU && checkU.length > 0)
+            throw new Error("Username sudah terdaftar!");
+          await _supabase.from("Users").insert([payload.userData]);
+        }
+        return {
+          success: true,
+          message: payload.isEdit
+            ? "User berhasil diperbarui!"
+            : "User baru berhasil didaftarkan!",
+        };
 
       case "apiDeleteUser":
         await _supabase
@@ -707,6 +730,8 @@ function switchTab(tabId) {
   if (tabId === "overview") renderSeatAssyControlBoard();
   if (tabId === "riwayat") renderRiwayatTable();
   if (tabId === "barang") renderMasterBarangTable();
+  if (tabId === "customer") renderCustomerTable();
+  if (tabId === "users") renderUsersTable();
   if (tabId === "analitik") renderAnalitikCharts();
   if (tabId !== "scanner") stopSmartScanner();
 
@@ -1539,7 +1564,7 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// TABEL MASTER, EDIT, HAPUS, & GRAFIK
+// TABEL MASTER DATA (BARANG, CUSTOMER, USER) DENGAN EDIT & HAPUS
 // =========================================================================
 function renderMasterBarangTable() {
   const tbody = document.getElementById("tblMasterBarangBody");
@@ -1591,10 +1616,25 @@ function printBarcode(partNumber, namaBarang) {
 function renderCustomerTable() {
   const tbody = document.getElementById("tblCustomerBody");
   if (!tbody) return;
+  if (appData.customer.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">Tidak ada customer.</td></tr>`;
+    return;
+  }
+
   tbody.innerHTML = appData.customer
     .map(
-      (c) =>
-        `<tr class="hover:bg-yellow-50"><td class="py-2 px-3 border-2 border-slate-800 font-black">${c.id_customer}</td><td class="py-2 px-3 border-2 border-slate-800 text-left font-black">${c.nama_customer}</td><td class="py-2 px-3 border-2 border-slate-800 text-left">${c.alamat || "-"}</td></tr>`,
+      (c) => `
+    <tr class="hover:bg-yellow-50 transition-colors">
+      <td class="py-2 px-3 border-2 border-slate-800 font-black">${c.id_customer}</td>
+      <td class="py-2 px-3 border-2 border-slate-800 text-left font-black">${c.nama_customer}</td>
+      <td class="py-2 px-3 border-2 border-slate-800 text-left">${c.alamat || "-"}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 text-center">
+        <div class="flex items-center justify-center gap-1.5">
+           <button onclick="editCustomer('${c.id_customer}')" class="w-7 h-7 bg-amber-400 hover:bg-amber-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Edit Customer"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-7 h-7 bg-red-400 hover:bg-red-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Hapus Customer"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      </td>
+    </tr>`,
     )
     .join("");
 }
@@ -1602,11 +1642,27 @@ function renderCustomerTable() {
 function renderUsersTable() {
   const tbody = document.getElementById("tblUsersBody");
   if (!tbody) return;
-  tbody.innerHTML = (appData.users || [])
-    .filter((u) => u.username !== "__SYSTEM_ROLLOVER__")
+  const usersList = (appData.users || []).filter(
+    (u) => u.username !== "__SYSTEM_ROLLOVER__",
+  );
+  if (usersList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400">Tidak ada user.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = usersList
     .map(
-      (u) =>
-        `<tr class="hover:bg-yellow-50"><td class="py-2 px-3 border-2 border-slate-800 font-black">${u.username}</td><td class="py-2 px-3 border-2 border-slate-800">${u.role}</td><td class="py-2 px-3 border-2 border-slate-800"><button onclick="sendToBackend('apiDeleteUser',{usernameTarget:'${u.username}'}).then(()=>refreshAllData())" class="bg-red-400 px-2 py-1 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]"><i class="fa-solid fa-trash-can"></i></button></td></tr>`,
+      (u) => `
+    <tr class="hover:bg-yellow-50 transition-colors">
+      <td class="py-2 px-3 border-2 border-slate-800 font-black">${u.username}</td>
+      <td class="py-2 px-3 border-2 border-slate-800">${u.role}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 text-center">
+        <div class="flex items-center justify-center gap-1.5">
+           <button onclick="editUser('${u.username}')" class="w-7 h-7 bg-amber-400 hover:bg-amber-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Edit User"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="deleteUser('${u.username}')" class="w-7 h-7 bg-red-400 hover:bg-red-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Hapus User"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+      </td>
+    </tr>`,
     )
     .join("");
 }
@@ -1712,7 +1768,7 @@ function renderAnalitikCharts() {
 }
 
 // =========================================================================
-// MODAL FORMS: EDIT BARANG & TAMBAH CUSTOMER
+// MODAL FORMS: BARANG
 // =========================================================================
 function openModalBarang() {
   currentEditPart = null;
@@ -1739,7 +1795,6 @@ function editBarang(partNum) {
     (b) => String(b.Part_Number) === String(partNum),
   );
   if (!barang) return showToast("error", "Data tidak ditemukan");
-
   currentEditPart = partNum;
 
   const titleEl = document.getElementById("modalMasterBarangTitle");
@@ -1851,52 +1906,227 @@ function handleSaveBarang(e) {
   });
 }
 
+// =========================================================================
+// MODAL FORMS: CUSTOMER
+// =========================================================================
 function openModalCustomer() {
+  currentEditCustomer = null;
+  const idInput = document.getElementById("mcId");
+  idInput.readOnly = false;
+  idInput.classList.remove("bg-slate-200");
+
+  const titleEl = document.getElementById("modalMasterCustomerTitle");
+  if (titleEl) titleEl.innerText = "Form Customer Baru";
+
+  document.getElementById("formMasterCustomer").reset();
   document.getElementById("modalMasterCustomer").classList.remove("hidden");
 }
+
 function closeModalCustomer() {
   document.getElementById("modalMasterCustomer").classList.add("hidden");
   document.getElementById("formMasterCustomer").reset();
+  currentEditCustomer = null;
 }
-function openModalUser() {
-  document.getElementById("modalMasterUser").classList.remove("hidden");
+
+function editCustomer(idCust) {
+  const cust = appData.customer.find(
+    (c) => String(c.id_customer) === String(idCust),
+  );
+  if (!cust) return showToast("error", "Data tidak ditemukan");
+  currentEditCustomer = idCust;
+
+  const titleEl = document.getElementById("modalMasterCustomerTitle");
+  if (titleEl) titleEl.innerText = "Edit Data Customer";
+
+  const idInput = document.getElementById("mcId");
+  idInput.value = cust.id_customer;
+  idInput.readOnly = true;
+  idInput.classList.add("bg-slate-200");
+
+  document.getElementById("mcNama").value = cust.nama_customer || "";
+  document.getElementById("mcKontak").value = cust.kontak || "";
+  document.getElementById("mcAlamat").value = cust.alamat || "";
+
+  document.getElementById("modalMasterCustomer").classList.remove("hidden");
 }
-function closeModalUser() {
-  document.getElementById("modalMasterUser").classList.add("hidden");
-  document.getElementById("formMasterUser").reset();
+
+function deleteCustomer(idCust, namaCust) {
+  swalUI
+    .fire({
+      title: "Hapus Customer?",
+      html: `Anda yakin ingin menghapus Customer <br><b class="text-red-600">${namaCust}</b> (${idCust})?`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus!",
+      cancelButtonText: "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiDeleteCustomer", { id_customer: idCust }).then(
+          (res) => {
+            isProcessing = false;
+            Swal.close();
+            if (res.success) {
+              showToast("success", "Customer Terhapus!");
+              refreshAllData();
+            } else {
+              showToast("error", "Gagal", res.message);
+            }
+          },
+        );
+      }
+    });
 }
 
 function handleSaveCustomer(e) {
   e.preventDefault();
-  sendToBackend("apiSaveCustomer", {
+  if (isProcessing) return;
+  isProcessing = true;
+
+  const payload = {
+    isEdit: currentEditCustomer !== null,
     cust: {
       id_customer: document.getElementById("mcId").value.trim(),
       nama_customer: document.getElementById("mcNama").value.trim(),
       kontak: document.getElementById("mcKontak").value.trim(),
       alamat: document.getElementById("mcAlamat").value.trim(),
     },
-  }).then(() => {
-    closeModalCustomer();
-    refreshAllData();
-    showToast("success", "Customer Disimpan");
+  };
+
+  swalUI.fire({
+    title: "Menyimpan...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
   });
+  sendToBackend("apiSaveCustomer", payload).then((res) => {
+    isProcessing = false;
+    Swal.close();
+    if (res.success) {
+      closeModalCustomer();
+      refreshAllData();
+      showToast("success", res.message);
+    } else showToast("error", "Gagal Menyimpan", res.message);
+  });
+}
+
+// =========================================================================
+// MODAL FORMS: PENGGUNA (USERS)
+// =========================================================================
+function openModalUser() {
+  currentEditUser = null;
+  const usernameInput = document.getElementById("muUsername");
+  usernameInput.readOnly = false;
+  usernameInput.classList.remove("bg-slate-200");
+
+  const titleEl = document.getElementById("modalMasterUserTitle");
+  if (titleEl) titleEl.innerText = "Form Pengguna Baru";
+
+  document.getElementById("formMasterUser").reset();
+  document.getElementById("modalMasterUser").classList.remove("hidden");
+}
+
+function closeModalUser() {
+  document.getElementById("modalMasterUser").classList.add("hidden");
+  document.getElementById("formMasterUser").reset();
+  currentEditUser = null;
+}
+
+function editUser(username) {
+  const usr = appData.users.find(
+    (u) => String(u.username) === String(username),
+  );
+  if (!usr) return showToast("error", "User tidak ditemukan");
+  currentEditUser = username;
+
+  const titleEl = document.getElementById("modalMasterUserTitle");
+  if (titleEl) titleEl.innerText = "Edit Data Pengguna";
+
+  const usernameInput = document.getElementById("muUsername");
+  usernameInput.value = usr.username;
+  usernameInput.readOnly = true;
+  usernameInput.classList.add("bg-slate-200");
+
+  document.getElementById("muPassword").value = usr.password || "";
+  document.getElementById("muRole").value = usr.role || "Warehouse";
+
+  document.getElementById("modalMasterUser").classList.remove("hidden");
+}
+
+function deleteUser(usernameTarget) {
+  if (currentUser && currentUser.username === usernameTarget)
+    return showToast(
+      "warning",
+      "Ditolak!",
+      "Anda tidak bisa menghapus akun yang sedang Anda gunakan sendiri.",
+    );
+  swalUI
+    .fire({
+      title: "Hapus Pengguna?",
+      html: `Anda yakin ingin menghapus akun pengguna <br><b class="text-red-600">${usernameTarget}</b>?`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus!",
+      cancelButtonText: "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiDeleteUser", { usernameTarget }).then((res) => {
+          isProcessing = false;
+          Swal.close();
+          if (res.success) {
+            showToast("success", "User Terhapus!");
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", res.message);
+          }
+        });
+      }
+    });
 }
 
 function handleSaveUser(e) {
   e.preventDefault();
-  sendToBackend("apiSaveUser", {
+  if (isProcessing) return;
+  isProcessing = true;
+
+  const payload = {
+    isEdit: currentEditUser !== null,
     userData: {
       username: document.getElementById("muUsername").value.trim(),
       password: document.getElementById("muPassword").value.trim(),
       role: document.getElementById("muRole").value,
     },
-  }).then(() => {
-    closeModalUser();
-    refreshAllData();
-    showToast("success", "User Disimpan");
+  };
+
+  swalUI.fire({
+    title: "Menyimpan...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
+  sendToBackend("apiSaveUser", payload).then((res) => {
+    isProcessing = false;
+    Swal.close();
+    if (res.success) {
+      closeModalUser();
+      refreshAllData();
+      showToast("success", res.message);
+    } else showToast("error", "Gagal Menyimpan", res.message);
   });
 }
 
+// =========================================================================
+// AUTH
+// =========================================================================
 function openLoginModal() {
   document.getElementById("modalLogin").classList.remove("hidden");
 }
