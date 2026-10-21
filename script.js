@@ -18,11 +18,10 @@ let appData = {
   seatAssyControl: [],
   users: [],
 };
-let smartScanner = null;
 let activeScannedPart = null;
 let isProcessing = false;
 
-// VARIABEL KERANJANG BATCH TROLLEY (KHUSUS SCANNER GUN)
+// VARIABEL KERANJANG BATCH TROLLEY
 let batchTrolley = [];
 
 // VARIABEL EDIT MASTER DATA
@@ -30,12 +29,16 @@ let currentEditPart = null;
 let currentEditCustomer = null;
 let currentEditUser = null;
 
-// Variabel Global untuk Grafik Analitik
+// VARIABEL SCANNER ZXING
+let codeReader = null;
+let isCameraPaused = false; // Mencegah scan berulang saat popup terbuka
+
+// Variabel Global Grafik Analitik
 let chartFastMoving = null;
 let chartStock = null;
 
 // =========================================================================
-// GAYA VISUAL BARU (CUSTOM TOAST NOTIFICATION & NEO-BRUTALISM MODAL)
+// GAYA VISUAL (CUSTOM TOAST NOTIFICATION & NEO-BRUTALISM MODAL)
 // =========================================================================
 const style = document.createElement("style");
 style.innerHTML = `
@@ -72,7 +75,6 @@ function showToast(type, title, message = "") {
   }
 
   toast.className = `flex items-start gap-3 ${bgColor} border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] p-3 rounded pointer-events-auto animate-toast-in`;
-
   toast.innerHTML = `
     <div class="text-slate-900 mt-0.5">${icon}</div>
     <div class="flex-1">
@@ -83,7 +85,6 @@ function showToast(type, title, message = "") {
       <i class="fa-solid fa-xmark text-lg"></i>
     </button>
   `;
-
   container.appendChild(toast);
   setTimeout(() => {
     if (toast.parentElement) {
@@ -110,7 +111,7 @@ const swalUI = Swal.mixin({
 });
 
 // =========================================================================
-// LOGIKA WAKTU OPERASIONAL (GANTI HARI JAM 08:00 PAGI)
+// LOGIKA ROLLOVER JAM 08:00 PAGI
 // =========================================================================
 function getOperationalDayInfo() {
   const now = new Date();
@@ -1161,7 +1162,7 @@ function handleGlobalSearch(kw) {
 }
 
 // =========================================================================
-// SCANNER: MENDUKUNG MULTI-CUSTOMER
+// SCANNER: MENDUKUNG MULTI-FORMAT (PDF417, QR, 1D) MENGGUNAKAN ZXING
 // =========================================================================
 function triggerManualGunButton() {
   handleScannerGun({ key: "Enter", preventDefault: () => {} });
@@ -1341,6 +1342,7 @@ async function submitBatchTrolley(tipeAction) {
   isProcessing = false;
 }
 
+// LOGIKA BARU MENGGUNAKAN ZXING
 function startSmartScanner() {
   if (!currentUser) {
     openLoginModal();
@@ -1349,31 +1351,33 @@ function startSmartScanner() {
   document.getElementById("smartReaderWrapper").classList.remove("hidden");
   document.getElementById("btnStartScan").classList.add("hidden");
   document.getElementById("btnStopScan").classList.remove("hidden");
-  smartScanner = new Html5Qrcode("smartReaderViewport");
-  smartScanner
-    .start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      (decodedText) => {
+
+  if (!codeReader) {
+    codeReader = new ZXing.BrowserMultiFormatReader();
+  }
+
+  isCameraPaused = false;
+
+  codeReader
+    .decodeFromVideoDevice(null, "smartReaderVideo", (result, err) => {
+      if (result && !isCameraPaused) {
         new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3")
           .play()
           .catch(() => {});
-        processSmartScanCamera(decodedText);
-      },
-      () => {},
-    )
-    .catch(() => stopSmartScanner());
+        processSmartScanCamera(result.getText());
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      showToast("error", "Kamera Gagal", "Pastikan izin kamera web diberikan.");
+      stopSmartScanner();
+    });
 }
 
 function stopSmartScanner() {
-  if (smartScanner) {
-    smartScanner
-      .stop()
-      .then(() => {
-        smartScanner.clear();
-        smartScanner = null;
-      })
-      .catch(() => {});
+  if (codeReader) {
+    codeReader.reset();
+    codeReader = null;
   }
   document.getElementById("smartReaderWrapper").classList.add("hidden");
   document.getElementById("btnStartScan").classList.remove("hidden");
@@ -1419,16 +1423,31 @@ function handleChangeScannerCustomer(val) {
 }
 
 function processSmartScanCamera(scannedCode) {
-  const part = scannedCode.trim();
+  if (isCameraPaused) return;
+
+  // PDF417 milik YIMM biasanya menyatukan banyak data.
+  // Kita coba ambil kata pertama jika ada spasi, atau langsung trim()
+  let part = scannedCode.trim();
+  // Khusus PDF417 pabrik, kadang formatnya digabung (misal ada karakter khusus).
+  // Untuk amannya, mari kita cari kecocokan substring jika perlu, atau gunakan raw partnya.
+
   const matchingRows = appData.seatAssyControl.filter(
-    (item) => item.Part_Number.toLowerCase() === part.toLowerCase(),
+    (item) =>
+      item.Part_Number.toLowerCase() === part.toLowerCase() ||
+      part.toLowerCase().includes(item.Part_Number.toLowerCase()),
   );
+
   if (matchingRows.length === 0) {
     showToast("error", "Tidak Dikenali", `Part ${part} tidak terdaftar.`);
+    // Beri jeda 2 detik sebelum kamera bisa baca lagi agar toast tidak spam
+    isCameraPaused = true;
+    setTimeout(() => {
+      isCameraPaused = false;
+    }, 2000);
     return;
   }
 
-  if (smartScanner) smartScanner.pause();
+  isCameraPaused = true; // Hentikan sementara pembacaan dari video
   const foundData = matchingRows.find((r) => r.sisa_del > 0) || matchingRows[0];
   activeScannedPart = foundData;
 
@@ -1469,14 +1488,19 @@ function processSmartScanCamera(scannedCode) {
     btnAssy.classList.add("hidden");
     wrapCust.classList.remove("hidden");
   }
+
   document.getElementById("modalSmartAction").classList.remove("hidden");
 }
 
 function closeSmartAction() {
   document.getElementById("modalSmartAction").classList.add("hidden");
   activeScannedPart = null;
-  if (smartScanner) smartScanner.resume();
+  // Lanjutkan kembali pemindaian setelah jeda sesaat agar tidak otomatis terscan barcode yang sama
+  setTimeout(() => {
+    isCameraPaused = false;
+  }, 1000);
 }
+
 function adjSmartQty(amt) {
   const input = document.getElementById("smInputQty");
   input.value = Math.max(1, (parseInt(input.value) || 0) + amt);
