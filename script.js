@@ -31,7 +31,7 @@ let currentEditUser = null;
 
 // VARIABEL SCANNER ZXING
 let codeReader = null;
-let isCameraPaused = false; // Mencegah scan berulang saat popup terbuka
+let isCameraPaused = false;
 
 // Variabel Global Grafik Analitik
 let chartFastMoving = null;
@@ -372,13 +372,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -404,15 +406,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -467,13 +471,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
         return { success: true };
 
@@ -491,13 +497,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -540,13 +548,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -577,13 +587,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -1080,6 +1092,9 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
     });
 }
 
+// =========================================================================
+// PAPAN KONTROL DENGAN ROWSPAN CUST
+// =========================================================================
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
   if (!tbody) return;
@@ -1101,7 +1116,6 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     return;
   }
 
-  // 1. URUTKAN DATA (SORTING) BERDASARKAN CUSTOMER LALU NO. RELL
   dataset.sort((a, b) => {
     if (a.Customer < b.Customer) return -1;
     if (a.Customer > b.Customer) return 1;
@@ -1120,7 +1134,6 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
 
   let html = "";
 
-  // 2. LOOPING DENGAN LOGIKA MERGE CELLS (ROWSPAN)
   for (let i = 0; i < dataset.length; i++) {
     let row = dataset[i];
     const formatNum = (num) => (num === 0 ? "-" : num);
@@ -1156,14 +1169,11 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
       : "";
 
-    // Hitung Rowspan (Berapa baris customer ini berturut-turut)
     let isFirstOfGroup = false;
     let rowspan = 1;
 
-    // Jika ini baris pertama, atau customernya berbeda dengan baris sebelumnya
     if (i === 0 || dataset[i].Customer !== dataset[i - 1].Customer) {
       isFirstOfGroup = true;
-      // Hitung ke depan ada berapa customer yang sama
       for (let j = i + 1; j < dataset.length; j++) {
         if (dataset[j].Customer === row.Customer) rowspan++;
         else break;
@@ -1171,13 +1181,9 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     }
 
     html += `<tr class="hover:bg-yellow-50 transition-colors">`;
-
-    // Kolom CUST HANYA dirender jika ini baris pertama dari grupnya
     if (isFirstOfGroup) {
       html += `<td rowspan="${rowspan}" class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words align-middle ${custClass}" ${custAction} title="Klik untuk ubah/tambah Customer">${row.Customer}</td>`;
     }
-
-    // Render sisa kolom seperti biasa
     html += `
       <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left"><div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div><div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div></td>
@@ -1189,7 +1195,6 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
     </tr>`;
   }
-
   tbody.innerHTML = html;
 }
 
@@ -1405,8 +1410,6 @@ function startSmartScanner() {
     })
     .catch((err) => {
       console.error(err);
-      showToast("error", "Kamera Gagal", "Pastikan izin kamera web diberikan.");
-      stopSmartScanner();
     });
 }
 
@@ -1461,11 +1464,7 @@ function handleChangeScannerCustomer(val) {
 function processSmartScanCamera(scannedCode) {
   if (isCameraPaused) return;
 
-  // PDF417 milik YIMM biasanya menyatukan banyak data.
-  // Kita coba ambil kata pertama jika ada spasi, atau langsung trim()
   let part = scannedCode.trim();
-  // Khusus PDF417 pabrik, kadang formatnya digabung (misal ada karakter khusus).
-  // Untuk amannya, mari kita cari kecocokan substring jika perlu, atau gunakan raw partnya.
 
   const matchingRows = appData.seatAssyControl.filter(
     (item) =>
@@ -1475,7 +1474,6 @@ function processSmartScanCamera(scannedCode) {
 
   if (matchingRows.length === 0) {
     showToast("error", "Tidak Dikenali", `Part ${part} tidak terdaftar.`);
-    // Beri jeda 2 detik sebelum kamera bisa baca lagi agar toast tidak spam
     isCameraPaused = true;
     setTimeout(() => {
       isCameraPaused = false;
@@ -1483,7 +1481,7 @@ function processSmartScanCamera(scannedCode) {
     return;
   }
 
-  isCameraPaused = true; // Hentikan sementara pembacaan dari video
+  isCameraPaused = true;
   const foundData = matchingRows.find((r) => r.sisa_del > 0) || matchingRows[0];
   activeScannedPart = foundData;
 
@@ -1531,7 +1529,6 @@ function processSmartScanCamera(scannedCode) {
 function closeSmartAction() {
   document.getElementById("modalSmartAction").classList.add("hidden");
   activeScannedPart = null;
-  // Lanjutkan kembali pemindaian setelah jeda sesaat agar tidak otomatis terscan barcode yang sama
   setTimeout(() => {
     isCameraPaused = false;
   }, 1000);

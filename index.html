@@ -28,7 +28,7 @@
       rel="stylesheet"
     />
 
-    <!-- PERBAIKAN IKON -->
+    <!-- Ikon FontAwesome -->
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
@@ -36,10 +36,8 @@
 
     <!-- Library Pendukung -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- LIBRARY BARU: ZXing (Zebra Crossing) untuk PDF417 & Semua Barcode -->
+    <!-- LIBRARY ZXing (Zebra Crossing) untuk PDF417 & Semua Barcode -->
     <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -410,7 +408,6 @@
                   id="smartReaderWrapper"
                   class="bg-slate-800 rounded border-4 border-slate-800 p-2 mb-6 hidden relative"
                 >
-                  <!-- PERUBAHAN: Gunakan elemen video untuk ZXing -->
                   <video
                     id="smartReaderVideo"
                     class="w-full aspect-square object-cover rounded bg-black"
@@ -804,7 +801,7 @@
       </div>
     </main>
 
-    <!-- MODAL POPUP SCANNER -->
+    <!-- MODAL POPUP SCANNER (KHUSUS KAMERA HP) -->
     <div
       id="modalSmartAction"
       class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden transition-all"
@@ -950,8 +947,7 @@
       </div>
     </div>
 
-    <!-- MODAL MASTER DATA (Barang, Customer, User) -->
-    <!-- (Kode Modal Master tetap sama seperti sebelumnya, tidak saya hilangkan) -->
+    <!-- MODAL MASTER BARANG -->
     <div
       id="modalMasterBarang"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1087,6 +1083,7 @@
       </div>
     </div>
 
+    <!-- MODAL MASTER CUSTOMER -->
     <div
       id="modalMasterCustomer"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1167,6 +1164,7 @@
       </div>
     </div>
 
+    <!-- MODAL MASTER USER -->
     <div
       id="modalMasterUser"
       class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
@@ -1323,7 +1321,6 @@
 
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <!-- SCRIPT VERSION UPDATE UNTUK CACHE BUSTING -->
-    <script src="script.js?v=zxing_v1"></script>
+    <script src="script.js?v=final"></script>
   </body>
 </html>
