@@ -1084,6 +1084,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
   if (!tbody) return;
   let dataset = appData.seatAssyControl || [];
+
   if (filterKeyword) {
     const kw = filterKeyword.toLowerCase();
     dataset = dataset.filter(
@@ -1093,11 +1094,21 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         d.Customer.toLowerCase().includes(kw),
     );
   }
+
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
     tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Belum ada barang di database.</td></tr>`;
     return;
   }
+
+  // 1. URUTKAN DATA (SORTING) BERDASARKAN CUSTOMER LALU NO. RELL
+  dataset.sort((a, b) => {
+    if (a.Customer < b.Customer) return -1;
+    if (a.Customer > b.Customer) return 1;
+    if (a.No_Rel < b.No_Rel) return -1;
+    if (a.No_Rel > b.No_Rel) return 1;
+    return 0;
+  });
 
   const isAdmin = currentUser && currentUser.role === "Admin";
   const canEditCust =
@@ -1107,43 +1118,67 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     currentUser &&
     (currentUser.role === "Admin" || currentUser.role === "Produksi");
 
-  tbody.innerHTML = dataset
-    .map((row) => {
-      const formatNum = (num) => (num === 0 ? "-" : num);
-      let varFormat =
-        row.variance > 0
-          ? "+" + row.variance
-          : row.variance < 0
-            ? row.variance
-            : "-";
-      let varColor =
-        row.variance > 0
-          ? "text-emerald-600"
-          : row.variance < 0
-            ? "text-red-600"
-            : "text-slate-700";
+  let html = "";
 
-      const custClass = canEditCust
-        ? "cursor-pointer hover:bg-blue-100 hover:text-blue-800 underline decoration-dashed underline-offset-4"
-        : "";
-      const custAction = canEditCust
-        ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
-        : "";
-      const qtyDayClass = isAdmin
-        ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4"
-        : "";
-      const qtyDayAction = isAdmin
-        ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
-        : "";
-      const assyClass = canEditAssy
-        ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4"
-        : "";
-      const assyAction = canEditAssy
-        ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
-        : "";
+  // 2. LOOPING DENGAN LOGIKA MERGE CELLS (ROWSPAN)
+  for (let i = 0; i < dataset.length; i++) {
+    let row = dataset[i];
+    const formatNum = (num) => (num === 0 ? "-" : num);
+    let varFormat =
+      row.variance > 0
+        ? "+" + row.variance
+        : row.variance < 0
+          ? row.variance
+          : "-";
+    let varColor =
+      row.variance > 0
+        ? "text-emerald-600"
+        : row.variance < 0
+          ? "text-red-600"
+          : "text-slate-700";
 
-      return `<tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words ${custClass}" ${custAction} title="Klik untuk ubah/tambah Customer">${row.Customer}</td>
+    const custClass = canEditCust
+      ? "cursor-pointer hover:bg-blue-100 hover:text-blue-800 underline decoration-dashed underline-offset-4"
+      : "";
+    const custAction = canEditCust
+      ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
+      : "";
+    const qtyDayClass = isAdmin
+      ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4"
+      : "";
+    const qtyDayAction = isAdmin
+      ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
+      : "";
+    const assyClass = canEditAssy
+      ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4"
+      : "";
+    const assyAction = canEditAssy
+      ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
+      : "";
+
+    // Hitung Rowspan (Berapa baris customer ini berturut-turut)
+    let isFirstOfGroup = false;
+    let rowspan = 1;
+
+    // Jika ini baris pertama, atau customernya berbeda dengan baris sebelumnya
+    if (i === 0 || dataset[i].Customer !== dataset[i - 1].Customer) {
+      isFirstOfGroup = true;
+      // Hitung ke depan ada berapa customer yang sama
+      for (let j = i + 1; j < dataset.length; j++) {
+        if (dataset[j].Customer === row.Customer) rowspan++;
+        else break;
+      }
+    }
+
+    html += `<tr class="hover:bg-yellow-50 transition-colors">`;
+
+    // Kolom CUST HANYA dirender jika ini baris pertama dari grupnya
+    if (isFirstOfGroup) {
+      html += `<td rowspan="${rowspan}" class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words align-middle ${custClass}" ${custAction} title="Klik untuk ubah/tambah Customer">${row.Customer}</td>`;
+    }
+
+    // Render sisa kolom seperti biasa
+    html += `
       <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left"><div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div><div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div></td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-700 text-base bg-blue-50/50">${formatNum(row.stock)}</td>
@@ -1153,8 +1188,9 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
     </tr>`;
-    })
-    .join("");
+  }
+
+  tbody.innerHTML = html;
 }
 
 function handleGlobalSearch(kw) {
