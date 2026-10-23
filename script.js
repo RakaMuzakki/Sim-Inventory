@@ -21,19 +21,14 @@ let appData = {
 let activeScannedPart = null;
 let isProcessing = false;
 
-// VARIABEL KERANJANG BATCH TROLLEY
 let batchTrolley = [];
-
-// VARIABEL EDIT MASTER DATA
 let currentEditPart = null;
 let currentEditCustomer = null;
 let currentEditUser = null;
 
-// VARIABEL SCANNER ZXING
 let codeReader = null;
 let isCameraPaused = false;
 
-// Variabel Global Grafik Analitik
 let chartFastMoving = null;
 let chartStock = null;
 
@@ -372,13 +367,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -404,15 +401,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -467,13 +466,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
         return { success: true };
 
@@ -491,13 +492,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -540,20 +543,24 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
 
+      // ==========================================
+      // FUNGSI UNLOCKED UNTUK SIMPAN BARANG
+      // ==========================================
       case "apiSaveBarang":
         if (payload.isEdit) {
-          // Jika Part Number diubah, pastikan tidak bentrok dengan Part Number lain yang sudah ada
           if (payload.item.Part_Number !== payload.oldPartNumber) {
             const { data: checkB } = await _supabase
               .from("Master_Barang")
@@ -563,14 +570,13 @@ async function sendToBackend(action, payload = {}) {
               throw new Error("Part Number baru sudah dipakai barang lain!");
           }
 
-          // Update baris lama dengan data baru (termasuk Part Number baru jika diubah)
           const { error: errUpd } = await _supabase
             .from("Master_Barang")
             .update(payload.item)
             .eq("Part_Number", payload.oldPartNumber);
           if (errUpd) throw new Error(errUpd.message);
 
-          // UPDATE CERDAS: Mengubah Part Number di seluruh tabel riwayat
+          // CASCADE UPDATE
           if (payload.item.Part_Number !== payload.oldPartNumber) {
             await _supabase
               .from("List_Order")
@@ -630,13 +636,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -657,6 +665,114 @@ async function sendToBackend(action, payload = {}) {
             : "Barang baru berhasil ditambahkan!",
         };
 
+      // ==========================================
+      // FUNGSI UNLOCKED UNTUK SIMPAN CUSTOMER
+      // ==========================================
+      case "apiSaveCustomer":
+        if (payload.isEdit) {
+          if (payload.cust.id_customer !== payload.oldIdCustomer) {
+            const { data: checkC } = await _supabase
+              .from("Master_Customer")
+              .select("id_customer")
+              .eq("id_customer", payload.cust.id_customer);
+            if (checkC && checkC.length > 0)
+              throw new Error(
+                "ID Customer baru sudah terdaftar untuk perusahaan lain!",
+              );
+          }
+
+          const { error: errUpd } = await _supabase
+            .from("Master_Customer")
+            .update(payload.cust)
+            .eq("id_customer", payload.oldIdCustomer);
+          if (errUpd) throw new Error(errUpd.message);
+
+          // CASCADE UPDATE LIST ORDER
+          if (payload.cust.id_customer !== payload.oldIdCustomer) {
+            await _supabase
+              .from("List_Order")
+              .update({ id_customer: payload.cust.id_customer })
+              .eq("id_customer", payload.oldIdCustomer);
+          }
+        } else {
+          const { data: checkC } = await _supabase
+            .from("Master_Customer")
+            .select("*")
+            .eq("id_customer", payload.cust.id_customer);
+          if (checkC && checkC.length > 0)
+            throw new Error("ID Customer sudah ada!");
+          const { error: errIns } = await _supabase
+            .from("Master_Customer")
+            .insert([payload.cust]);
+          if (errIns) throw new Error(errIns.message);
+        }
+        return {
+          success: true,
+          message: payload.isEdit
+            ? "Data Customer diperbarui!"
+            : "Customer baru tersimpan!",
+        };
+
+      // ==========================================
+      // FUNGSI UNLOCKED UNTUK SIMPAN USER
+      // ==========================================
+      case "apiSaveUser":
+        if (payload.isEdit) {
+          if (payload.userData.username !== payload.oldUsername) {
+            const { data: checkU } = await _supabase
+              .from("Users")
+              .select("username")
+              .eq("username", payload.userData.username);
+            if (checkU && checkU.length > 0)
+              throw new Error("Username baru sudah dipakai oleh orang lain!");
+          }
+
+          const { error: errUpd } = await _supabase
+            .from("Users")
+            .update(payload.userData)
+            .eq("username", payload.oldUsername);
+          if (errUpd) throw new Error(errUpd.message);
+
+          // CASCADE UPDATE RIWAYAT PETUGAS
+          if (payload.userData.username !== payload.oldUsername) {
+            await _supabase
+              .from("Transaksi_Masuk")
+              .update({ petugas: payload.userData.username })
+              .eq("petugas", payload.oldUsername);
+            await _supabase
+              .from("Transaksi_Keluar")
+              .update({ petugas: payload.userData.username })
+              .eq("petugas", payload.oldUsername);
+
+            // Jika user mengedit akunnya sendiri
+            if (currentUser && currentUser.username === payload.oldUsername) {
+              currentUser.username = payload.userData.username;
+              sessionStorage.setItem(
+                "sim_inventory_user",
+                JSON.stringify(currentUser),
+              );
+              applyRbacUI();
+            }
+          }
+        } else {
+          const { data: checkU } = await _supabase
+            .from("Users")
+            .select("*")
+            .eq("username", payload.userData.username);
+          if (checkU && checkU.length > 0)
+            throw new Error("Username sudah terdaftar!");
+          const { error: errIns } = await _supabase
+            .from("Users")
+            .insert([payload.userData]);
+          if (errIns) throw new Error(errIns.message);
+        }
+        return {
+          success: true,
+          message: payload.isEdit
+            ? "User berhasil diperbarui!"
+            : "User baru berhasil didaftarkan!",
+        };
+
       case "apiDeleteBarang":
         await _supabase
           .from("Master_Barang")
@@ -670,56 +786,12 @@ async function sendToBackend(action, payload = {}) {
         localStorage.removeItem("multi_cust_orders_" + payload.partNumber);
         return { success: true, message: "Barang terhapus permanen!" };
 
-      case "apiSaveCustomer":
-        if (payload.isEdit) {
-          await _supabase
-            .from("Master_Customer")
-            .update(payload.cust)
-            .eq("id_customer", payload.cust.id_customer);
-        } else {
-          const { data: checkC } = await _supabase
-            .from("Master_Customer")
-            .select("*")
-            .eq("id_customer", payload.cust.id_customer);
-          if (checkC && checkC.length > 0)
-            throw new Error("ID Customer sudah ada!");
-          await _supabase.from("Master_Customer").insert([payload.cust]);
-        }
-        return {
-          success: true,
-          message: payload.isEdit
-            ? "Data Customer diperbarui!"
-            : "Customer baru tersimpan!",
-        };
-
       case "apiDeleteCustomer":
         await _supabase
           .from("Master_Customer")
           .delete()
           .eq("id_customer", payload.id_customer);
         return { success: true, message: "Customer terhapus!" };
-
-      case "apiSaveUser":
-        if (payload.isEdit) {
-          await _supabase
-            .from("Users")
-            .update(payload.userData)
-            .eq("username", payload.userData.username);
-        } else {
-          const { data: checkU } = await _supabase
-            .from("Users")
-            .select("*")
-            .eq("username", payload.userData.username);
-          if (checkU && checkU.length > 0)
-            throw new Error("Username sudah terdaftar!");
-          await _supabase.from("Users").insert([payload.userData]);
-        }
-        return {
-          success: true,
-          message: payload.isEdit
-            ? "User berhasil diperbarui!"
-            : "User baru berhasil didaftarkan!",
-        };
 
       case "apiDeleteUser":
         await _supabase
@@ -1244,7 +1316,7 @@ function handleGlobalSearch(kw) {
 }
 
 // =========================================================================
-// SCANNER: MENDUKUNG MULTI-FORMAT (PDF417, QR, 1D) MENGGUNAKAN ZXING
+// SCANNER MENGGUNAKAN ZXING
 // =========================================================================
 function triggerManualGunButton() {
   handleScannerGun({ key: "Enter", preventDefault: () => {} });
@@ -1865,7 +1937,7 @@ function renderAnalitikCharts() {
 }
 
 // =========================================================================
-// MODAL FORMS: BARANG (EDIT PART NUMBER & NAMA UNLOCKED)
+// MODAL FORMS: BARANG (SEMUA INPUT TERBUKA)
 // =========================================================================
 function openModalBarang() {
   currentEditPart = null;
@@ -1899,8 +1971,7 @@ function editBarang(partNum) {
 
   const partInput = document.getElementById("mbPartNumber");
   partInput.value = barang.Part_Number;
-  // BAGIAN INI SUDAH DIBUKA (TIDAK READONLY)
-  partInput.readOnly = false;
+  partInput.readOnly = false; // KUNCI DIBUKA
   partInput.classList.remove("bg-slate-200");
 
   document.getElementById("mbNamaBarang").value = barang.nama_barang || "";
@@ -1975,7 +2046,7 @@ function handleSaveBarang(e) {
   const selectedCust = document.getElementById("mbCustomer")?.value || "-";
   const payload = {
     isEdit: currentEditPart !== null,
-    oldPartNumber: currentEditPart, // Wajib dikirim untuk sinkronisasi
+    oldPartNumber: currentEditPart,
     customer: selectedCust,
     item: {
       Part_Number: document.getElementById("mbPartNumber").value.trim(),
@@ -2006,7 +2077,7 @@ function handleSaveBarang(e) {
 }
 
 // =========================================================================
-// MODAL FORMS: CUSTOMER
+// MODAL FORMS: CUSTOMER (ID CUSTOMER UNLOCKED)
 // =========================================================================
 function openModalCustomer() {
   currentEditCustomer = null;
@@ -2039,8 +2110,8 @@ function editCustomer(idCust) {
 
   const idInput = document.getElementById("mcId");
   idInput.value = cust.id_customer;
-  idInput.readOnly = true;
-  idInput.classList.add("bg-slate-200");
+  idInput.readOnly = false; // KUNCI DIBUKA
+  idInput.classList.remove("bg-slate-200");
 
   document.getElementById("mcNama").value = cust.nama_customer || "";
   document.getElementById("mcKontak").value = cust.kontak || "";
@@ -2089,6 +2160,7 @@ function handleSaveCustomer(e) {
 
   const payload = {
     isEdit: currentEditCustomer !== null,
+    oldIdCustomer: currentEditCustomer,
     cust: {
       id_customer: document.getElementById("mcId").value.trim(),
       nama_customer: document.getElementById("mcNama").value.trim(),
@@ -2114,7 +2186,7 @@ function handleSaveCustomer(e) {
 }
 
 // =========================================================================
-// MODAL FORMS: PENGGUNA (USERS)
+// MODAL FORMS: PENGGUNA (USERNAME UNLOCKED)
 // =========================================================================
 function openModalUser() {
   currentEditUser = null;
@@ -2147,8 +2219,8 @@ function editUser(username) {
 
   const usernameInput = document.getElementById("muUsername");
   usernameInput.value = usr.username;
-  usernameInput.readOnly = true;
-  usernameInput.classList.add("bg-slate-200");
+  usernameInput.readOnly = false; // KUNCI DIBUKA
+  usernameInput.classList.remove("bg-slate-200");
 
   document.getElementById("muPassword").value = usr.password || "";
   document.getElementById("muRole").value = usr.role || "Warehouse";
@@ -2200,6 +2272,7 @@ function handleSaveUser(e) {
 
   const payload = {
     isEdit: currentEditUser !== null,
+    oldUsername: currentEditUser,
     userData: {
       username: document.getElementById("muUsername").value.trim(),
       password: document.getElementById("muPassword").value.trim(),
