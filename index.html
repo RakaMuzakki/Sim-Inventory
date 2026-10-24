@@ -579,22 +579,32 @@
                   Aktivitas Barang Keluar & Masuk
                 </p>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <!-- TAMBAHAN: INPUT BULAN -->
+                <input
+                  type="month"
+                  id="filterBulanRiwayat"
+                  onchange="renderRiwayatTable()"
+                  class="bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100 shadow-[2px_2px_0px_rgba(0,0,0,1)] cursor-pointer"
+                  title="Pilih Bulan untuk Ekspor"
+                />
+
+                <select
+                  id="filterRiwayat"
+                  onchange="renderRiwayatTable()"
+                  class="bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100 uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)] cursor-pointer"
+                >
+                  <option value="ALL">Semua Transaksi</option>
+                  <option value="IN">Barang Masuk (IN)</option>
+                  <option value="OUT">Barang Keluar (OUT)</option>
+                </select>
+
                 <button
                   onclick="exportToExcel('Riwayat')"
                   class="px-3 py-2 border-2 border-slate-800 bg-emerald-400 font-black text-xs uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
                 >
                   <i class="fa-solid fa-file-excel mr-1"></i> Ekspor
                 </button>
-                <select
-                  id="filterRiwayat"
-                  onchange="renderRiwayatTable()"
-                  class="bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100 uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)]"
-                >
-                  <option value="ALL">Semua Transaksi</option>
-                  <option value="IN">Barang Masuk (IN)</option>
-                  <option value="OUT">Barang Keluar (OUT)</option>
-                </select>
               </div>
             </div>
             <div class="overflow-x-auto">
@@ -1387,6 +1397,6 @@
 
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=qty_out_target_history"></script>
+    <script src="script.js?v=export_per_bulan"></script>
   </body>
 </html>

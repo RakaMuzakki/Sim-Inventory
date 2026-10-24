@@ -309,7 +309,6 @@ function extractCustomerFromCatatan(catatan) {
     }
   }
 
-  // Mencari ekstraksi Customer untuk catatan input manual (Batal/Koreksi/Input Cepat)
   const matchManual = String(catatan).match(
     /(?:Kirim ke|Dari|Tujuan):\s*(.+)$/i,
   );
@@ -439,13 +438,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -471,20 +472,19 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
-      // ===========================================================================
-      // PERBAIKAN: "KALKULATOR SELISIH CERDAS" UNTUK PENGATURAN ASSY
-      // ===========================================================================
       case "apiUpdateAssyFsg":
         const { data: bAssy, error: errAssy } = await _supabase
           .from("Master_Barang")
@@ -522,7 +522,6 @@ async function sendToBackend(action, payload = {}) {
               },
             ]);
           } else if (diff < 0) {
-            // Jika mengurangi angka Assy, dicatat di Transaksi_Masuk tapi dengan nilai Negatif agar memotong total masuk
             await _supabase.from("Transaksi_Masuk").insert([
               {
                 Part_Number: payload.partNumber,
@@ -581,16 +580,17 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
 
-        // PERBAIKAN: CATAT QTY/DAY KE RIWAYAT TRANSAKSI (Hanya Note, Nilai 0)
         if (payload.petugas) {
           await _supabase.from("Transaksi_Masuk").insert([
             {
@@ -618,13 +618,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -667,13 +669,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -754,13 +758,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -1342,7 +1348,6 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
     });
 }
 
-// === PERBAIKAN QTY/DAY: OTOMATIS TERCATAT KE RIWAYAT ===
 function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
   if (!currentUser) return openLoginModal();
   if (isProcessing) return;
@@ -1369,7 +1374,7 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
           partNumber: partNumber,
           qty: Number(res.value) || 0,
           customer: customerName,
-          petugas: currentUser.username, // Membawa nama petugas untuk riwayat
+          petugas: currentUser.username,
         }).then((response) => {
           isProcessing = false;
           Swal.close();
@@ -1384,7 +1389,6 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
     });
 }
 
-// === PERBAIKAN QTY/OUT: KALKULATOR SELISIH PENGIRIMAN ===
 function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
   if (!currentUser) return openLoginModal();
   if (isProcessing) return;
@@ -1414,7 +1418,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
             "Angka sama dengan sebelumnya",
           );
 
-        const diff = newTotal - currentQtyOut; // Menghitung selisih
+        const diff = newTotal - currentQtyOut;
         isProcessing = true;
         swalUI.fire({
           title: "Mencatat Riwayat...",
@@ -1429,7 +1433,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 
         sendToBackend("apiSaveTransaksiKeluar", {
           partNumber: partNumber,
-          qty: diff, // Mengirimkan selisih (bisa plus bisa minus)
+          qty: diff,
           petugas: currentUser.username,
           customer: customerName,
           catatan: catatanStr,
@@ -1518,7 +1522,6 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
       : "";
 
-    // QTY/OUT SEKARANG MEMBAWA NILAI currentQty (row.qty_out)
     const qtyOutClass = canEditCust
       ? "cursor-pointer hover:bg-slate-200 hover:text-red-600 underline decoration-dashed underline-offset-4 transition-colors"
       : "";
@@ -2250,34 +2253,51 @@ function renderUsersTable(keyword = "") {
     .join("");
 }
 
-// === PERBAIKAN: FORMAT TAMPILAN TABEL RIWAYAT AGAR LOGIS ===
+// === PERBAIKAN: FORMAT TAMPILAN TABEL RIWAYAT DENGAN FILTER BULAN ===
 function renderRiwayatTable() {
   const tbody = document.getElementById("tblRiwayatBody");
   if (!tbody) return;
-  const f = document.getElementById("filterRiwayat")?.value || "ALL";
+  const fTipe = document.getElementById("filterRiwayat")?.value || "ALL";
+  const fBulan = document.getElementById("filterBulanRiwayat")?.value || "";
+
   let logs = [];
-  if (f === "ALL" || f === "IN")
-    appData.masuk.forEach((m) =>
-      logs.push({
-        waktu: new Date(m.tanggal || m.created_at),
-        tipe: "IN",
-        part: m.Part_Number,
-        qty: m.qty,
-        petugas: m.petugas,
-        catatan: m.catatan,
-      }),
-    );
-  if (f === "ALL" || f === "OUT")
-    appData.keluar.forEach((k) =>
-      logs.push({
-        waktu: new Date(k.tanggal || k.created_at),
-        tipe: "OUT",
-        part: k.Part_Number,
-        qty: k.qty,
-        petugas: k.petugas,
-        catatan: k.catatan,
-      }),
-    );
+
+  const isMatchMonth = (dateStr) => {
+    if (!fBulan) return true;
+    const d = new Date(dateStr);
+    const ym =
+      d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    return ym === fBulan;
+  };
+
+  if (fTipe === "ALL" || fTipe === "IN") {
+    appData.masuk.forEach((m) => {
+      if (isMatchMonth(m.tanggal || m.created_at)) {
+        logs.push({
+          waktu: new Date(m.tanggal || m.created_at),
+          tipe: "IN",
+          part: m.Part_Number,
+          qty: m.qty,
+          petugas: m.petugas,
+          catatan: m.catatan,
+        });
+      }
+    });
+  }
+  if (fTipe === "ALL" || fTipe === "OUT") {
+    appData.keluar.forEach((k) => {
+      if (isMatchMonth(k.tanggal || k.created_at)) {
+        logs.push({
+          waktu: new Date(k.tanggal || k.created_at),
+          tipe: "OUT",
+          part: k.Part_Number,
+          qty: k.qty,
+          petugas: k.petugas,
+          catatan: k.catatan,
+        });
+      }
+    });
+  }
   logs.sort((a, b) => b.waktu - a.waktu);
 
   tbody.innerHTML =
@@ -2285,20 +2305,17 @@ function renderRiwayatTable() {
       ? `<tr><td colspan="6" class="py-6 text-slate-400">Belum ada riwayat.</td></tr>`
       : logs
           .map((r) => {
-            // Logika Pintar untuk mewarnai dan memberi tanda (+ / -) pada riwayat
             let isTarget = r.catatan && String(r.catatan).includes("QTY/DAY");
             let displayQty = r.qty;
             let color = "text-slate-800";
 
             if (isTarget) {
-              displayQty = `TARGET`; // Khusus Update Target
+              displayQty = `TARGET`;
               color = "text-blue-600";
             } else if (r.tipe === "IN") {
-              // Tipe IN: positif (+ nambah stok), negatif (- koreksi kurang stok)
               displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
               color = r.qty > 0 ? "text-emerald-600" : "text-red-500";
             } else {
-              // Tipe OUT: positif (- barang keluar), negatif (+ koreksi batal keluar)
               displayQty = r.qty > 0 ? `-${r.qty}` : `+${Math.abs(r.qty)}`;
               color = r.qty > 0 ? "text-red-500" : "text-emerald-600";
             }
@@ -2420,31 +2437,46 @@ function exportToExcel(tipe) {
     }));
     filename = "Laporan_Papan_Kontrol_" + dateStr + ".xlsx";
   } else if (tipe === "Riwayat") {
-    const filter = document.getElementById("filterRiwayat")?.value || "ALL";
+    const filterTipe = document.getElementById("filterRiwayat")?.value || "ALL";
+    const filterBulan =
+      document.getElementById("filterBulanRiwayat")?.value || "";
+
+    const isMatchMonth = (dateString) => {
+      if (!filterBulan) return true;
+      const d = new Date(dateString);
+      const ym =
+        d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      return ym === filterBulan;
+    };
+
     let logs = [];
-    if (filter === "ALL" || filter === "IN") {
-      appData.masuk.forEach((m) =>
-        logs.push({
-          Waktu: new Date(m.tanggal || m.created_at),
-          Tipe: "MASUK (IN)",
-          Part_Number: m.Part_Number,
-          Qty: m.qty,
-          Petugas: m.petugas,
-          Catatan: m.catatan,
-        }),
-      );
+    if (filterTipe === "ALL" || filterTipe === "IN") {
+      appData.masuk.forEach((m) => {
+        if (isMatchMonth(m.tanggal || m.created_at)) {
+          logs.push({
+            Waktu: new Date(m.tanggal || m.created_at),
+            Tipe: "MASUK (IN)",
+            Part_Number: m.Part_Number,
+            Qty: m.qty,
+            Petugas: m.petugas,
+            Catatan: m.catatan,
+          });
+        }
+      });
     }
-    if (filter === "ALL" || filter === "OUT") {
-      appData.keluar.forEach((k) =>
-        logs.push({
-          Waktu: new Date(k.tanggal || k.created_at),
-          Tipe: "KELUAR (OUT)",
-          Part_Number: k.Part_Number,
-          Qty: k.qty,
-          Petugas: k.petugas,
-          Catatan: k.catatan,
-        }),
-      );
+    if (filterTipe === "ALL" || filterTipe === "OUT") {
+      appData.keluar.forEach((k) => {
+        if (isMatchMonth(k.tanggal || k.created_at)) {
+          logs.push({
+            Waktu: new Date(k.tanggal || k.created_at),
+            Tipe: "KELUAR (OUT)",
+            Part_Number: k.Part_Number,
+            Qty: k.qty,
+            Petugas: k.petugas,
+            Catatan: k.catatan,
+          });
+        }
+      });
     }
     logs.sort((a, b) => b.Waktu - a.Waktu);
 
@@ -2456,7 +2488,9 @@ function exportToExcel(tipe) {
       Petugas: r.Petugas,
       "Keterangan / Tujuan": r.Catatan || "-",
     }));
-    filename = "Laporan_Riwayat_Transaksi_" + dateStr + ".xlsx";
+
+    let monthLabel = filterBulan ? filterBulan : dateStr;
+    filename = "Laporan_Riwayat_Transaksi_" + monthLabel + ".xlsx";
   }
 
   if (dataToExport.length === 0) {
