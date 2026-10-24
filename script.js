@@ -42,13 +42,13 @@ let chartFastMoving = null;
 let chartStock = null;
 
 // =========================================================================
-// GAYA VISUAL (CUSTOM TOAST NOTIFICATION & NEO-BRUTALISM MODAL)
+// GAYA VISUAL (TOAST & SWEETALERT SAAS THEME)
 // =========================================================================
 const style = document.createElement("style");
 style.innerHTML = `
   @keyframes toastSlideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   @keyframes toastSlideUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
-  .animate-toast-in { animation: toastSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-toast-in { animation: toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   .animate-toast-out { animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 `;
 document.head.appendChild(style);
@@ -59,33 +59,34 @@ function showToast(type, title, message = "") {
     container = document.createElement("div");
     container.id = "toastContainer";
     container.className =
-      "fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
+      "fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
     document.body.appendChild(container);
   }
 
   const toast = document.createElement("div");
-  let bgColor = "bg-emerald-400";
-  let icon = '<i class="fa-solid fa-circle-check text-xl"></i>';
+  let bgColor = "bg-white";
+  let iconColor = "text-emerald-500";
+  let icon = '<i class="fa-solid fa-circle-check text-2xl"></i>';
 
   if (type === "error") {
-    bgColor = "bg-red-400";
-    icon = '<i class="fa-solid fa-triangle-exclamation text-xl"></i>';
+    iconColor = "text-red-500";
+    icon = '<i class="fa-solid fa-circle-xmark text-2xl"></i>';
   } else if (type === "warning") {
-    bgColor = "bg-yellow-400";
-    icon = '<i class="fa-solid fa-circle-exclamation text-xl"></i>';
+    iconColor = "text-amber-500";
+    icon = '<i class="fa-solid fa-triangle-exclamation text-2xl"></i>';
   } else if (type === "info") {
-    bgColor = "bg-blue-400";
-    icon = '<i class="fa-solid fa-circle-info text-xl"></i>';
+    iconColor = "text-blue-500";
+    icon = '<i class="fa-solid fa-circle-info text-2xl"></i>';
   }
 
-  toast.className = `flex items-start gap-3 ${bgColor} border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] p-3 rounded pointer-events-auto animate-toast-in`;
+  toast.className = `flex items-start gap-4 ${bgColor} border border-slate-100 shadow-xl shadow-slate-200/50 p-4 rounded-2xl pointer-events-auto animate-toast-in`;
   toast.innerHTML = `
-    <div class="text-slate-900 mt-0.5">${icon}</div>
+    <div class="${iconColor} mt-0.5">${icon}</div>
     <div class="flex-1">
-      <h4 class="font-black text-sm uppercase text-slate-900 leading-tight">${title}</h4>
-      ${message ? `<p class="text-[10px] font-bold text-slate-800 mt-0.5 leading-tight">${message}</p>` : ""}
+      <h4 class="font-bold text-sm text-slate-800 leading-tight">${title}</h4>
+      ${message ? `<p class="text-xs font-medium text-slate-500 mt-1 leading-snug">${message}</p>` : ""}
     </div>
-    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-slate-900 hover:text-white transition-colors">
+    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-slate-400 hover:text-slate-600 transition-colors">
       <i class="fa-solid fa-xmark text-lg"></i>
     </button>
   `;
@@ -100,16 +101,15 @@ function showToast(type, title, message = "") {
 
 const swalUI = Swal.mixin({
   customClass: {
-    popup:
-      "border-4 border-slate-800 rounded shadow-[8px_8px_0px_rgba(0,0,0,1)] bg-white",
-    title: "font-black uppercase tracking-tighter text-slate-900 text-xl",
-    htmlContainer: "font-bold text-xs text-slate-700",
+    popup: "rounded-2xl shadow-2xl bg-white border border-slate-100",
+    title: "font-bold text-slate-900 text-xl",
+    htmlContainer: "text-sm text-slate-600",
     confirmButton:
-      "px-4 py-2 border-4 border-slate-800 bg-emerald-400 font-black text-xs uppercase text-slate-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-emerald-500 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all mx-1",
+      "px-5 py-2.5 bg-brand-600 text-white rounded-lg font-semibold hover:bg-brand-700 transition-colors mx-1.5 shadow-sm focus:ring-2 focus:ring-brand-500 focus:ring-offset-1",
     cancelButton:
-      "px-4 py-2 border-4 border-slate-800 bg-slate-200 font-black text-xs uppercase text-slate-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-slate-300 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all mx-1",
+      "px-5 py-2.5 bg-white text-slate-700 border border-slate-300 rounded-lg font-semibold hover:bg-slate-50 transition-colors mx-1.5 shadow-sm",
     input:
-      "w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-sm font-bold focus:bg-yellow-100 mt-2 text-center",
+      "w-full border border-slate-300 rounded-lg px-4 py-3 text-lg font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none mt-3 text-center",
   },
   buttonsStyling: false,
 });
@@ -123,23 +123,17 @@ function parseYimmBarcode(rawCode) {
     original: rawCode,
     qty: 1,
   };
-
   if (rawCode.startsWith("[)>")) {
     let partMatch = rawCode.match(/P([A-Z0-9]+)V/);
-    if (partMatch && partMatch[1]) {
-      result.partNumberClean = partMatch[1];
-    } else {
+    if (partMatch && partMatch[1]) result.partNumberClean = partMatch[1];
+    else {
       let fallbackPart = rawCode.match(/P([A-Z0-9]{10,15})/);
       if (fallbackPart) result.partNumberClean = fallbackPart[1];
     }
-
     let qtyMatch = rawCode.match(/Q(\d{6})/);
-    if (qtyMatch && qtyMatch[1]) {
-      result.qty = parseInt(qtyMatch[1], 10);
-    }
+    if (qtyMatch && qtyMatch[1]) result.qty = parseInt(qtyMatch[1], 10);
     return result;
   }
-
   if (rawCode.includes("|")) {
     let segment1 = rawCode.split("|")[0];
     let parts = segment1.split("-");
@@ -308,7 +302,6 @@ function extractCustomerFromCatatan(catatan) {
       return resolveCustomerDisplay(raw);
     }
   }
-
   const matchManual = String(catatan).match(
     /(?:Kirim ke|Dari|Tujuan):\s*(.+)$/i,
   );
@@ -329,7 +322,6 @@ function getLocalMultiCustMap(partNum) {
     return {};
   }
 }
-
 function saveLocalMultiCustTarget(partNum, customerName, qtyOrder) {
   const cName = resolveCustomerDisplay(customerName);
   if (!cName || cName === "-") return;
@@ -339,7 +331,6 @@ function saveLocalMultiCustTarget(partNum, customerName, qtyOrder) {
   else if (map[cName] === undefined) map[cName] = 0;
   localStorage.setItem("multi_cust_orders_" + partNum, JSON.stringify(map));
 }
-
 function removeLocalMultiCustTarget(partNum, customerName) {
   const cName = resolveCustomerDisplay(customerName);
   const map = getLocalMultiCustMap(partNum);
@@ -438,15 +429,13 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase
-                .from("List_Order")
-                .insert([
-                  {
-                    Part_Number: payload.partNumber,
-                    qty_order: 0,
-                    id_customer: cleanCust,
-                  },
-                ]);
+              await _supabase.from("List_Order").insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty_order: 0,
+                  id_customer: cleanCust,
+                },
+              ]);
             }
           }
         }
@@ -472,17 +461,15 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase
-          .from("Transaksi_Masuk")
-          .insert([
-            {
-              Part_Number: payload.partNumber,
-              qty: payload.qty,
-              petugas: payload.petugas,
-              catatan: payload.catatan,
-              tanggal: new Date().toISOString(),
-            },
-          ]);
+        await _supabase.from("Transaksi_Masuk").insert([
+          {
+            Part_Number: payload.partNumber,
+            qty: payload.qty,
+            petugas: payload.petugas,
+            catatan: payload.catatan,
+            tanggal: new Date().toISOString(),
+          },
+        ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -580,15 +567,13 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: payload.qty,
-                id_customer: custTarget !== "-" ? custTarget : null,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: payload.qty,
+              id_customer: custTarget !== "-" ? custTarget : null,
+            },
+          ]);
         }
 
         if (payload.petugas) {
@@ -618,15 +603,13 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: Number(payload.qtyOrder) || 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: Number(payload.qtyOrder) || 0,
+              id_customer: newCustClean,
+            },
+          ]);
           return { success: true };
         }
 
@@ -669,15 +652,13 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: 0,
+              id_customer: newCustClean,
+            },
+          ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -758,15 +739,13 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase
-              .from("List_Order")
-              .insert([
-                {
-                  Part_Number: payload.item.Part_Number,
-                  qty_order: 0,
-                  id_customer: cClean,
-                },
-              ]);
+            await _supabase.from("List_Order").insert([
+              {
+                Part_Number: payload.item.Part_Number,
+                qty_order: 0,
+                id_customer: cClean,
+              },
+            ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -967,13 +946,13 @@ function switchTab(tabId) {
   if (activeTab) activeTab.classList.remove("hidden");
 
   document.querySelectorAll(".nav-item").forEach((btn) => {
-    btn.classList.remove("bg-slate-800", "text-white");
-    btn.classList.add("bg-white", "text-slate-800");
+    btn.classList.remove("bg-brand-50", "text-brand-600");
+    btn.classList.add("text-slate-600");
   });
   const activeNav = document.getElementById(`btn-tab-${tabId}`);
   if (activeNav) {
-    activeNav.classList.add("bg-slate-800", "text-white");
-    activeNav.classList.remove("bg-white", "text-slate-800");
+    activeNav.classList.add("bg-brand-50", "text-brand-600");
+    activeNav.classList.remove("text-slate-600");
   }
 
   if (tabId === "overview") renderSeatAssyControlBoard();
@@ -1238,16 +1217,16 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
 
   swalUI
     .fire({
-      title: "ATUR CUSTOMER TUJUAN",
-      html: `<div class="text-left space-y-3"><p class="text-xs">Part Number: <b>${partNumber}</b></p>
-      <div><label class="block text-[10px] font-black uppercase mb-1">Customer:</label><select id="swalSelectCust" class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold">${optionsHtml}</select></div>
-      <div><label class="block text-[10px] font-black uppercase mb-1">Mode:</label>
-        <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full bg-yellow-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold">
-          <option value="UPDATE">Ubah Customer Baris Ini</option><option value="ADD_NEW">+ Tambah Customer Baru (Beli Barang Sama)</option>
+      title: "Ubah Customer",
+      html: `<div class="text-left space-y-3"><p class="text-sm">Part: <b class="text-brand-600">${partNumber}</b></p>
+      <div><label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Customer Tujuan:</label><select id="swalSelectCust" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">${optionsHtml}</select></div>
+      <div><label class="block text-xs font-semibold text-slate-600 mb-1">Aksi:</label>
+        <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
+          <option value="UPDATE">Ubah Customer Baris Ini</option><option value="ADD_NEW">+ Tambah Customer Baru (Part Sama)</option>
           ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Customer Ini</option>` : ""}
         </select>
       </div>
-      <div id="swalWrapQtyBaru" class="hidden"><label class="block text-[10px] font-black uppercase mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold" /></div>
+      <div id="swalWrapQtyBaru" class="hidden"><label class="block text-xs font-semibold text-slate-600 mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" /></div>
     </div>`,
       showCancelButton: true,
       confirmButtonText: "Simpan",
@@ -1299,10 +1278,10 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
 
   swalUI
     .fire({
-      title: "UPDATE TOTAL ASSY",
+      title: "Update Stok Assy",
       html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b></p>
-           <p class="text-[10px] font-bold text-slate-500 mb-2">Total saat ini: <b class="text-blue-600">${currentQty}</b> Pcs</p>
-           <p class="text-[10px] font-bold text-purple-600">Masukkan TOTAL AKHIR. Sistem akan otomatis menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
+           <div class="bg-blue-50 text-blue-700 p-3 rounded-lg text-sm mb-3">Total saat ini: <b>${currentQty} Pcs</b></div>
+           <p class="text-xs font-medium text-slate-500">Masukkan <b class="text-slate-800">Total Akhir</b>. Sistem akan menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
       input: "number",
       inputValue: currentQty,
       inputAttributes: { min: 0 },
@@ -1354,9 +1333,9 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
 
   swalUI
     .fire({
-      title: "SET TARGET (QTY/DAY)",
-      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
-           <p class="text-[10px] font-bold text-blue-600">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`,
+      title: "Set Target Qty/Day",
+      html: `<p class="text-sm mb-3">Part: <b class="text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
+           <p class="text-xs text-slate-500">Perubahan target akan dicatat di Riwayat.</p>`,
       input: "number",
       inputValue: currentQty > 0 ? currentQty : "",
       showCancelButton: true,
@@ -1395,15 +1374,15 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 
   swalUI
     .fire({
-      title: "UPDATE TOTAL QTY/OUT",
-      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
-           <p class="text-[10px] font-bold text-slate-500 mb-2">Total terkirim saat ini: <b class="text-blue-600">${currentQtyOut}</b> Pcs</p>
-           <p class="text-[10px] font-bold text-red-500">Masukkan TOTAL AKHIR pengiriman. Sistem otomatis menghitung selisih dan mencatatnya ke Riwayat (OUT).</p>`,
+      title: "Update Qty Out",
+      html: `<p class="text-sm mb-3">Part: <b class="text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
+           <div class="bg-blue-50 text-blue-700 p-3 rounded-lg text-sm mb-3">Terkirim saat ini: <b>${currentQtyOut} Pcs</b></div>
+           <p class="text-xs font-medium text-slate-500">Masukkan <b class="text-slate-800">Total Akhir</b>. Sistem akan menghitung selisih dan mencatatnya ke Riwayat.</p>`,
       input: "number",
       inputValue: currentQtyOut,
       inputAttributes: { min: 0 },
       showCancelButton: true,
-      confirmButtonText: "Simpan Total",
+      confirmButtonText: "Kirim Barang",
       cancelButtonText: "Batal",
     })
     .then((res) => {
@@ -1471,7 +1450,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">Belum ada barang di database.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium">Belum ada barang di database.</td></tr>`;
     return;
   }
 
@@ -1502,35 +1481,38 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         : row.variance < 0
           ? row.variance
           : "-";
-    let varColor =
+
+    // SaaS Clean Colors for variance
+    let varBadge =
       row.variance > 0
-        ? "text-emerald-600"
+        ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800">${varFormat}</span>`
         : row.variance < 0
-          ? "text-red-600"
-          : "text-slate-700";
+          ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800">${varFormat}</span>`
+          : `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">-</span>`;
 
     const custClass = canEditCust
-      ? "cursor-pointer hover:bg-blue-100 hover:text-blue-800 underline decoration-dashed underline-offset-4"
+      ? "cursor-pointer hover:text-brand-600 hover:underline transition-colors"
       : "";
     const custAction = canEditCust
       ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
       : "";
+
     const qtyDayClass = isAdmin
-      ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-colors"
+      ? "cursor-pointer hover:bg-slate-100 hover:text-brand-600 transition-colors rounded"
       : "";
     const qtyDayAction = isAdmin
       ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
       : "";
 
     const qtyOutClass = canEditCust
-      ? "cursor-pointer hover:bg-slate-200 hover:text-red-600 underline decoration-dashed underline-offset-4 transition-colors"
+      ? "cursor-pointer hover:bg-slate-100 hover:text-red-600 transition-colors rounded"
       : "";
     const qtyOutAction = canEditCust
       ? `onclick="promptUpdateQtyOut('${row.Part_Number}', '${row.Customer}', ${row.qty_out})"`
       : "";
 
     const assyClass = canEditAssy
-      ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4 transition-colors"
+      ? "cursor-pointer hover:bg-purple-50 hover:text-purple-700 transition-colors rounded"
       : "";
     const assyAction = canEditAssy
       ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
@@ -1547,19 +1529,23 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       }
     }
 
-    html += `<tr class="hover:bg-yellow-50 transition-colors">`;
+    // Menggunakan border-b border-slate-100 untuk SaaS table lines
+    html += `<tr class="hover:bg-slate-50 transition-colors group">`;
     if (isFirstOfGroup) {
-      html += `<td rowspan="${rowspan}" class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words align-middle ${custClass}" ${custAction} title="Klik untuk ubah/tambah Customer">${row.Customer}</td>`;
+      html += `<td rowspan="${rowspan}" class="py-3 px-4 border-b border-r border-slate-200 text-xs font-semibold text-slate-600 align-top ${custClass}" ${custAction} title="Klik untuk ubah Customer">${row.Customer}</td>`;
     }
     html += `
-      <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 text-left"><div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div><div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div></td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-700 text-base bg-blue-50/50">${formatNum(row.stock)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction} title="${isAdmin ? "Klik untuk Ubah Target (QTY/DAY)" : ""}">${formatNum(row.qty_day)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700 bg-slate-50 ${qtyOutClass}" ${qtyOutAction} title="${canEditCust ? "Klik untuk Ubah Total QTY/OUT" : ""}">${formatNum(row.qty_out)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black text-red-600">${formatNum(row.sisa_del)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction} title="${canEditAssy ? "Klik untuk Ubah Total Assy" : ""}">${formatNum(row.assy_fsg)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
+      <td class="py-3 px-4 border-b border-slate-100 font-semibold text-slate-500 whitespace-nowrap">${row.No_Rel}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left">
+        <div class="font-bold text-slate-900">${row.Part_Number}</div>
+        <div class="text-[10px] text-slate-500 truncate max-w-[150px] mt-0.5 uppercase">${row.nama_barang}</div>
+      </td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center"><span class="inline-block px-2 py-1 bg-blue-50 text-blue-700 rounded font-semibold min-w-[32px]">${formatNum(row.stock)}</span></td>
+      <td class="py-3 px-2 border-b border-slate-100 text-center"><div class="px-2 py-1 ${qtyDayClass} font-semibold text-slate-700" ${qtyDayAction}>${formatNum(row.qty_day)}</div></td>
+      <td class="py-3 px-2 border-b border-slate-100 text-center"><div class="px-2 py-1 ${qtyOutClass} font-semibold text-slate-700" ${qtyOutAction}>${formatNum(row.qty_out)}</div></td>
+      <td class="py-3 px-2 border-b border-slate-100 text-center font-bold text-red-500">${formatNum(row.sisa_del)}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center"><div class="px-2 py-1 ${assyClass} font-bold text-purple-600" ${assyAction}>${formatNum(row.assy_fsg)}</div></td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center">${varBadge}</td>
     </tr>`;
   }
   tbody.innerHTML = html;
@@ -1654,24 +1640,28 @@ function updateBatchTrolleyUI() {
   const container = document.getElementById("batchTrolleyInlineList");
   if (!container) return;
   if (batchTrolley.length === 0) {
-    container.innerHTML = `<div class="py-12 text-center text-slate-400 font-bold text-xs border-2 border-dashed border-slate-300 rounded">Belum ada barang di Troli.</div>`;
+    container.innerHTML = `<div class="py-10 text-center text-slate-400 text-sm border border-dashed border-slate-200 rounded-xl bg-slate-50">Belum ada barang di daftar batch.</div>`;
     return;
   }
+
   container.innerHTML = batchTrolley
     .map(
       (b, idx) => `
-    <div class="flex items-center justify-between p-2.5 bg-yellow-50 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+    <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-brand-300 transition-colors">
       <div class="text-left pr-2">
-        <div class="flex items-center gap-1.5"><span class="px-1.5 py-0.5 bg-slate-800 text-yellow-300 font-black text-[9px] rounded">${b.No_Rel}</span><span class="font-black text-xs text-slate-900">${b.Part_Number}</span></div>
-        <div class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">${b.nama_barang}</div>
-        <div class="text-[10px] font-black text-blue-700 mt-0.5">Ditembak: ${b.trolleyCount}x Troli | Cust: <span class="text-slate-900">${b.Customer}</span></div>
-      </div>
-      <div class="flex items-center gap-2">
-        <div>
-          <label class="block text-[8px] font-black uppercase text-slate-500 text-center">Total Qty</label>
-          <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="w-20 bg-white border-2 border-slate-800 px-2 py-1 text-center font-black text-sm rounded focus:bg-yellow-100" />
+        <div class="flex items-center gap-2 mb-1">
+           <span class="px-1.5 py-0.5 bg-slate-100 text-slate-600 font-bold text-[10px] rounded">${b.No_Rel}</span>
+           <span class="font-bold text-sm text-slate-900">${b.Part_Number}</span>
         </div>
-        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-7 h-7 bg-red-400 hover:bg-red-500 border-2 border-slate-800 rounded font-black text-xs flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+        <div class="text-[10px] font-medium text-slate-500 uppercase">${b.nama_barang}</div>
+        <div class="text-[10px] font-semibold text-brand-600 mt-1"><i class="fa-solid fa-boxes-stacked mr-1"></i> ${b.trolleyCount}x Troli &nbsp;|&nbsp; <span class="text-slate-600">Cust: ${b.Customer}</span></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-center">
+          <label class="block text-[9px] font-semibold uppercase text-slate-400 mb-0.5">Total Qty</label>
+          <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="w-16 bg-slate-50 border border-slate-200 px-2 py-1 text-center font-bold text-sm rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-slate-800" />
+        </div>
+        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-8 h-8 bg-slate-100 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </div>
   `,
@@ -1684,7 +1674,7 @@ async function submitBatchTrolley(tipeAction) {
   if (batchTrolley.length === 0)
     return showToast(
       "warning",
-      "Troli Kosong!",
+      "Daftar Kosong!",
       "Silakan scan barang terlebih dahulu.",
     );
   if (isProcessing) return;
@@ -1709,14 +1699,14 @@ async function submitBatchTrolley(tipeAction) {
         return showToast(
           "warning",
           "Pilih Customer!",
-          "Pilih Tujuan pada dropdown atas!",
+          "Pilih Tujuan pada dropdown di atas!",
         );
     }
   }
 
   isProcessing = true;
   swalUI.fire({
-    title: "Memproses Troli...",
+    title: "Memproses Batch...",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   });
@@ -1754,13 +1744,13 @@ async function submitBatchTrolley(tipeAction) {
     Swal.close();
     showToast(
       "success",
-      "Troli Tersimpan!",
+      "Batch Tersimpan!",
       "Semua transaksi berhasil dicatat.",
     );
     refreshAllData();
   } catch (err) {
     Swal.close();
-    showToast("error", "Gagal", err.message);
+    showToast("error", "Gagal Memproses", err.message);
   }
   isProcessing = false;
 }
@@ -2025,7 +2015,7 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// TABEL MASTER DATA (DENGAN SEARCH & BULK DELETE + FIX REFRESH)
+// TABEL MASTER DATA (DENGAN SEARCH & BULK DELETE)
 // =========================================================================
 
 // --- MASTER BARANG ---
@@ -2044,7 +2034,7 @@ function renderMasterBarangTable(keyword = "") {
   }
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">Tidak ada barang ditemukan.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-slate-400 font-medium">Tidak ada barang ditemukan.</td></tr>`;
     return;
   }
 
@@ -2054,17 +2044,17 @@ function renderMasterBarangTable(keyword = "") {
         ? "checked"
         : "";
       return `
-    <tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-2 border-2 border-slate-800 text-center"><input type="checkbox" class="chk-barang w-4 h-4 cursor-pointer accent-slate-800" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
-      <td class="py-2 px-3 border-2 border-slate-800 font-black">${b.Part_Number}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 text-left font-bold">${b.nama_barang}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 font-black text-blue-700">${b.stok}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 font-black text-yellow-600">${b.No_Rel || "-"}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 text-center">
-        <div class="flex items-center justify-center gap-1.5">
-           <button onclick="editBarang('${b.Part_Number}')" class="w-7 h-7 bg-amber-400 hover:bg-amber-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Edit Barang"><i class="fa-solid fa-pen"></i></button>
-           <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-900 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Cetak Barcode"><i class="fa-solid fa-print"></i></button>
-           <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-7 h-7 bg-red-400 hover:bg-red-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Hapus Barang"><i class="fa-solid fa-trash-can"></i></button>
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-100 text-center"><input type="checkbox" class="chk-barang w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
+      <td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-900">${b.Part_Number}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left font-medium text-slate-600 uppercase">${b.nama_barang}</td>
+      <td class="py-3 px-4 border-b border-slate-100 font-semibold text-brand-600">${b.stok}</td>
+      <td class="py-3 px-4 border-b border-slate-100 font-medium text-slate-500">${b.No_Rel || "-"}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center">
+        <div class="flex items-center justify-center gap-2">
+           <button onclick="editBarang('${b.Part_Number}')" class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center transition-colors" title="Edit Barang"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg flex items-center justify-center transition-colors" title="Cetak Barcode"><i class="fa-solid fa-print"></i></button>
+           <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition-colors" title="Hapus Barang"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
     </tr>`;
@@ -2113,9 +2103,11 @@ function updateBulkDeleteUI() {
 
   if (selectedForDelete.length > 0) {
     btnBulk.classList.remove("hidden");
+    btnBulk.classList.add("flex");
     lblCount.innerText = selectedForDelete.length;
   } else {
     btnBulk.classList.add("hidden");
+    btnBulk.classList.remove("flex");
     lblCount.innerText = "0";
   }
 }
@@ -2192,21 +2184,21 @@ function renderCustomerTable(keyword = "") {
   }
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">Tidak ada customer.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-slate-400 font-medium">Tidak ada customer.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = dataset
     .map(
       (c) => `
-    <tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-3 border-2 border-slate-800 font-black">${c.id_customer}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 text-left font-black">${c.nama_customer}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 text-left">${c.alamat || "-"}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 text-center">
-        <div class="flex items-center justify-center gap-1.5">
-           <button onclick="editCustomer('${c.id_customer}')" class="w-7 h-7 bg-amber-400 hover:bg-amber-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Edit Customer"><i class="fa-solid fa-pen"></i></button>
-           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-7 h-7 bg-red-400 hover:bg-red-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Hapus Customer"><i class="fa-solid fa-trash-can"></i></button>
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-900">${c.id_customer}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left font-medium text-slate-700">${c.nama_customer}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left text-slate-500">${c.alamat || "-"}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center">
+        <div class="flex items-center justify-center gap-2">
+           <button onclick="editCustomer('${c.id_customer}')" class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center transition-colors" title="Edit Customer"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition-colors" title="Hapus Customer"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
     </tr>`,
@@ -2232,28 +2224,34 @@ function renderUsersTable(keyword = "") {
   }
 
   if (usersList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400 font-medium">Tidak ada user.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="py-10 text-center text-slate-400 font-medium">Tidak ada user.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = usersList
-    .map(
-      (u) => `
-    <tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-3 border-2 border-slate-800 font-black">${u.username}</td>
-      <td class="py-2 px-3 border-2 border-slate-800">${u.role}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 text-center">
-        <div class="flex items-center justify-center gap-1.5">
-           <button onclick="editUser('${u.username}')" class="w-7 h-7 bg-amber-400 hover:bg-amber-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Edit User"><i class="fa-solid fa-pen"></i></button>
-           <button onclick="deleteUser('${u.username}')" class="w-7 h-7 bg-red-400 hover:bg-red-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Hapus User"><i class="fa-solid fa-trash-can"></i></button>
+    .map((u) => {
+      let roleBadge = `<span class="px-2.5 py-1 rounded bg-slate-100 text-slate-600 font-medium text-xs">${u.role}</span>`;
+      if (u.role === "Admin")
+        roleBadge = `<span class="px-2.5 py-1 rounded bg-brand-50 text-brand-700 font-medium text-xs">${u.role}</span>`;
+      if (u.role === "Produksi")
+        roleBadge = `<span class="px-2.5 py-1 rounded bg-purple-50 text-purple-700 font-medium text-xs">${u.role}</span>`;
+
+      return `
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-900">${u.username}</td>
+      <td class="py-3 px-4 border-b border-slate-100">${roleBadge}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center">
+        <div class="flex items-center justify-center gap-2">
+           <button onclick="editUser('${u.username}')" class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center transition-colors" title="Edit User"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="deleteUser('${u.username}')" class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition-colors" title="Hapus User"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
-    </tr>`,
-    )
+    </tr>`;
+    })
     .join("");
 }
 
-// === PERBAIKAN: FORMAT TAMPILAN TABEL RIWAYAT DENGAN FILTER BULAN ===
+// --- RIWAYAT TRANSAKSI ---
 function renderRiwayatTable() {
   const tbody = document.getElementById("tblRiwayatBody");
   if (!tbody) return;
@@ -2302,31 +2300,46 @@ function renderRiwayatTable() {
 
   tbody.innerHTML =
     logs.length === 0
-      ? `<tr><td colspan="6" class="py-6 text-slate-400">Belum ada riwayat.</td></tr>`
+      ? `<tr><td colspan="6" class="py-10 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td></tr>`
       : logs
           .map((r) => {
             let isTarget = r.catatan && String(r.catatan).includes("QTY/DAY");
             let displayQty = r.qty;
-            let color = "text-slate-800";
+            let color = "text-slate-600";
+            let bgTipe = "bg-slate-100 text-slate-600";
 
             if (isTarget) {
               displayQty = `TARGET`;
-              color = "text-blue-600";
+              color = "text-brand-600";
+              bgTipe = "bg-brand-50 text-brand-600";
             } else if (r.tipe === "IN") {
               displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
               color = r.qty > 0 ? "text-emerald-600" : "text-red-500";
+              bgTipe =
+                "bg-emerald-50 text-emerald-600 border border-emerald-100";
             } else {
               displayQty = r.qty > 0 ? `-${r.qty}` : `+${Math.abs(r.qty)}`;
               color = r.qty > 0 ? "text-red-500" : "text-emerald-600";
+              bgTipe = "bg-amber-50 text-amber-600 border border-amber-100";
             }
 
-            return `<tr class="hover:bg-yellow-50"><td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-bold">${r.waktu.toLocaleString("id-ID")}</td><td class="py-2 px-2 border-2 border-slate-800 font-black">${r.tipe}</td><td class="py-2 px-3 border-2 border-slate-800 text-left font-black">${r.part}</td><td class="py-2 px-2 border-2 border-slate-800 font-black ${color}">${displayQty}</td><td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-bold uppercase">${r.petugas || "-"}</td><td class="py-2 px-3 border-2 border-slate-800 text-left text-[10px] font-bold">${r.catatan || "-"}</td></tr>`;
+            return `<tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-100 text-xs font-medium text-slate-500">${r.waktu.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+      <td class="py-3 px-4 border-b border-slate-100"><span class="px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase ${bgTipe}">${isTarget ? "UPDATE" : r.tipe}</span></td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left font-bold text-slate-900">${r.part}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-right font-bold text-base ${color}">${displayQty}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-xs font-semibold uppercase text-slate-600">${r.petugas || "-"}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left text-xs font-medium text-slate-500">${r.catatan || "-"}</td>
+    </tr>`;
           })
           .join("");
 }
 
 function renderAnalitikCharts() {
   if (typeof Chart === "undefined") return;
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = "#64748b";
+
   let mapOut = {};
   appData.keluar.forEach(
     (k) =>
@@ -2335,6 +2348,7 @@ function renderAnalitikCharts() {
   let top5 = Object.entries(mapOut)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
+
   if (chartFastMoving) chartFastMoving.destroy();
   chartFastMoving = new Chart(
     document.getElementById("fastMovingChart").getContext("2d"),
@@ -2345,9 +2359,8 @@ function renderAnalitikCharts() {
         datasets: [
           {
             data: top5.length ? top5.map((x) => x[1]) : [0],
-            backgroundColor: "#facc15",
-            borderColor: "#1e293b",
-            borderWidth: 2,
+            backgroundColor: "#3b82f6",
+            borderRadius: 6,
           },
         ],
       },
@@ -2355,6 +2368,10 @@ function renderAnalitikCharts() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: "#f1f5f9" } },
+          x: { grid: { display: false } },
+        },
       },
     },
   );
@@ -2362,6 +2379,7 @@ function renderAnalitikCharts() {
   let lowStock = [...appData.barang]
     .sort((a, b) => Number(a.stok) - Number(b.stok))
     .slice(0, 10);
+
   if (chartStock) chartStock.destroy();
   chartStock = new Chart(
     document.getElementById("stockStatusChart").getContext("2d"),
@@ -2375,13 +2393,19 @@ function renderAnalitikCharts() {
           {
             label: "Stok",
             data: lowStock.length ? lowStock.map((x) => Number(x.stok)) : [0],
-            backgroundColor: "#34d399",
-            borderColor: "#1e293b",
-            borderWidth: 2,
+            backgroundColor: "#10b981",
+            borderRadius: 6,
           },
         ],
       },
-      options: { responsive: true, maintainAspectRatio: false },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, grid: { color: "#f1f5f9" } },
+          x: { grid: { display: false } },
+        },
+      },
     },
   );
 }
@@ -2517,7 +2541,7 @@ function openModalBarang() {
   populateCustomerDropdown(document.getElementById("mbCustomer"), "-");
   const partInput = document.getElementById("mbPartNumber");
   partInput.readOnly = false;
-  partInput.classList.remove("bg-slate-200");
+  partInput.classList.remove("bg-slate-100", "cursor-not-allowed");
 
   const titleEl = document.getElementById("modalMasterBarangTitle");
   if (titleEl) titleEl.innerText = "Form Barang Baru";
@@ -2545,7 +2569,7 @@ function editBarang(partNum) {
   const partInput = document.getElementById("mbPartNumber");
   partInput.value = barang.Part_Number;
   partInput.readOnly = false;
-  partInput.classList.remove("bg-slate-200");
+  partInput.classList.remove("bg-slate-100", "cursor-not-allowed");
 
   document.getElementById("mbNamaBarang").value = barang.nama_barang || "";
   document.getElementById("mbKategori").value = barang.kategori || "";
@@ -2623,7 +2647,7 @@ function openModalCustomer() {
   currentEditCustomer = null;
   const idInput = document.getElementById("mcId");
   idInput.readOnly = false;
-  idInput.classList.remove("bg-slate-200");
+  idInput.classList.remove("bg-slate-100", "cursor-not-allowed");
 
   const titleEl = document.getElementById("modalMasterCustomerTitle");
   if (titleEl) titleEl.innerText = "Form Customer Baru";
@@ -2651,7 +2675,7 @@ function editCustomer(idCust) {
   const idInput = document.getElementById("mcId");
   idInput.value = cust.id_customer;
   idInput.readOnly = false;
-  idInput.classList.remove("bg-slate-200");
+  idInput.classList.remove("bg-slate-100", "cursor-not-allowed");
 
   document.getElementById("mcNama").value = cust.nama_customer || "";
   document.getElementById("mcKontak").value = cust.kontak || "";
@@ -2699,7 +2723,7 @@ function openModalUser() {
   currentEditUser = null;
   const usernameInput = document.getElementById("muUsername");
   usernameInput.readOnly = false;
-  usernameInput.classList.remove("bg-slate-200");
+  usernameInput.classList.remove("bg-slate-100", "cursor-not-allowed");
 
   const titleEl = document.getElementById("modalMasterUserTitle");
   if (titleEl) titleEl.innerText = "Form Pengguna Baru";
@@ -2727,7 +2751,7 @@ function editUser(username) {
   const usernameInput = document.getElementById("muUsername");
   usernameInput.value = usr.username;
   usernameInput.readOnly = false;
-  usernameInput.classList.remove("bg-slate-200");
+  usernameInput.classList.remove("bg-slate-100", "cursor-not-allowed");
 
   document.getElementById("muPassword").value = usr.password || "";
   document.getElementById("muRole").value = usr.role || "Warehouse";
