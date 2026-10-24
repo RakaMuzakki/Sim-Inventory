@@ -21,6 +21,9 @@ let appData = {
 let activeScannedPart = null;
 let isProcessing = false;
 
+// VARIABEL PENYIMPAN CENTANG (CEGAH HILANG SAAT AUTO-REFRESH)
+let selectedForDelete = [];
+
 let batchTrolley = [];
 let currentEditPart = null;
 let currentEditCustomer = null;
@@ -181,14 +184,19 @@ window.addEventListener("DOMContentLoaded", () => {
     const riwayatTab = document.getElementById("tab-riwayat");
     const analitikTab = document.getElementById("tab-analitik");
     const barangTab = document.getElementById("tab-barang");
+    const custTab = document.getElementById("tab-customer");
+    const usersTab = document.getElementById("tab-users");
 
     if (isProcessing) return;
 
+    // Auto-refresh hanya dijalankan di tab yang sedang aktif
     if (
       (overviewTab && !overviewTab.classList.contains("hidden")) ||
       (riwayatTab && !riwayatTab.classList.contains("hidden")) ||
       (analitikTab && !analitikTab.classList.contains("hidden")) ||
-      (barangTab && !barangTab.classList.contains("hidden"))
+      (barangTab && !barangTab.classList.contains("hidden")) ||
+      (custTab && !custTab.classList.contains("hidden")) ||
+      (usersTab && !usersTab.classList.contains("hidden"))
     ) {
       sendToBackend("apiGetMasterData").then(async (res) => {
         if (res && res.success) {
@@ -415,13 +423,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -447,15 +457,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -510,13 +522,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
         return { success: true };
 
@@ -534,13 +548,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -583,13 +599,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -670,13 +688,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -805,7 +825,7 @@ async function sendToBackend(action, payload = {}) {
         return { success: true, message: "Barang terhapus permanen!" };
 
       // ==========================================
-      // FUNGSI BULK DELETE BARANG
+      // FUNGSI BARU: BULK DELETE BARANG
       // ==========================================
       case "apiBulkDeleteBarang":
         await _supabase
@@ -1377,6 +1397,7 @@ function handleScannerGun(event) {
     if (!code) return;
 
     const parsed = parseYimmBarcode(code);
+
     const matchingRows = appData.seatAssyControl.filter(
       (item) =>
         item.Part_Number.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() ===
@@ -1799,7 +1820,7 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// TABEL MASTER DATA (DENGAN SEARCH & BULK DELETE)
+// TABEL MASTER DATA (DENGAN SEARCH & BULK DELETE + FIX REFRESH)
 // =========================================================================
 
 // --- MASTER BARANG ---
@@ -1823,10 +1844,15 @@ function renderMasterBarangTable(keyword = "") {
   }
 
   tbody.innerHTML = dataset
-    .map(
-      (b) => `
+    .map((b) => {
+      // Mengecek apakah Part Number ini sebelumnya sudah dicentang oleh user
+      const isChecked = selectedForDelete.includes(String(b.Part_Number))
+        ? "checked"
+        : "";
+
+      return `
     <tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-2 border-2 border-slate-800 text-center"><input type="checkbox" class="chk-barang w-4 h-4 cursor-pointer accent-slate-800" value="${b.Part_Number}" onchange="handleSelectBarang()"></td>
+      <td class="py-2 px-2 border-2 border-slate-800 text-center"><input type="checkbox" class="chk-barang w-4 h-4 cursor-pointer accent-slate-800" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
       <td class="py-2 px-3 border-2 border-slate-800 font-black">${b.Part_Number}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left font-bold">${b.nama_barang}</td>
       <td class="py-2 px-3 border-2 border-slate-800 font-black text-blue-700">${b.stok}</td>
@@ -1838,29 +1864,54 @@ function renderMasterBarangTable(keyword = "") {
            <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-7 h-7 bg-red-400 hover:bg-red-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Hapus Barang"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
-    </tr>`,
-    )
+    </tr>`;
+    })
     .join("");
 
+  // Mengembalikan status centang "Pilih Semua" jika semua data di layar tercentang
   const chkAll = document.getElementById("chkAllBarang");
-  if (chkAll) chkAll.checked = false;
-  handleSelectBarang();
+  if (chkAll) {
+    const allDisplayedParts = dataset.map((b) => String(b.Part_Number));
+    const allChecked =
+      allDisplayedParts.length > 0 &&
+      allDisplayedParts.every((p) => selectedForDelete.includes(p));
+    chkAll.checked = allChecked;
+  }
+
+  updateBulkDeleteUI();
+}
+
+function toggleSingleBarang(el) {
+  const val = String(el.value);
+  if (el.checked) {
+    if (!selectedForDelete.includes(val)) selectedForDelete.push(val);
+  } else {
+    selectedForDelete = selectedForDelete.filter((p) => p !== val);
+  }
+  updateBulkDeleteUI();
 }
 
 function toggleAllBarang(el) {
   const checkboxes = document.querySelectorAll(".chk-barang");
-  checkboxes.forEach((chk) => (chk.checked = el.checked));
-  handleSelectBarang();
+  checkboxes.forEach((chk) => {
+    chk.checked = el.checked;
+    const val = String(chk.value);
+    if (el.checked) {
+      if (!selectedForDelete.includes(val)) selectedForDelete.push(val);
+    } else {
+      selectedForDelete = selectedForDelete.filter((p) => p !== val);
+    }
+  });
+  updateBulkDeleteUI();
 }
 
-function handleSelectBarang() {
-  const checkboxes = document.querySelectorAll(".chk-barang:checked");
+function updateBulkDeleteUI() {
   const btnBulk = document.getElementById("btnBulkDeleteBarang");
   const lblCount = document.getElementById("lblCountDelete");
 
-  if (checkboxes.length > 0) {
+  if (selectedForDelete.length > 0) {
     btnBulk.classList.remove("hidden");
-    lblCount.innerText = checkboxes.length;
+    lblCount.innerText = selectedForDelete.length;
   } else {
     btnBulk.classList.add("hidden");
     lblCount.innerText = "0";
@@ -1868,15 +1919,12 @@ function handleSelectBarang() {
 }
 
 function bulkDeleteBarang() {
-  const checkboxes = document.querySelectorAll(".chk-barang:checked");
-  const partNumbers = Array.from(checkboxes).map((chk) => chk.value);
-
-  if (partNumbers.length === 0) return;
+  if (selectedForDelete.length === 0) return;
 
   swalUI
     .fire({
       title: "Hapus Massal?",
-      html: `Anda yakin ingin menghapus permanen <b class="text-red-600 text-lg">${partNumbers.length}</b> barang terpilih?`,
+      html: `Anda yakin ingin menghapus permanen <b class="text-red-600 text-lg">${selectedForDelete.length}</b> barang terpilih?`,
       showCancelButton: true,
       confirmButtonText: "Ya, Hapus Semua!",
       cancelButtonText: "Batal",
@@ -1889,11 +1937,14 @@ function bulkDeleteBarang() {
           allowOutsideClick: false,
           didOpen: () => Swal.showLoading(),
         });
-        sendToBackend("apiBulkDeleteBarang", { partNumbers }).then((res) => {
+        sendToBackend("apiBulkDeleteBarang", {
+          partNumbers: selectedForDelete,
+        }).then((res) => {
           isProcessing = false;
           Swal.close();
           if (res.success) {
             showToast("success", "Berhasil Dihapus!");
+            selectedForDelete = []; // Kosongkan memori centang
             document.getElementById("searchMasterBarang").value = "";
             refreshAllData();
           } else {
@@ -2192,6 +2243,9 @@ function deleteBarang(partNum, namaBarang) {
             Swal.close();
             if (res.success) {
               showToast("success", "Terhapus!");
+              selectedForDelete = selectedForDelete.filter(
+                (p) => p !== String(partNum),
+              ); // Buang dari memori centang
               refreshAllData();
             } else {
               showToast("error", "Gagal", res.message);
