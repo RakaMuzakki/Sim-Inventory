@@ -106,6 +106,58 @@ const swalUI = Swal.mixin({
 });
 
 // =========================================================================
+// PENERJEMAH BARCODE CERDAS (KHUSUS FORMAT YIMM / PDF417)
+// =========================================================================
+function parseYimmBarcode(rawCode) {
+  let result = {
+    partNumberClean: rawCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase(),
+    original: rawCode,
+    qty: 1,
+  };
+
+  // FORMAT 1: ISO/IEC 15434 (Standar Otomotif Global / EDI) -> [)>069K...
+  if (rawCode.startsWith("[)>")) {
+    // Ekstrak Part Number (Setelah huruf 'P' dan sebelum 'V' atau identifier lain)
+    let partMatch = rawCode.match(/P([A-Z0-9]+)V/);
+    if (partMatch && partMatch[1]) {
+      result.partNumberClean = partMatch[1];
+    } else {
+      let fallbackPart = rawCode.match(/P([A-Z0-9]{10,15})/);
+      if (fallbackPart) result.partNumberClean = fallbackPart[1];
+    }
+
+    // Ekstrak Quantity (Setelah huruf 'Q' diikuti 6 digit angka)
+    let qtyMatch = rawCode.match(/Q(\d{6})/);
+    if (qtyMatch && qtyMatch[1]) {
+      result.qty = parseInt(qtyMatch[1], 10);
+    }
+    return result;
+  }
+
+  // FORMAT 2: Trolley/Kanban Lokal -> BWPF4730100080-020|20261016...
+  if (rawCode.includes("|")) {
+    let segment1 = rawCode.split("|")[0];
+    let parts = segment1.split("-");
+    if (parts.length > 1) {
+      let possibleQty = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(possibleQty)) {
+        result.qty = possibleQty;
+        parts.pop();
+      }
+      result.partNumberClean = parts
+        .join("")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .toUpperCase();
+    } else {
+      result.partNumberClean = segment1
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .toUpperCase();
+    }
+  }
+  return result;
+}
+
+// =========================================================================
 // LOGIKA ROLLOVER JAM 08:00 PAGI
 // =========================================================================
 function getOperationalDayInfo() {
@@ -556,9 +608,6 @@ async function sendToBackend(action, payload = {}) {
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
 
-      // ==========================================
-      // FUNGSI UNLOCKED UNTUK SIMPAN BARANG
-      // ==========================================
       case "apiSaveBarang":
         if (payload.isEdit) {
           if (payload.item.Part_Number !== payload.oldPartNumber) {
@@ -576,7 +625,6 @@ async function sendToBackend(action, payload = {}) {
             .eq("Part_Number", payload.oldPartNumber);
           if (errUpd) throw new Error(errUpd.message);
 
-          // CASCADE UPDATE
           if (payload.item.Part_Number !== payload.oldPartNumber) {
             await _supabase
               .from("List_Order")
@@ -665,9 +713,6 @@ async function sendToBackend(action, payload = {}) {
             : "Barang baru berhasil ditambahkan!",
         };
 
-      // ==========================================
-      // FUNGSI UNLOCKED UNTUK SIMPAN CUSTOMER
-      // ==========================================
       case "apiSaveCustomer":
         if (payload.isEdit) {
           if (payload.cust.id_customer !== payload.oldIdCustomer) {
@@ -680,14 +725,11 @@ async function sendToBackend(action, payload = {}) {
                 "ID Customer baru sudah terdaftar untuk perusahaan lain!",
               );
           }
-
           const { error: errUpd } = await _supabase
             .from("Master_Customer")
             .update(payload.cust)
             .eq("id_customer", payload.oldIdCustomer);
           if (errUpd) throw new Error(errUpd.message);
-
-          // CASCADE UPDATE LIST ORDER
           if (payload.cust.id_customer !== payload.oldIdCustomer) {
             await _supabase
               .from("List_Order")
@@ -713,9 +755,6 @@ async function sendToBackend(action, payload = {}) {
             : "Customer baru tersimpan!",
         };
 
-      // ==========================================
-      // FUNGSI UNLOCKED UNTUK SIMPAN USER
-      // ==========================================
       case "apiSaveUser":
         if (payload.isEdit) {
           if (payload.userData.username !== payload.oldUsername) {
@@ -726,14 +765,11 @@ async function sendToBackend(action, payload = {}) {
             if (checkU && checkU.length > 0)
               throw new Error("Username baru sudah dipakai oleh orang lain!");
           }
-
           const { error: errUpd } = await _supabase
             .from("Users")
             .update(payload.userData)
             .eq("username", payload.oldUsername);
           if (errUpd) throw new Error(errUpd.message);
-
-          // CASCADE UPDATE RIWAYAT PETUGAS
           if (payload.userData.username !== payload.oldUsername) {
             await _supabase
               .from("Transaksi_Masuk")
@@ -743,8 +779,6 @@ async function sendToBackend(action, payload = {}) {
               .from("Transaksi_Keluar")
               .update({ petugas: payload.userData.username })
               .eq("petugas", payload.oldUsername);
-
-            // Jika user mengedit akunnya sendiri
             if (currentUser && currentUser.username === payload.oldUsername) {
               currentUser.username = payload.userData.username;
               sessionStorage.setItem(
@@ -1316,7 +1350,7 @@ function handleGlobalSearch(kw) {
 }
 
 // =========================================================================
-// SCANNER MENGGUNAKAN ZXING
+// SCANNER SMART YIMM PARSING
 // =========================================================================
 function triggerManualGunButton() {
   handleScannerGun({ key: "Enter", preventDefault: () => {} });
@@ -1329,16 +1363,29 @@ function handleScannerGun(event) {
     const code = inputField.value.trim();
     if (!code) return;
 
+    // Logika cerdas penerjemah barcode YIMM/EDI
+    const parsed = parseYimmBarcode(code);
+
+    // Cari barang berdasarkan nama bersih (tanpa strip) ATAU nama aslinya
     const matchingRows = appData.seatAssyControl.filter(
-      (item) => item.Part_Number.toLowerCase() === code.toLowerCase(),
+      (item) =>
+        item.Part_Number.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() ===
+          parsed.partNumberClean ||
+        item.Part_Number.toLowerCase() === code.toLowerCase(),
     );
+
     if (matchingRows.length === 0) {
       showToast("error", "Tidak Dikenali", `Part ${code} tidak ada.`);
       inputField.value = "";
       return;
     }
+
     const foundData =
       matchingRows.find((r) => r.sisa_del > 0) || matchingRows[0];
+
+    // Titipkan nilai QTY dari hasil bacaan barcode YIMM ke objek sementara
+    foundData._tempScanQty = parsed.qty;
+
     addToBatchTrolley(foundData);
     inputField.value = "";
     inputField.focus();
@@ -1356,8 +1403,14 @@ function addToBatchTrolley(item) {
   const existing = batchTrolley.find(
     (b) => b.Part_Number === item.Part_Number && b.Customer === custToUse,
   );
-  if (existing) existing.trolleyCount += 1;
-  else
+
+  // Ambil qty bawaan barcode (jika ada), kalau tidak ada jadikan 1
+  const addQty = item._tempScanQty || 1;
+
+  if (existing) {
+    existing.trolleyCount += 1;
+    existing.qtyInput += addQty;
+  } else {
     batchTrolley.push({
       Part_Number: item.Part_Number,
       nama_barang: item.nama_barang,
@@ -1366,8 +1419,11 @@ function addToBatchTrolley(item) {
       stock: item.stock,
       assy_fsg: item.assy_fsg,
       trolleyCount: 1,
-      qtyInput: 1,
+      qtyInput: addQty,
     });
+  }
+
+  item._tempScanQty = null; // bersihkan data titipan
   updateBatchTrolleyUI();
   new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3")
     .play()
@@ -1576,16 +1632,19 @@ function handleChangeScannerCustomer(val) {
 function processSmartScanCamera(scannedCode) {
   if (isCameraPaused) return;
 
-  let part = scannedCode.trim();
+  const code = scannedCode.trim();
+  const parsed = parseYimmBarcode(code);
 
+  // Cari kecocokan berdasarkan nama bersih (tanpa strip) ATAU nama aslinya
   const matchingRows = appData.seatAssyControl.filter(
     (item) =>
-      item.Part_Number.toLowerCase() === part.toLowerCase() ||
-      part.toLowerCase().includes(item.Part_Number.toLowerCase()),
+      item.Part_Number.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() ===
+        parsed.partNumberClean ||
+      item.Part_Number.toLowerCase() === code.toLowerCase(),
   );
 
   if (matchingRows.length === 0) {
-    showToast("error", "Tidak Dikenali", `Part ${part} tidak terdaftar.`);
+    showToast("error", "Tidak Dikenali", `Part tidak terdaftar di sistem.`);
     isCameraPaused = true;
     setTimeout(() => {
       isCameraPaused = false;
@@ -1616,7 +1675,9 @@ function processSmartScanCamera(scannedCode) {
   document.getElementById("smInfoStok").innerText = foundData.stock;
   document.getElementById("smInfoTarget").innerText = foundData.sisa_del;
   document.getElementById("smInfoAssy").innerText = foundData.assy_fsg;
-  document.getElementById("smInputQty").value = 1;
+
+  // Set nilai kolom QTY menggunakan angka dari scan YIMM!
+  document.getElementById("smInputQty").value = parsed.qty;
 
   const btnWH = document.getElementById("btnGroupWH"),
     btnAssy = document.getElementById("btnGroupAssy"),
@@ -1937,7 +1998,7 @@ function renderAnalitikCharts() {
 }
 
 // =========================================================================
-// MODAL FORMS: BARANG (SEMUA INPUT TERBUKA)
+// MODAL FORMS: BARANG (EDIT PART NUMBER & NAMA UNLOCKED)
 // =========================================================================
 function openModalBarang() {
   currentEditPart = null;
@@ -1971,7 +2032,7 @@ function editBarang(partNum) {
 
   const partInput = document.getElementById("mbPartNumber");
   partInput.value = barang.Part_Number;
-  partInput.readOnly = false; // KUNCI DIBUKA
+  partInput.readOnly = false;
   partInput.classList.remove("bg-slate-200");
 
   document.getElementById("mbNamaBarang").value = barang.nama_barang || "";
@@ -2077,7 +2138,7 @@ function handleSaveBarang(e) {
 }
 
 // =========================================================================
-// MODAL FORMS: CUSTOMER (ID CUSTOMER UNLOCKED)
+// MODAL FORMS: CUSTOMER
 // =========================================================================
 function openModalCustomer() {
   currentEditCustomer = null;
@@ -2110,7 +2171,7 @@ function editCustomer(idCust) {
 
   const idInput = document.getElementById("mcId");
   idInput.value = cust.id_customer;
-  idInput.readOnly = false; // KUNCI DIBUKA
+  idInput.readOnly = false;
   idInput.classList.remove("bg-slate-200");
 
   document.getElementById("mcNama").value = cust.nama_customer || "";
@@ -2186,7 +2247,7 @@ function handleSaveCustomer(e) {
 }
 
 // =========================================================================
-// MODAL FORMS: PENGGUNA (USERNAME UNLOCKED)
+// MODAL FORMS: PENGGUNA (USERS)
 // =========================================================================
 function openModalUser() {
   currentEditUser = null;
@@ -2219,7 +2280,7 @@ function editUser(username) {
 
   const usernameInput = document.getElementById("muUsername");
   usernameInput.value = usr.username;
-  usernameInput.readOnly = false; // KUNCI DIBUKA
+  usernameInput.readOnly = false;
   usernameInput.classList.remove("bg-slate-200");
 
   document.getElementById("muPassword").value = usr.password || "";
