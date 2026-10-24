@@ -6,7 +6,6 @@ const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
 const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
 
-// Ini adalah kunci rahasia untuk menembus RLS Supabase Anda
 const RLS_SECRET = "KunciGudang2026!";
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -472,11 +471,45 @@ async function sendToBackend(action, payload = {}) {
         ]);
         return { success: true };
 
+      // ==============================================================
+      // PERBAIKAN: ASSY SEKARANG MENAMBAH DAN MASUK RIWAYAT TRANSAKSI
+      // ==============================================================
       case "apiUpdateAssyFsg":
-        await _supabase
-          .from("Master_Barang")
-          .update({ assy_fsg: payload.qty })
-          .eq("Part_Number", payload.partNumber);
+        if (payload.mode === "ADD") {
+          // 1. Ambil data assy lama
+          const { data: bAssy, error: errAssy } = await _supabase
+            .from("Master_Barang")
+            .select("assy_fsg")
+            .eq("Part_Number", payload.partNumber)
+            .single();
+          if (errAssy) throw new Error(errAssy.message);
+
+          // 2. Tambahkan angka lama dengan angka baru
+          const newAssy = (Number(bAssy?.assy_fsg) || 0) + Number(payload.qty);
+          await _supabase
+            .from("Master_Barang")
+            .update({ assy_fsg: newAssy })
+            .eq("Part_Number", payload.partNumber);
+
+          // 3. Wajib Catat ke Riwayat Transaksi sebagai Barang Masuk
+          if (payload.petugas) {
+            await _supabase.from("Transaksi_Masuk").insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: payload.qty,
+                petugas: payload.petugas,
+                catatan: "Masuk Gudang FSG (Hasil Assy)",
+                tanggal: new Date().toISOString(),
+              },
+            ]);
+          }
+        } else {
+          // Mode SET absolut (misal jika Admin ingin mereset angka total)
+          await _supabase
+            .from("Master_Barang")
+            .update({ assy_fsg: payload.qty })
+            .eq("Part_Number", payload.partNumber);
+        }
         return { success: true };
 
       case "apiUpdateQtyDay":
@@ -1147,7 +1180,7 @@ function buildSeatAssyControlDataset() {
 }
 
 // =========================================================================
-// FUNGSI POPUP (EDIT CUSTOMER, ASSY, QTY/DAY, DAN FUNGSI BARU: QTY/OUT)
+// FUNGSI POPUP INTERAKTIF (DASHBOARD)
 // =========================================================================
 function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   if (isProcessing) return;
@@ -1217,25 +1250,48 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
     });
 }
 
-function promptUpdateAssyFsg(partNumber, currentQty) {
+function promptUpdateAssyFsg(partNumber) {
+  if (!currentUser) return openLoginModal();
   if (isProcessing) return;
+
   swalUI
     .fire({
-      title: "UPDATE STOK ASSY",
-      html: `<p class="text-sm mb-3">Part:<br><b class="text-lg">${partNumber}</b></p>`,
+      title: "INPUT HASIL ASSY",
+      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b></p>
+           <p class="text-[10px] font-bold text-purple-600">PENTING: Angka ini akan DITAMBAHKAN ke stok Assy saat ini dan otomatis tercatat di Riwayat Transaksi (Barang Masuk).</p>`,
       input: "number",
-      inputValue: currentQty > 0 ? currentQty : "",
+      inputAttributes: { min: 1 },
       showCancelButton: true,
       confirmButtonText: "Simpan",
+      cancelButtonText: "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
+        const qty = Number(res.value) || 0;
+        if (qty <= 0)
+          return showToast("error", "Error", "Jumlah harus lebih dari 0");
+
+        isProcessing = true;
+        swalUI.fire({
+          title: "Mencatat Riwayat...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+
         sendToBackend("apiUpdateAssyFsg", {
-          partNumber,
-          qty: Number(res.value) || 0,
-        }).then(() => {
-          showToast("success", "Assy Diupdate");
-          refreshAllData();
+          partNumber: partNumber,
+          qty: qty,
+          mode: "ADD", // PERINTAH ADD YG MEMICU PENCATATAN KE RIWAYAT
+          petugas: currentUser.username,
+        }).then((response) => {
+          isProcessing = false;
+          Swal.close();
+          if (response.success) {
+            showToast("success", "Berhasil Ditambahkan!");
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", response.message);
+          }
         });
       }
     });
@@ -1266,7 +1322,6 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
     });
 }
 
-// === FUNGSI BARU: KLIK QTY/OUT ===
 function promptUpdateQtyOut(partNumber, customerName) {
   if (!currentUser) return openLoginModal();
   if (isProcessing) return;
@@ -1305,7 +1360,7 @@ function promptUpdateQtyOut(partNumber, customerName) {
           Swal.close();
           if (response.success) {
             showToast("success", "Berhasil Terkirim!");
-            refreshAllData(); // Otomatis refresh Dashboard & Riwayat
+            refreshAllData();
           } else {
             showToast("error", "Gagal", response.message);
           }
@@ -1315,7 +1370,7 @@ function promptUpdateQtyOut(partNumber, customerName) {
 }
 
 // =========================================================================
-// PAPAN KONTROL DENGAN ROWSPAN CUST & KLIK QTY OUT
+// PAPAN KONTROL DENGAN ROWSPAN CUST & SEMUA TOMBOL INTERAKTIF
 // =========================================================================
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
@@ -1384,19 +1439,19 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     const qtyDayAction = isAdmin
       ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
       : "";
-    const assyClass = canEditAssy
-      ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4"
-      : "";
-    const assyAction = canEditAssy
-      ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
-      : "";
 
-    // KELAS & ACTION BARU UNTUK KLIK QTY OUT
     const qtyOutClass = canEditCust
       ? "cursor-pointer hover:bg-slate-200 hover:text-red-600 underline decoration-dashed underline-offset-4 transition-colors"
       : "";
     const qtyOutAction = canEditCust
       ? `onclick="promptUpdateQtyOut('${row.Part_Number}', '${row.Customer}')"`
+      : "";
+
+    const assyClass = canEditAssy
+      ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4 transition-colors"
+      : "";
+    const assyAction = canEditAssy
+      ? `onclick="promptUpdateAssyFsg('${row.Part_Number}')"`
       : "";
 
     let isFirstOfGroup = false;
@@ -1419,9 +1474,9 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       <td class="py-2 px-3 border-2 border-slate-800 text-left"><div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div><div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div></td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-700 text-base bg-blue-50/50">${formatNum(row.stock)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700 bg-slate-50 ${qtyOutClass}" ${qtyOutAction} title="Klik untuk Input Barang Keluar">${formatNum(row.qty_out)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700 bg-slate-50 ${qtyOutClass}" ${qtyOutAction} title="${canEditCust ? "Klik untuk Input Barang Keluar" : ""}">${formatNum(row.qty_out)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-red-600">${formatNum(row.sisa_del)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction} title="${canEditAssy ? "Klik untuk Input Hasil Assy" : ""}">${formatNum(row.assy_fsg)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
     </tr>`;
   }
@@ -1604,13 +1659,11 @@ async function submitBatchTrolley(tipeAction) {
           catatan: `Kirim ke: ${targetCust}`,
         });
       } else if (tipeAction === "ASSY_ADD") {
-        const currentBarang = appData.barang.find(
-          (b) => String(b.Part_Number).trim() === item.Part_Number,
-        );
-        const curAssy = Number(currentBarang?.assy_fsg) || 0;
         await sendToBackend("apiUpdateAssyFsg", {
           partNumber: item.Part_Number,
-          qty: curAssy + qty,
+          qty: qty,
+          mode: "ADD",
+          petugas: currentUser.username,
         });
       }
     }
@@ -1846,9 +1899,7 @@ function submitSmartAction(tipeAction) {
         showToast("success", "Berhasil Masuk!");
       } else showToast("error", "Gagal", res.message);
     });
-  } else {
-    const finalQty =
-      tipeAction === "ASSY_ADD" ? activeScannedPart.assy_fsg + qty : qty;
+  } else if (tipeAction === "ASSY_ADD") {
     swalUI.fire({
       title: "Menyimpan...",
       allowOutsideClick: false,
@@ -1856,14 +1907,35 @@ function submitSmartAction(tipeAction) {
     });
     sendToBackend("apiUpdateAssyFsg", {
       partNumber: activeScannedPart.Part_Number,
-      qty: finalQty,
+      qty: qty,
+      mode: "ADD",
+      petugas: currentUser.username,
     }).then((res) => {
       isProcessing = false;
       Swal.close();
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Assy Tersimpan!");
+        showToast("success", "Assy Ditambahkan!");
+      } else showToast("error", "Gagal", res.message);
+    });
+  } else if (tipeAction === "ASSY_SET") {
+    swalUI.fire({
+      title: "Menyimpan...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+    sendToBackend("apiUpdateAssyFsg", {
+      partNumber: activeScannedPart.Part_Number,
+      qty: qty,
+      mode: "SET",
+    }).then((res) => {
+      isProcessing = false;
+      Swal.close();
+      if (res.success) {
+        closeSmartAction();
+        refreshAllData();
+        showToast("success", "Total Assy Disetel!");
       } else showToast("error", "Gagal", res.message);
     });
   }
