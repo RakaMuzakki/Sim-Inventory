@@ -23,7 +23,7 @@
     
     <!-- Library Pendukung -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- LIBRARY ZXing (Zebra Crossing) untuk PDF417 & Semua Barcode -->
+    <!-- LIBRARY ZXing (Zebra Crossing) -->
     <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -296,17 +296,22 @@
           </div>
         </section>
 
-        <!-- TAB MASTER BARANG -->
+        <!-- TAB MASTER BARANG (DENGAN SEARCH & BULK DELETE) -->
         <section id="tab-barang" class="tab-pane hidden space-y-6">
           <div class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
             <div class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b-4 border-slate-800 pb-4 mb-4">
-              <h3 class="font-black text-xl uppercase tracking-tighter">Master Data Barang</h3>
-              <button onclick="openModalBarang()" class="role-admin hidden px-4 py-2 border-4 border-slate-800 bg-emerald-400 text-slate-900 font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"><i class="fa-solid fa-plus mr-1"></i> Tambah Part Number</button>
+              <h3 class="font-black text-xl uppercase tracking-tighter w-full sm:w-auto">Master Data Barang</h3>
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                <input type="text" id="searchMasterBarang" oninput="renderMasterBarangTable(this.value)" placeholder="🔍 Cari Part / Nama..." class="w-full sm:w-64 bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100 shadow-[2px_2px_0px_rgba(0,0,0,1)]" />
+                <button id="btnBulkDeleteBarang" onclick="bulkDeleteBarang()" class="hidden px-3 py-2 border-4 border-slate-800 bg-red-500 text-white font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all" title="Hapus Terpilih"><i class="fa-solid fa-trash-can mr-1"></i> (<span id="lblCountDelete">0</span>)</button>
+                <button onclick="openModalBarang()" class="role-admin hidden px-4 py-2 border-4 border-slate-800 bg-emerald-400 text-slate-900 font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"><i class="fa-solid fa-plus mr-1"></i> Tambah</button>
+              </div>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-xs border-collapse border-2 border-slate-800 text-center">
                 <thead>
                   <tr class="bg-slate-200 font-black uppercase border-b-4 border-slate-800">
+                    <th class="py-3 px-2 border-2 border-slate-800 w-10"><input type="checkbox" id="chkAllBarang" onchange="toggleAllBarang(this)" class="w-4 h-4 cursor-pointer accent-slate-800"></th>
                     <th class="py-3 px-3 border-2 border-slate-800">Part Number</th>
                     <th class="py-3 px-3 border-2 border-slate-800">Nama Barang</th>
                     <th class="py-3 px-3 border-2 border-slate-800">Stok Master</th>
@@ -315,19 +320,22 @@
                   </tr>
                 </thead>
                 <tbody id="tblMasterBarangBody" class="font-bold divide-y-2 divide-slate-800 bg-white">
-                  <tr><td colspan="5" class="py-6 text-center text-slate-400 font-medium">Memuat data...</td></tr>
+                  <tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">Memuat data...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
         </section>
 
-        <!-- TAB MASTER CUSTOMER -->
+        <!-- TAB MASTER CUSTOMER (DENGAN SEARCH) -->
         <section id="tab-customer" class="tab-pane hidden space-y-6">
           <div class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
             <div class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b-4 border-slate-800 pb-4 mb-4">
-              <h3 class="font-black text-xl uppercase tracking-tighter">Master Customer</h3>
-              <button onclick="openModalCustomer()" class="role-admin hidden px-4 py-2 border-4 border-slate-800 bg-blue-400 text-slate-900 font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"><i class="fa-solid fa-plus mr-1"></i> Tambah Customer</button>
+              <h3 class="font-black text-xl uppercase tracking-tighter w-full sm:w-auto">Master Customer</h3>
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                <input type="text" id="searchMasterCustomer" oninput="renderCustomerTable(this.value)" placeholder="🔍 Cari Customer..." class="w-full sm:w-64 bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100 shadow-[2px_2px_0px_rgba(0,0,0,1)]" />
+                <button onclick="openModalCustomer()" class="role-admin hidden px-4 py-2 border-4 border-slate-800 bg-blue-400 text-slate-900 font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"><i class="fa-solid fa-plus mr-1"></i> Tambah</button>
+              </div>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-xs border-collapse border-2 border-slate-800 text-center">
@@ -347,12 +355,15 @@
           </div>
         </section>
 
-        <!-- TAB KELOLA PENGGUNA -->
+        <!-- TAB KELOLA PENGGUNA (DENGAN SEARCH) -->
         <section id="tab-users" class="tab-pane hidden space-y-6">
           <div class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]">
             <div class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b-4 border-slate-800 pb-4 mb-4">
-              <h3 class="font-black text-xl uppercase tracking-tighter">Kelola Pengguna</h3>
-              <button onclick="openModalUser()" class="role-admin hidden px-4 py-2 border-4 border-slate-800 bg-yellow-400 text-slate-900 font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"><i class="fa-solid fa-plus mr-1"></i> Tambah Pengguna</button>
+              <h3 class="font-black text-xl uppercase tracking-tighter w-full sm:w-auto">Kelola Pengguna</h3>
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                <input type="text" id="searchMasterUser" oninput="renderUsersTable(this.value)" placeholder="🔍 Cari User..." class="w-full sm:w-64 bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100 shadow-[2px_2px_0px_rgba(0,0,0,1)]" />
+                <button onclick="openModalUser()" class="role-admin hidden px-4 py-2 border-4 border-slate-800 bg-yellow-400 text-slate-900 font-black text-xs uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all"><i class="fa-solid fa-plus mr-1"></i> Tambah</button>
+              </div>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-xs border-collapse border-2 border-slate-800 text-center">
@@ -512,6 +523,6 @@
     
     <canvas id="hiddenBarcodeCanvas" style="display:none;"></canvas>
     
-    <script src="script.js?v=ultimate_scanner"></script>
+    <script src="script.js?v=super_unlocked"></script>
   </body>
 </html>

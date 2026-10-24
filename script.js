@@ -115,9 +115,7 @@ function parseYimmBarcode(rawCode) {
     qty: 1,
   };
 
-  // FORMAT 1: ISO/IEC 15434 (Standar Otomotif Global / EDI) -> [)>069K...
   if (rawCode.startsWith("[)>")) {
-    // Ekstrak Part Number (Setelah huruf 'P' dan sebelum 'V' atau identifier lain)
     let partMatch = rawCode.match(/P([A-Z0-9]+)V/);
     if (partMatch && partMatch[1]) {
       result.partNumberClean = partMatch[1];
@@ -126,7 +124,6 @@ function parseYimmBarcode(rawCode) {
       if (fallbackPart) result.partNumberClean = fallbackPart[1];
     }
 
-    // Ekstrak Quantity (Setelah huruf 'Q' diikuti 6 digit angka)
     let qtyMatch = rawCode.match(/Q(\d{6})/);
     if (qtyMatch && qtyMatch[1]) {
       result.qty = parseInt(qtyMatch[1], 10);
@@ -134,7 +131,6 @@ function parseYimmBarcode(rawCode) {
     return result;
   }
 
-  // FORMAT 2: Trolley/Kanban Lokal -> BWPF4730100080-020|20261016...
   if (rawCode.includes("|")) {
     let segment1 = rawCode.split("|")[0];
     let parts = segment1.split("-");
@@ -419,15 +415,13 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase
-                .from("List_Order")
-                .insert([
-                  {
-                    Part_Number: payload.partNumber,
-                    qty_order: 0,
-                    id_customer: cleanCust,
-                  },
-                ]);
+              await _supabase.from("List_Order").insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty_order: 0,
+                  id_customer: cleanCust,
+                },
+              ]);
             }
           }
         }
@@ -453,17 +447,15 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase
-          .from("Transaksi_Masuk")
-          .insert([
-            {
-              Part_Number: payload.partNumber,
-              qty: payload.qty,
-              petugas: payload.petugas,
-              catatan: payload.catatan,
-              tanggal: new Date().toISOString(),
-            },
-          ]);
+        await _supabase.from("Transaksi_Masuk").insert([
+          {
+            Part_Number: payload.partNumber,
+            qty: payload.qty,
+            petugas: payload.petugas,
+            catatan: payload.catatan,
+            tanggal: new Date().toISOString(),
+          },
+        ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -518,15 +510,13 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: payload.qty,
-                id_customer: custTarget !== "-" ? custTarget : null,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: payload.qty,
+              id_customer: custTarget !== "-" ? custTarget : null,
+            },
+          ]);
         }
         return { success: true };
 
@@ -544,15 +534,13 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: Number(payload.qtyOrder) || 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: Number(payload.qtyOrder) || 0,
+              id_customer: newCustClean,
+            },
+          ]);
           return { success: true };
         }
 
@@ -595,15 +583,13 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: 0,
+              id_customer: newCustClean,
+            },
+          ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -684,15 +670,13 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase
-              .from("List_Order")
-              .insert([
-                {
-                  Part_Number: payload.item.Part_Number,
-                  qty_order: 0,
-                  id_customer: cClean,
-                },
-              ]);
+            await _supabase.from("List_Order").insert([
+              {
+                Part_Number: payload.item.Part_Number,
+                qty_order: 0,
+                id_customer: cClean,
+              },
+            ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -820,6 +804,24 @@ async function sendToBackend(action, payload = {}) {
         localStorage.removeItem("multi_cust_orders_" + payload.partNumber);
         return { success: true, message: "Barang terhapus permanen!" };
 
+      // ==========================================
+      // FUNGSI BULK DELETE BARANG
+      // ==========================================
+      case "apiBulkDeleteBarang":
+        await _supabase
+          .from("Master_Barang")
+          .delete()
+          .in("Part_Number", payload.partNumbers);
+        await _supabase
+          .from("List_Order")
+          .delete()
+          .in("Part_Number", payload.partNumbers);
+        payload.partNumbers.forEach((pn) => {
+          localStorage.removeItem("cust_map_" + pn);
+          localStorage.removeItem("multi_cust_orders_" + pn);
+        });
+        return { success: true, message: "Barang terpilih terhapus permanen!" };
+
       case "apiDeleteCustomer":
         await _supabase
           .from("Master_Customer")
@@ -889,9 +891,16 @@ function switchTab(tabId) {
 
   if (tabId === "overview") renderSeatAssyControlBoard();
   if (tabId === "riwayat") renderRiwayatTable();
-  if (tabId === "barang") renderMasterBarangTable();
-  if (tabId === "customer") renderCustomerTable();
-  if (tabId === "users") renderUsersTable();
+  if (tabId === "barang")
+    renderMasterBarangTable(
+      document.getElementById("searchMasterBarang")?.value || "",
+    );
+  if (tabId === "customer")
+    renderCustomerTable(
+      document.getElementById("searchMasterCustomer")?.value || "",
+    );
+  if (tabId === "users")
+    renderUsersTable(document.getElementById("searchMasterUser")?.value || "");
   if (tabId === "analitik") renderAnalitikCharts();
   if (tabId !== "scanner") stopSmartScanner();
 
@@ -999,9 +1008,13 @@ function refreshAllUI() {
     document.getElementById("globalSearchInput")?.value || "",
   );
   renderRiwayatTable();
-  renderMasterBarangTable();
-  renderCustomerTable();
-  renderUsersTable();
+  renderMasterBarangTable(
+    document.getElementById("searchMasterBarang")?.value || "",
+  );
+  renderCustomerTable(
+    document.getElementById("searchMasterCustomer")?.value || "",
+  );
+  renderUsersTable(document.getElementById("searchMasterUser")?.value || "");
   populateCustomerDropdown(
     document.getElementById("batchSelectCustomer"),
     document.getElementById("batchSelectCustomer")?.value || "-",
@@ -1363,10 +1376,7 @@ function handleScannerGun(event) {
     const code = inputField.value.trim();
     if (!code) return;
 
-    // Logika cerdas penerjemah barcode YIMM/EDI
     const parsed = parseYimmBarcode(code);
-
-    // Cari barang berdasarkan nama bersih (tanpa strip) ATAU nama aslinya
     const matchingRows = appData.seatAssyControl.filter(
       (item) =>
         item.Part_Number.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() ===
@@ -1382,8 +1392,6 @@ function handleScannerGun(event) {
 
     const foundData =
       matchingRows.find((r) => r.sisa_del > 0) || matchingRows[0];
-
-    // Titipkan nilai QTY dari hasil bacaan barcode YIMM ke objek sementara
     foundData._tempScanQty = parsed.qty;
 
     addToBatchTrolley(foundData);
@@ -1404,7 +1412,6 @@ function addToBatchTrolley(item) {
     (b) => b.Part_Number === item.Part_Number && b.Customer === custToUse,
   );
 
-  // Ambil qty bawaan barcode (jika ada), kalau tidak ada jadikan 1
   const addQty = item._tempScanQty || 1;
 
   if (existing) {
@@ -1423,7 +1430,7 @@ function addToBatchTrolley(item) {
     });
   }
 
-  item._tempScanQty = null; // bersihkan data titipan
+  item._tempScanQty = null;
   updateBatchTrolleyUI();
   new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3")
     .play()
@@ -1635,7 +1642,6 @@ function processSmartScanCamera(scannedCode) {
   const code = scannedCode.trim();
   const parsed = parseYimmBarcode(code);
 
-  // Cari kecocokan berdasarkan nama bersih (tanpa strip) ATAU nama aslinya
   const matchingRows = appData.seatAssyControl.filter(
     (item) =>
       item.Part_Number.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() ===
@@ -1676,7 +1682,6 @@ function processSmartScanCamera(scannedCode) {
   document.getElementById("smInfoTarget").innerText = foundData.sisa_del;
   document.getElementById("smInfoAssy").innerText = foundData.assy_fsg;
 
-  // Set nilai kolom QTY menggunakan angka dari scan YIMM!
   document.getElementById("smInputQty").value = parsed.qty;
 
   const btnWH = document.getElementById("btnGroupWH"),
@@ -1794,20 +1799,34 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// TABEL MASTER DATA (BARANG, CUSTOMER, USER) DENGAN EDIT & HAPUS
+// TABEL MASTER DATA (DENGAN SEARCH & BULK DELETE)
 // =========================================================================
-function renderMasterBarangTable() {
+
+// --- MASTER BARANG ---
+function renderMasterBarangTable(keyword = "") {
   const tbody = document.getElementById("tblMasterBarangBody");
   if (!tbody) return;
-  if (appData.barang.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">Tidak ada barang.</td></tr>`;
+
+  let dataset = appData.barang || [];
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    dataset = dataset.filter(
+      (b) =>
+        String(b.Part_Number).toLowerCase().includes(kw) ||
+        String(b.nama_barang).toLowerCase().includes(kw),
+    );
+  }
+
+  if (dataset.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">Tidak ada barang ditemukan.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = appData.barang
+  tbody.innerHTML = dataset
     .map(
       (b) => `
     <tr class="hover:bg-yellow-50 transition-colors">
+      <td class="py-2 px-2 border-2 border-slate-800 text-center"><input type="checkbox" class="chk-barang w-4 h-4 cursor-pointer accent-slate-800" value="${b.Part_Number}" onchange="handleSelectBarang()"></td>
       <td class="py-2 px-3 border-2 border-slate-800 font-black">${b.Part_Number}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left font-bold">${b.nama_barang}</td>
       <td class="py-2 px-3 border-2 border-slate-800 font-black text-blue-700">${b.stok}</td>
@@ -1822,6 +1841,67 @@ function renderMasterBarangTable() {
     </tr>`,
     )
     .join("");
+
+  const chkAll = document.getElementById("chkAllBarang");
+  if (chkAll) chkAll.checked = false;
+  handleSelectBarang();
+}
+
+function toggleAllBarang(el) {
+  const checkboxes = document.querySelectorAll(".chk-barang");
+  checkboxes.forEach((chk) => (chk.checked = el.checked));
+  handleSelectBarang();
+}
+
+function handleSelectBarang() {
+  const checkboxes = document.querySelectorAll(".chk-barang:checked");
+  const btnBulk = document.getElementById("btnBulkDeleteBarang");
+  const lblCount = document.getElementById("lblCountDelete");
+
+  if (checkboxes.length > 0) {
+    btnBulk.classList.remove("hidden");
+    lblCount.innerText = checkboxes.length;
+  } else {
+    btnBulk.classList.add("hidden");
+    lblCount.innerText = "0";
+  }
+}
+
+function bulkDeleteBarang() {
+  const checkboxes = document.querySelectorAll(".chk-barang:checked");
+  const partNumbers = Array.from(checkboxes).map((chk) => chk.value);
+
+  if (partNumbers.length === 0) return;
+
+  swalUI
+    .fire({
+      title: "Hapus Massal?",
+      html: `Anda yakin ingin menghapus permanen <b class="text-red-600 text-lg">${partNumbers.length}</b> barang terpilih?`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus Semua!",
+      cancelButtonText: "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiBulkDeleteBarang", { partNumbers }).then((res) => {
+          isProcessing = false;
+          Swal.close();
+          if (res.success) {
+            showToast("success", "Berhasil Dihapus!");
+            document.getElementById("searchMasterBarang").value = "";
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", res.message);
+          }
+        });
+      }
+    });
 }
 
 function printBarcode(partNumber, namaBarang) {
@@ -1843,15 +1923,27 @@ function printBarcode(partNumber, namaBarang) {
   }, 300);
 }
 
-function renderCustomerTable() {
+// --- MASTER CUSTOMER ---
+function renderCustomerTable(keyword = "") {
   const tbody = document.getElementById("tblCustomerBody");
   if (!tbody) return;
-  if (appData.customer.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">Tidak ada customer.</td></tr>`;
+
+  let dataset = appData.customer || [];
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    dataset = dataset.filter(
+      (c) =>
+        String(c.id_customer).toLowerCase().includes(kw) ||
+        String(c.nama_customer).toLowerCase().includes(kw),
+    );
+  }
+
+  if (dataset.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">Tidak ada customer.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = appData.customer
+  tbody.innerHTML = dataset
     .map(
       (c) => `
     <tr class="hover:bg-yellow-50 transition-colors">
@@ -1869,14 +1961,25 @@ function renderCustomerTable() {
     .join("");
 }
 
-function renderUsersTable() {
+// --- KELOLA PENGGUNA ---
+function renderUsersTable(keyword = "") {
   const tbody = document.getElementById("tblUsersBody");
   if (!tbody) return;
-  const usersList = (appData.users || []).filter(
+
+  let usersList = (appData.users || []).filter(
     (u) => u.username !== "__SYSTEM_ROLLOVER__",
   );
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    usersList = usersList.filter(
+      (u) =>
+        String(u.username).toLowerCase().includes(kw) ||
+        String(u.role).toLowerCase().includes(kw),
+    );
+  }
+
   if (usersList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400">Tidak ada user.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400 font-medium">Tidak ada user.</td></tr>`;
     return;
   }
 
@@ -1998,7 +2101,7 @@ function renderAnalitikCharts() {
 }
 
 // =========================================================================
-// MODAL FORMS: BARANG (EDIT PART NUMBER & NAMA UNLOCKED)
+// MODAL FORMS: BARANG
 // =========================================================================
 function openModalBarang() {
   currentEditPart = null;
