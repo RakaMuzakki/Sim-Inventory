@@ -21,9 +21,7 @@ let appData = {
 let activeScannedPart = null;
 let isProcessing = false;
 
-// VARIABEL PENYIMPAN CENTANG (CEGAH HILANG SAAT AUTO-REFRESH)
 let selectedForDelete = [];
-
 let batchTrolley = [];
 let currentEditPart = null;
 let currentEditCustomer = null;
@@ -189,7 +187,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
     if (isProcessing) return;
 
-    // Auto-refresh hanya dijalankan di tab yang sedang aktif
     if (
       (overviewTab && !overviewTab.classList.contains("hidden")) ||
       (riwayatTab && !riwayatTab.classList.contains("hidden")) ||
@@ -824,9 +821,6 @@ async function sendToBackend(action, payload = {}) {
         localStorage.removeItem("multi_cust_orders_" + payload.partNumber);
         return { success: true, message: "Barang terhapus permanen!" };
 
-      // ==========================================
-      // FUNGSI BARU: BULK DELETE BARANG
-      // ==========================================
       case "apiBulkDeleteBarang":
         await _supabase
           .from("Master_Barang")
@@ -1325,7 +1319,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
           : "-";
     let varColor =
       row.variance > 0
-        ? "text-emerald-600"
+        ? "textemerald-600"
         : row.variance < 0
           ? "text-red-600"
           : "text-slate-700";
@@ -1845,11 +1839,9 @@ function renderMasterBarangTable(keyword = "") {
 
   tbody.innerHTML = dataset
     .map((b) => {
-      // Mengecek apakah Part Number ini sebelumnya sudah dicentang oleh user
       const isChecked = selectedForDelete.includes(String(b.Part_Number))
         ? "checked"
         : "";
-
       return `
     <tr class="hover:bg-yellow-50 transition-colors">
       <td class="py-2 px-2 border-2 border-slate-800 text-center"><input type="checkbox" class="chk-barang w-4 h-4 cursor-pointer accent-slate-800" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
@@ -1868,7 +1860,6 @@ function renderMasterBarangTable(keyword = "") {
     })
     .join("");
 
-  // Mengembalikan status centang "Pilih Semua" jika semua data di layar tercentang
   const chkAll = document.getElementById("chkAllBarang");
   if (chkAll) {
     const allDisplayedParts = dataset.map((b) => String(b.Part_Number));
@@ -1944,7 +1935,7 @@ function bulkDeleteBarang() {
           Swal.close();
           if (res.success) {
             showToast("success", "Berhasil Dihapus!");
-            selectedForDelete = []; // Kosongkan memori centang
+            selectedForDelete = [];
             document.getElementById("searchMasterBarang").value = "";
             refreshAllData();
           } else {
@@ -2152,6 +2143,114 @@ function renderAnalitikCharts() {
 }
 
 // =========================================================================
+// FUNGSI EKSPOR EXCEL (.XLSX) MENGGUNAKAN SHEETJS
+// =========================================================================
+function exportToExcel(tipe) {
+  if (typeof XLSX === "undefined") {
+    return showToast(
+      "error",
+      "Library Excel Belum Siap",
+      "Silakan tunggu sebentar lalu coba lagi.",
+    );
+  }
+
+  let dataToExport = [];
+  let filename = "";
+  const dateStr = new Date().toISOString().split("T")[0];
+
+  if (tipe === "PapanKontrol") {
+    const keyword =
+      document.getElementById("globalSearchInput")?.value.toLowerCase() || "";
+    let dataset = appData.seatAssyControl || [];
+    if (keyword) {
+      dataset = dataset.filter(
+        (d) =>
+          String(d.Part_Number).toLowerCase().includes(keyword) ||
+          String(d.No_Rel).toLowerCase().includes(keyword) ||
+          String(d.Customer).toLowerCase().includes(keyword),
+      );
+    }
+
+    dataset.sort((a, b) => {
+      if (a.Customer < b.Customer) return -1;
+      if (a.Customer > b.Customer) return 1;
+      if (a.No_Rel < b.No_Rel) return -1;
+      if (a.No_Rel > b.No_Rel) return 1;
+      return 0;
+    });
+
+    dataToExport = dataset.map((item) => ({
+      Customer: item.Customer,
+      "No Rel Rak": item.No_Rel,
+      "Part Number": item.Part_Number,
+      "Nama Barang": item.nama_barang,
+      "Stock Master (Pcs)": item.stock,
+      "Target Qty/Day (Pcs)": item.qty_day,
+      "Terkirim Qty/Out (Pcs)": item.qty_out,
+      "Sisa Delivery (Pcs)": item.sisa_del,
+      "Stok Assy / FSG (Pcs)": item.assy_fsg,
+      "Varians Status": item.variance,
+    }));
+    filename = "Laporan_Papan_Kontrol_" + dateStr + ".xlsx";
+  } else if (tipe === "Riwayat") {
+    const filter = document.getElementById("filterRiwayat")?.value || "ALL";
+    let logs = [];
+    if (filter === "ALL" || filter === "IN") {
+      appData.masuk.forEach((m) =>
+        logs.push({
+          Waktu: new Date(m.tanggal || m.created_at),
+          Tipe: "MASUK (IN)",
+          Part_Number: m.Part_Number,
+          Qty: m.qty,
+          Petugas: m.petugas,
+          Catatan: m.catatan,
+        }),
+      );
+    }
+    if (filter === "ALL" || filter === "OUT") {
+      appData.keluar.forEach((k) =>
+        logs.push({
+          Waktu: new Date(k.tanggal || k.created_at),
+          Tipe: "KELUAR (OUT)",
+          Part_Number: k.Part_Number,
+          Qty: k.qty,
+          Petugas: k.petugas,
+          Catatan: k.catatan,
+        }),
+      );
+    }
+    logs.sort((a, b) => b.Waktu - a.Waktu);
+
+    dataToExport = logs.map((r) => ({
+      "Waktu Transaksi": r.Waktu.toLocaleString("id-ID"),
+      "Tipe Transaksi": r.Tipe,
+      "Part Number": r.Part_Number,
+      "Qty (Pcs)": r.Qty,
+      Petugas: r.Petugas,
+      "Keterangan / Tujuan": r.Catatan || "-",
+    }));
+    filename = "Laporan_Riwayat_Transaksi_" + dateStr + ".xlsx";
+  }
+
+  if (dataToExport.length === 0) {
+    return showToast(
+      "warning",
+      "Data Kosong",
+      "Tidak ada data yang bisa diekspor ke Excel saat ini.",
+    );
+  }
+
+  // Proses membuat file Excel
+  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+  // Memicu download
+  XLSX.writeFile(workbook, filename);
+  showToast("success", "Ekspor Berhasil!", `File ${filename} sedang diunduh.`);
+}
+
+// =========================================================================
 // MODAL FORMS: BARANG
 // =========================================================================
 function openModalBarang() {
@@ -2218,42 +2317,6 @@ function editBarang(partNum) {
     resolveCustomerDisplay(custRaw),
   );
   document.getElementById("modalMasterBarang").classList.remove("hidden");
-}
-
-function deleteBarang(partNum, namaBarang) {
-  swalUI
-    .fire({
-      title: "Hapus Permanen?",
-      html: `Anda yakin ingin menghapus Part Number <br><b class="text-red-600">${partNum}</b>?<br><br><span class="text-xs">Data stok dan daftar customer untuk barang ini akan terhapus.</span>`,
-      showCancelButton: true,
-      confirmButtonText: "Ya, Hapus!",
-      cancelButtonText: "Batal",
-    })
-    .then((result) => {
-      if (result.isConfirmed) {
-        isProcessing = true;
-        swalUI.fire({
-          title: "Menghapus...",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-        });
-        sendToBackend("apiDeleteBarang", { partNumber: partNum }).then(
-          (res) => {
-            isProcessing = false;
-            Swal.close();
-            if (res.success) {
-              showToast("success", "Terhapus!");
-              selectedForDelete = selectedForDelete.filter(
-                (p) => p !== String(partNum),
-              ); // Buang dari memori centang
-              refreshAllData();
-            } else {
-              showToast("error", "Gagal", res.message);
-            }
-          },
-        );
-      }
-    });
 }
 
 function handleSaveBarang(e) {
@@ -2338,39 +2401,6 @@ function editCustomer(idCust) {
   document.getElementById("modalMasterCustomer").classList.remove("hidden");
 }
 
-function deleteCustomer(idCust, namaCust) {
-  swalUI
-    .fire({
-      title: "Hapus Customer?",
-      html: `Anda yakin ingin menghapus Customer <br><b class="text-red-600">${namaCust}</b> (${idCust})?`,
-      showCancelButton: true,
-      confirmButtonText: "Ya, Hapus!",
-      cancelButtonText: "Batal",
-    })
-    .then((result) => {
-      if (result.isConfirmed) {
-        isProcessing = true;
-        swalUI.fire({
-          title: "Menghapus...",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-        });
-        sendToBackend("apiDeleteCustomer", { id_customer: idCust }).then(
-          (res) => {
-            isProcessing = false;
-            Swal.close();
-            if (res.success) {
-              showToast("success", "Customer Terhapus!");
-              refreshAllData();
-            } else {
-              showToast("error", "Gagal", res.message);
-            }
-          },
-        );
-      }
-    });
-}
-
 function handleSaveCustomer(e) {
   e.preventDefault();
   if (isProcessing) return;
@@ -2444,43 +2474,6 @@ function editUser(username) {
   document.getElementById("muRole").value = usr.role || "Warehouse";
 
   document.getElementById("modalMasterUser").classList.remove("hidden");
-}
-
-function deleteUser(usernameTarget) {
-  if (currentUser && currentUser.username === usernameTarget)
-    return showToast(
-      "warning",
-      "Ditolak!",
-      "Anda tidak bisa menghapus akun yang sedang Anda gunakan sendiri.",
-    );
-  swalUI
-    .fire({
-      title: "Hapus Pengguna?",
-      html: `Anda yakin ingin menghapus akun pengguna <br><b class="text-red-600">${usernameTarget}</b>?`,
-      showCancelButton: true,
-      confirmButtonText: "Ya, Hapus!",
-      cancelButtonText: "Batal",
-    })
-    .then((result) => {
-      if (result.isConfirmed) {
-        isProcessing = true;
-        swalUI.fire({
-          title: "Menghapus...",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-        });
-        sendToBackend("apiDeleteUser", { usernameTarget }).then((res) => {
-          isProcessing = false;
-          Swal.close();
-          if (res.success) {
-            showToast("success", "User Terhapus!");
-            refreshAllData();
-          } else {
-            showToast("error", "Gagal", res.message);
-          }
-        });
-      }
-    });
 }
 
 function handleSaveUser(e) {
