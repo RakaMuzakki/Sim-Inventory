@@ -115,7 +115,7 @@ const swalUI = Swal.mixin({
 });
 
 // =========================================================================
-// PENERJEMAH BARCODE CERDAS (KHUSUS FORMAT YIMM / PDF417)
+// PENERJEMAH BARCODE CERDAS
 // =========================================================================
 function parseYimmBarcode(rawCode) {
   let result = {
@@ -308,6 +308,17 @@ function extractCustomerFromCatatan(catatan) {
       return resolveCustomerDisplay(raw);
     }
   }
+
+  // Mencari ekstraksi Customer untuk catatan input manual (Batal/Koreksi/Input Cepat)
+  const matchManual = String(catatan).match(
+    /(?:Kirim ke|Dari|Tujuan):\s*(.+)$/i,
+  );
+  if (matchManual && matchManual[1]) {
+    const raw = matchManual[1].trim();
+    if (raw && raw !== "-" && raw.toLowerCase() !== "undefined") {
+      return resolveCustomerDisplay(raw);
+    }
+  }
   return null;
 }
 
@@ -471,44 +482,57 @@ async function sendToBackend(action, payload = {}) {
         ]);
         return { success: true };
 
-      // ==============================================================
-      // PERBAIKAN: ASSY SEKARANG MENAMBAH DAN MASUK RIWAYAT TRANSAKSI
-      // ==============================================================
+      // ===========================================================================
+      // PERBAIKAN: "KALKULATOR SELISIH CERDAS" UNTUK PENGATURAN ASSY
+      // ===========================================================================
       case "apiUpdateAssyFsg":
+        const { data: bAssy, error: errAssy } = await _supabase
+          .from("Master_Barang")
+          .select("assy_fsg")
+          .eq("Part_Number", payload.partNumber)
+          .single();
+        if (errAssy) throw new Error(errAssy.message);
+
+        const currentAssy = Number(bAssy?.assy_fsg) || 0;
+        let finalAssy = currentAssy;
+        let diff = 0;
+
         if (payload.mode === "ADD") {
-          // 1. Ambil data assy lama
-          const { data: bAssy, error: errAssy } = await _supabase
-            .from("Master_Barang")
-            .select("assy_fsg")
-            .eq("Part_Number", payload.partNumber)
-            .single();
-          if (errAssy) throw new Error(errAssy.message);
+          diff = Number(payload.qty);
+          finalAssy = currentAssy + diff;
+        } else if (payload.mode === "SET") {
+          finalAssy = Number(payload.qty);
+          diff = finalAssy - currentAssy;
+        }
 
-          // 2. Tambahkan angka lama dengan angka baru
-          const newAssy = (Number(bAssy?.assy_fsg) || 0) + Number(payload.qty);
-          await _supabase
-            .from("Master_Barang")
-            .update({ assy_fsg: newAssy })
-            .eq("Part_Number", payload.partNumber);
+        await _supabase
+          .from("Master_Barang")
+          .update({ assy_fsg: finalAssy })
+          .eq("Part_Number", payload.partNumber);
 
-          // 3. Wajib Catat ke Riwayat Transaksi sebagai Barang Masuk
-          if (payload.petugas) {
+        if (diff !== 0 && payload.petugas) {
+          if (diff > 0) {
             await _supabase.from("Transaksi_Masuk").insert([
               {
                 Part_Number: payload.partNumber,
-                qty: payload.qty,
+                qty: diff,
                 petugas: payload.petugas,
                 catatan: "Masuk Gudang FSG (Hasil Assy)",
                 tanggal: new Date().toISOString(),
               },
             ]);
+          } else if (diff < 0) {
+            // Jika mengurangi angka Assy, dicatat di Transaksi_Masuk tapi dengan nilai Negatif agar memotong total masuk
+            await _supabase.from("Transaksi_Masuk").insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: diff,
+                petugas: payload.petugas,
+                catatan: "Koreksi Pengurangan Stok Assy",
+                tanggal: new Date().toISOString(),
+              },
+            ]);
           }
-        } else {
-          // Mode SET absolut (misal jika Admin ingin mereset angka total)
-          await _supabase
-            .from("Master_Barang")
-            .update({ assy_fsg: payload.qty })
-            .eq("Part_Number", payload.partNumber);
         }
         return { success: true };
 
@@ -562,6 +586,19 @@ async function sendToBackend(action, payload = {}) {
               Part_Number: payload.partNumber,
               qty_order: payload.qty,
               id_customer: custTarget !== "-" ? custTarget : null,
+            },
+          ]);
+        }
+
+        // PERBAIKAN: CATAT QTY/DAY KE RIWAYAT TRANSAKSI (Hanya Note, Nilai 0)
+        if (payload.petugas) {
+          await _supabase.from("Transaksi_Masuk").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: 0,
+              petugas: payload.petugas,
+              catatan: `Set Target QTY/DAY menjadi ${payload.qty} Pcs (${custTarget})`,
+              tanggal: new Date().toISOString(),
             },
           ]);
         }
@@ -1250,44 +1287,52 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
     });
 }
 
-function promptUpdateAssyFsg(partNumber) {
+function promptUpdateAssyFsg(partNumber, currentQty) {
   if (!currentUser) return openLoginModal();
   if (isProcessing) return;
 
   swalUI
     .fire({
-      title: "INPUT HASIL ASSY",
+      title: "UPDATE TOTAL ASSY",
       html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b></p>
-           <p class="text-[10px] font-bold text-purple-600">PENTING: Angka ini akan DITAMBAHKAN ke stok Assy saat ini dan otomatis tercatat di Riwayat Transaksi (Barang Masuk).</p>`,
+           <p class="text-[10px] font-bold text-slate-500 mb-2">Total saat ini: <b class="text-blue-600">${currentQty}</b> Pcs</p>
+           <p class="text-[10px] font-bold text-purple-600">Masukkan TOTAL AKHIR. Sistem akan otomatis menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
       input: "number",
-      inputAttributes: { min: 1 },
+      inputValue: currentQty,
+      inputAttributes: { min: 0 },
       showCancelButton: true,
-      confirmButtonText: "Simpan",
+      confirmButtonText: "Simpan Total",
       cancelButtonText: "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
-        const qty = Number(res.value) || 0;
-        if (qty <= 0)
-          return showToast("error", "Error", "Jumlah harus lebih dari 0");
+        const newTotal = Number(res.value);
+        if (newTotal < 0)
+          return showToast("error", "Error", "Total tidak boleh minus");
+        if (newTotal === currentQty)
+          return showToast(
+            "info",
+            "Tidak ada perubahan",
+            "Angka sama dengan sebelumnya",
+          );
 
         isProcessing = true;
         swalUI.fire({
-          title: "Mencatat Riwayat...",
+          title: "Memproses...",
           allowOutsideClick: false,
           didOpen: () => Swal.showLoading(),
         });
 
         sendToBackend("apiUpdateAssyFsg", {
           partNumber: partNumber,
-          qty: qty,
-          mode: "ADD", // PERINTAH ADD YG MEMICU PENCATATAN KE RIWAYAT
+          qty: newTotal,
+          mode: "SET",
           petugas: currentUser.username,
         }).then((response) => {
           isProcessing = false;
           Swal.close();
           if (response.success) {
-            showToast("success", "Berhasil Ditambahkan!");
+            showToast("success", "Berhasil Diupdate!");
             refreshAllData();
           } else {
             showToast("error", "Gagal", response.message);
@@ -1297,12 +1342,16 @@ function promptUpdateAssyFsg(partNumber) {
     });
 }
 
+// === PERBAIKAN QTY/DAY: OTOMATIS TERCATAT KE RIWAYAT ===
 function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
+  if (!currentUser) return openLoginModal();
   if (isProcessing) return;
+
   swalUI
     .fire({
       title: "SET TARGET (QTY/DAY)",
-      html: `<p class="text-sm mb-3">Part:<br><b class="text-lg">${partNumber}</b><br><span class="text-xs text-slate-500">Customer: ${customerName}</span></p>`,
+      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
+           <p class="text-[10px] font-bold text-blue-600">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`,
       input: "number",
       inputValue: currentQty > 0 ? currentQty : "",
       showCancelButton: true,
@@ -1310,38 +1359,62 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
     })
     .then((res) => {
       if (res.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menyimpan...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
         sendToBackend("apiUpdateQtyDay", {
-          partNumber,
+          partNumber: partNumber,
           qty: Number(res.value) || 0,
           customer: customerName,
-        }).then(() => {
-          showToast("success", "Target Disimpan");
-          refreshAllData();
+          petugas: currentUser.username, // Membawa nama petugas untuk riwayat
+        }).then((response) => {
+          isProcessing = false;
+          Swal.close();
+          if (response.success) {
+            showToast("success", "Target Disimpan");
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", response.message);
+          }
         });
       }
     });
 }
 
-function promptUpdateQtyOut(partNumber, customerName) {
+// === PERBAIKAN QTY/OUT: KALKULATOR SELISIH PENGIRIMAN ===
+function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
   if (!currentUser) return openLoginModal();
   if (isProcessing) return;
 
   swalUI
     .fire({
-      title: "INPUT PENGIRIMAN (QTY/OUT)",
-      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p><p class="text-[10px] font-bold text-red-500">PENTING: Angka yang dimasukkan akan memotong stok dan masuk ke Riwayat Transaksi!</p>`,
+      title: "UPDATE TOTAL QTY/OUT",
+      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
+           <p class="text-[10px] font-bold text-slate-500 mb-2">Total terkirim saat ini: <b class="text-blue-600">${currentQtyOut}</b> Pcs</p>
+           <p class="text-[10px] font-bold text-red-500">Masukkan TOTAL AKHIR pengiriman. Sistem otomatis menghitung selisih dan mencatatnya ke Riwayat (OUT).</p>`,
       input: "number",
-      inputAttributes: { min: 1 },
+      inputValue: currentQtyOut,
+      inputAttributes: { min: 0 },
       showCancelButton: true,
-      confirmButtonText: "Kirim Barang",
+      confirmButtonText: "Simpan Total",
       cancelButtonText: "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
-        const qty = Number(res.value) || 0;
-        if (qty <= 0)
-          return showToast("error", "Error", "Jumlah kirim harus lebih dari 0");
+        const newTotal = Number(res.value);
+        if (newTotal < 0)
+          return showToast("error", "Error", "Total tidak boleh minus");
+        if (newTotal === currentQtyOut)
+          return showToast(
+            "info",
+            "Tidak ada perubahan",
+            "Angka sama dengan sebelumnya",
+          );
 
+        const diff = newTotal - currentQtyOut; // Menghitung selisih
         isProcessing = true;
         swalUI.fire({
           title: "Mencatat Riwayat...",
@@ -1349,17 +1422,22 @@ function promptUpdateQtyOut(partNumber, customerName) {
           didOpen: () => Swal.showLoading(),
         });
 
+        let catatanStr =
+          diff > 0
+            ? `Pengiriman Papan Kontrol - Tujuan: ${customerName}`
+            : `Koreksi Batal Kirim - Dari: ${customerName}`;
+
         sendToBackend("apiSaveTransaksiKeluar", {
           partNumber: partNumber,
-          qty: qty,
+          qty: diff, // Mengirimkan selisih (bisa plus bisa minus)
           petugas: currentUser.username,
           customer: customerName,
-          catatan: `Input Cepat Papan Kontrol - Kirim ke: ${customerName}`,
+          catatan: catatanStr,
         }).then((response) => {
           isProcessing = false;
           Swal.close();
           if (response.success) {
-            showToast("success", "Berhasil Terkirim!");
+            showToast("success", "Berhasil Diupdate!");
             refreshAllData();
           } else {
             showToast("error", "Gagal", response.message);
@@ -1434,24 +1512,25 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
       : "";
     const qtyDayClass = isAdmin
-      ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4"
+      ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-colors"
       : "";
     const qtyDayAction = isAdmin
       ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
       : "";
 
+    // QTY/OUT SEKARANG MEMBAWA NILAI currentQty (row.qty_out)
     const qtyOutClass = canEditCust
       ? "cursor-pointer hover:bg-slate-200 hover:text-red-600 underline decoration-dashed underline-offset-4 transition-colors"
       : "";
     const qtyOutAction = canEditCust
-      ? `onclick="promptUpdateQtyOut('${row.Part_Number}', '${row.Customer}')"`
+      ? `onclick="promptUpdateQtyOut('${row.Part_Number}', '${row.Customer}', ${row.qty_out})"`
       : "";
 
     const assyClass = canEditAssy
       ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4 transition-colors"
       : "";
     const assyAction = canEditAssy
-      ? `onclick="promptUpdateAssyFsg('${row.Part_Number}')"`
+      ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
       : "";
 
     let isFirstOfGroup = false;
@@ -1473,10 +1552,10 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
       <td class="py-2 px-3 border-2 border-slate-800 text-left"><div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div><div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div></td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-700 text-base bg-blue-50/50">${formatNum(row.stock)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700 bg-slate-50 ${qtyOutClass}" ${qtyOutAction} title="${canEditCust ? "Klik untuk Input Barang Keluar" : ""}">${formatNum(row.qty_out)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100 ${qtyDayClass}" ${qtyDayAction} title="${isAdmin ? "Klik untuk Ubah Target (QTY/DAY)" : ""}">${formatNum(row.qty_day)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700 bg-slate-50 ${qtyOutClass}" ${qtyOutAction} title="${canEditCust ? "Klik untuk Ubah Total QTY/OUT" : ""}">${formatNum(row.qty_out)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black text-red-600">${formatNum(row.sisa_del)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction} title="${canEditAssy ? "Klik untuk Input Hasil Assy" : ""}">${formatNum(row.assy_fsg)}</td>
+      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50 ${assyClass}" ${assyAction} title="${canEditAssy ? "Klik untuk Ubah Total Assy" : ""}">${formatNum(row.assy_fsg)}</td>
       <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
     </tr>`;
   }
@@ -1929,6 +2008,7 @@ function submitSmartAction(tipeAction) {
       partNumber: activeScannedPart.Part_Number,
       qty: qty,
       mode: "SET",
+      petugas: currentUser.username,
     }).then((res) => {
       isProcessing = false;
       Swal.close();
@@ -2170,6 +2250,7 @@ function renderUsersTable(keyword = "") {
     .join("");
 }
 
+// === PERBAIKAN: FORMAT TAMPILAN TABEL RIWAYAT AGAR LOGIS ===
 function renderRiwayatTable() {
   const tbody = document.getElementById("tblRiwayatBody");
   if (!tbody) return;
@@ -2198,14 +2279,32 @@ function renderRiwayatTable() {
       }),
     );
   logs.sort((a, b) => b.waktu - a.waktu);
+
   tbody.innerHTML =
     logs.length === 0
       ? `<tr><td colspan="6" class="py-6 text-slate-400">Belum ada riwayat.</td></tr>`
       : logs
-          .map(
-            (r) =>
-              `<tr class="hover:bg-yellow-50"><td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-bold">${r.waktu.toLocaleString("id-ID")}</td><td class="py-2 px-2 border-2 border-slate-800 font-black">${r.tipe}</td><td class="py-2 px-3 border-2 border-slate-800 text-left font-black">${r.part}</td><td class="py-2 px-2 border-2 border-slate-800 font-black ${r.tipe === "IN" ? "text-emerald-600" : "text-red-600"}">${r.tipe === "IN" ? "+" : "-"}${r.qty}</td><td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-bold uppercase">${r.petugas || "-"}</td><td class="py-2 px-3 border-2 border-slate-800 text-left text-[10px] font-bold">${r.catatan || "-"}</td></tr>`,
-          )
+          .map((r) => {
+            // Logika Pintar untuk mewarnai dan memberi tanda (+ / -) pada riwayat
+            let isTarget = r.catatan && String(r.catatan).includes("QTY/DAY");
+            let displayQty = r.qty;
+            let color = "text-slate-800";
+
+            if (isTarget) {
+              displayQty = `TARGET`; // Khusus Update Target
+              color = "text-blue-600";
+            } else if (r.tipe === "IN") {
+              // Tipe IN: positif (+ nambah stok), negatif (- koreksi kurang stok)
+              displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
+              color = r.qty > 0 ? "text-emerald-600" : "text-red-500";
+            } else {
+              // Tipe OUT: positif (- barang keluar), negatif (+ koreksi batal keluar)
+              displayQty = r.qty > 0 ? `-${r.qty}` : `+${Math.abs(r.qty)}`;
+              color = r.qty > 0 ? "text-red-500" : "text-emerald-600";
+            }
+
+            return `<tr class="hover:bg-yellow-50"><td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-bold">${r.waktu.toLocaleString("id-ID")}</td><td class="py-2 px-2 border-2 border-slate-800 font-black">${r.tipe}</td><td class="py-2 px-3 border-2 border-slate-800 text-left font-black">${r.part}</td><td class="py-2 px-2 border-2 border-slate-800 font-black ${color}">${displayQty}</td><td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-bold uppercase">${r.petugas || "-"}</td><td class="py-2 px-3 border-2 border-slate-800 text-left text-[10px] font-bold">${r.catatan || "-"}</td></tr>`;
+          })
           .join("");
 }
 
