@@ -1,6 +1,6 @@
 // =========================================================================
 // KONFIGURASI SUPABASE DATABASE (DENGAN RLS CUSTOM HEADER)
-// =========================================================================
+// =================x========================================================
 // ⚠️ GANTI DENGAN URL & KEY SUPABASE MILIK ANDA! ⚠️
 const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
 const SUPABASE_KEY =
