@@ -922,7 +922,7 @@ async function sendToBackend(action, payload = {}) {
 }
 
 // =========================================================================
-// UI & NAVIGASI
+// UI & NAVIGASI (DENGAN AUTO-CLOSE SIDEBAR)
 // =========================================================================
 function startLiveClock() {
   setInterval(() => {
@@ -989,6 +989,9 @@ function switchTab(tabId) {
     updateBatchTrolleyUI();
     setTimeout(() => document.getElementById("manualSmartInput")?.focus(), 100);
   }
+
+  // MENUTUP SIDEBAR OTOMATIS SAAT MENU DIPILIH DI HP
+  closeSidebar();
 }
 
 function applyRbacUI() {
@@ -1229,15 +1232,15 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   swalUI
     .fire({
       title: "ATUR CUSTOMER TUJUAN",
-      html: `<div class="text-left space-y-3"><p class="text-sm">Part Number: <b>${partNumber}</b></p>
-      <div><label class="block text-xs font-bold text-slate-600 mb-1">Customer:</label><select id="swalSelectCust" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500">${optionsHtml}</select></div>
-      <div><label class="block text-xs font-bold text-slate-600 mb-1">Mode:</label>
+      html: `<div class="text-left space-y-3"><p class="text-xs">Part Number: <b>${partNumber}</b></p>
+      <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Customer:</label><select id="swalSelectCust" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500">${optionsHtml}</select></div>
+      <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Mode:</label>
         <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500">
           <option value="UPDATE">Ubah Customer Baris Ini</option><option value="ADD_NEW">+ Tambah Customer Baru (Beli Barang Sama)</option>
           ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Customer Ini</option>` : ""}
         </select>
       </div>
-      <div id="swalWrapQtyBaru" class="hidden"><label class="block text-xs font-bold text-slate-600 mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500" /></div>
+      <div id="swalWrapQtyBaru" class="hidden"><label class="block text-[10px] font-bold text-slate-600 mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500" /></div>
     </div>`,
       showCancelButton: true,
       confirmButtonText: "Simpan",
@@ -1682,7 +1685,7 @@ async function submitBatchTrolley(tipeAction) {
   if (batchTrolley.length === 0)
     return showToast(
       "warning",
-      "Troli Kosong!",
+      "Daftar Kosong!",
       "Silakan scan barang terlebih dahulu.",
     );
   if (isProcessing) return;
@@ -1758,7 +1761,7 @@ async function submitBatchTrolley(tipeAction) {
     refreshAllData();
   } catch (err) {
     Swal.close();
-    showToast("error", "Gagal", err.message);
+    showToast("error", "Gagal Memproses", err.message);
   }
   isProcessing = false;
 }
@@ -1854,7 +1857,7 @@ function processSmartScanCamera(scannedCode) {
   );
 
   if (matchingRows.length === 0) {
-    showToast("error", "Tidak Dikenali", `Part tidak terdaftar di sistem.`);
+    showToast("error", "Tidak Dikenali", `Part tidak terdaftar.`);
     isCameraPaused = true;
     setTimeout(() => {
       isCameraPaused = false;
@@ -1935,8 +1938,8 @@ function submitSmartAction(tipeAction) {
       isProcessing = false;
       return showToast(
         "warning",
-        "Pilih Customer!",
-        "Pilih tujuan pengiriman terlebih dahulu.",
+        "Pilih Customer",
+        "Tentukan tujuan pengiriman.",
       );
     }
     swalUI.fire({
@@ -1956,7 +1959,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Berhasil Keluar!");
+        showToast("success", "Berhasil Keluar");
       } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "IN") {
@@ -1976,7 +1979,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Berhasil Masuk!");
+        showToast("success", "Berhasil Masuk");
       } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "ASSY_ADD") {
@@ -1996,7 +1999,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Assy Ditambahkan!");
+        showToast("success", "Assy Ditambahkan");
       } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "ASSY_SET") {
@@ -2016,7 +2019,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Total Assy Disetel!");
+        showToast("success", "Assy Disetel");
       } else showToast("error", "Gagal", res.message);
     });
   }
@@ -2313,27 +2316,22 @@ function renderRiwayatTable() {
           .map((r) => {
             let isTarget = r.catatan && String(r.catatan).includes("QTY/DAY");
             let displayQty = r.qty;
-            let color = "text-slate-600";
-            let bgTipe = "bg-slate-100 text-slate-600";
+            let color = "text-slate-800";
 
             if (isTarget) {
               displayQty = `TARGET`;
-              color = "text-brand-600";
-              bgTipe = "bg-brand-50 text-brand-600";
+              color = "text-blue-600";
             } else if (r.tipe === "IN") {
               displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
               color = r.qty > 0 ? "text-emerald-600" : "text-red-500";
-              bgTipe =
-                "bg-emerald-50 text-emerald-600 border border-emerald-100";
             } else {
               displayQty = r.qty > 0 ? `-${r.qty}` : `+${Math.abs(r.qty)}`;
               color = r.qty > 0 ? "text-red-500" : "text-emerald-600";
-              bgTipe = "bg-amber-50 text-amber-600 border border-amber-100";
             }
 
             return `<tr class="hover:bg-slate-50 transition-colors">
       <td class="py-3 px-4 border-b border-slate-200 text-xs font-medium text-slate-500">${r.waktu.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
-      <td class="py-3 px-4 border-b border-slate-200"><span class="px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase ${bgTipe}">${isTarget ? "UPDATE" : r.tipe}</span></td>
+      <td class="py-3 px-4 border-b border-slate-200"><span class="px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase bg-slate-100 text-slate-600">${isTarget ? "UPDATE" : r.tipe}</span></td>
       <td class="py-3 px-4 border-b border-slate-200 text-left font-bold text-slate-900">${r.part}</td>
       <td class="py-3 px-4 border-b border-slate-200 text-right font-bold text-base ${color}">${displayQty}</td>
       <td class="py-3 px-4 border-b border-slate-200 text-xs font-semibold uppercase text-slate-600">${r.petugas || "-"}</td>
