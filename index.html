@@ -36,12 +36,10 @@
 
     <!-- Library Pendukung -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- LIBRARY ZXing (Scanner), Supabase, Chart.js, JsBarcode -->
     <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- LIBRARY SHEETJS UNTUK EKSPOR EXCEL -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <link rel="stylesheet" href="style.css" />
@@ -236,8 +234,8 @@
         </div>
       </header>
 
-      <div class="p-4 sm:p-8 space-y-6 flex-1">
-        <!-- TAB PAPAN KONTROL -->
+      <div class="p-4 sm:p-8 space-y-6 flex-1 max-w-[1600px] mx-auto w-full">
+        <!-- TAB PAPAN KONTROL (KEMBALI KE DESAIN NEO-BRUTALISM SESUAI GAMBAR) -->
         <section id="tab-overview" class="tab-pane block space-y-6">
           <div
             class="bg-white p-5 sm:p-7 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -411,7 +409,6 @@
                 >
                   Kamera HP (Popup Satuan) / Gun Scanner (Batch Troli)
                 </p>
-
                 <div
                   id="smartReaderWrapper"
                   class="bg-slate-800 rounded border-4 border-slate-800 p-2 mb-6 hidden relative"
@@ -426,7 +423,6 @@
                     Fokuskan PDF417/QR/Barcode di area ini
                   </p>
                 </div>
-
                 <div class="flex flex-col gap-3">
                   <button
                     id="btnStartScan"
@@ -444,15 +440,14 @@
                   </button>
                 </div>
               </div>
-
               <div class="mt-6 pt-6 border-t-2 border-slate-800">
                 <p class="text-[10px] font-black uppercase mb-1 text-slate-700">
                   <i class="fa-solid fa-barcode mr-1"></i> Mode Gun Scanner
                   (Masuk Daftar Troli)
                 </p>
                 <p class="text-[10px] text-slate-500 font-semibold mb-3">
-                  Tembak semua barang ke sini dulu, lalu isi jumlahnya sekaligus
-                  di tabel samping/bawah.
+                  Tembak semua barang ke sini dulu, lalu isi jumlahnya
+                  sekaligus.
                 </p>
                 <div class="flex gap-2">
                   <input
@@ -494,17 +489,15 @@
                     Reset
                   </button>
                 </div>
-
                 <div
                   id="batchCustWrapper"
                   class="mb-3 bg-yellow-100 p-2.5 rounded border-2 border-slate-800"
                 >
                   <label
                     class="block text-[10px] font-black uppercase text-slate-800 mb-1"
+                    ><i class="fa-solid fa-building mr-1"></i> Pilih Customer
+                    Tujuan Pengiriman:</label
                   >
-                    <i class="fa-solid fa-building mr-1"></i> Pilih Customer
-                    Tujuan Pengiriman:
-                  </label>
                   <select
                     id="batchSelectCustomer"
                     class="w-full bg-white border-2 border-slate-800 rounded px-2.5 py-1.5 font-black text-xs uppercase"
@@ -512,7 +505,6 @@
                     <option value="-">-- Pilih Customer Tujuan --</option>
                   </select>
                 </div>
-
                 <div
                   id="batchTrolleyInlineList"
                   class="space-y-2 max-h-72 overflow-y-auto pr-1"
@@ -524,7 +516,6 @@
                   </div>
                 </div>
               </div>
-
               <div class="pt-4 mt-4 border-t-2 border-slate-800 space-y-2">
                 <p
                   class="text-[10px] font-black uppercase text-center text-slate-500"
@@ -561,7 +552,7 @@
           </div>
         </section>
 
-        <!-- TAB RIWAYAT -->
+        <!-- TAB RIWAYAT TRANSAKSI -->
         <section id="tab-riwayat" class="tab-pane hidden space-y-6">
           <div
             class="bg-white p-6 rounded border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)]"
@@ -580,7 +571,6 @@
                 </p>
               </div>
               <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <!-- TAMBAHAN: INPUT BULAN -->
                 <input
                   type="month"
                   id="filterBulanRiwayat"
@@ -588,7 +578,6 @@
                   class="bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold focus:bg-yellow-100 shadow-[2px_2px_0px_rgba(0,0,0,1)] cursor-pointer"
                   title="Pilih Bulan untuk Ekspor"
                 />
-
                 <select
                   id="filterRiwayat"
                   onchange="renderRiwayatTable()"
@@ -598,7 +587,6 @@
                   <option value="IN">Barang Masuk (IN)</option>
                   <option value="OUT">Barang Keluar (OUT)</option>
                 </select>
-
                 <button
                   onclick="exportToExcel('Riwayat')"
                   class="px-3 py-2 border-2 border-slate-800 bg-emerald-400 font-black text-xs uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,1)] transition-all"
@@ -891,7 +879,6 @@
         >
           <i class="fa-solid fa-xmark"></i>
         </button>
-
         <div
           class="bg-yellow-300 p-5 border-b-4 border-slate-800 pt-8 relative"
         >
@@ -920,7 +907,6 @@
             Nama Barang
           </p>
         </div>
-
         <div
           class="grid grid-cols-3 divide-x-2 divide-slate-800 border-b-4 border-slate-800"
         >
@@ -949,14 +935,13 @@
             </p>
           </div>
         </div>
-
         <div class="p-5 bg-white">
           <div id="wrapperSelectCustomer" class="mb-4 text-left">
             <label
               class="block text-[10px] font-black uppercase text-slate-600 mb-1"
+              ><i class="fa-solid fa-building mr-1"></i> Pilih Customer
+              Tujuan:</label
             >
-              <i class="fa-solid fa-building mr-1"></i> Pilih Customer Tujuan:
-            </label>
             <select
               id="smSelectCustomer"
               onchange="handleChangeScannerCustomer(this.value)"
@@ -965,7 +950,6 @@
               <option value="-">-- Pilih Customer --</option>
             </select>
           </div>
-
           <p class="text-[10px] font-black uppercase text-center mb-3">
             Tentukan Jumlah (Pcs)
           </p>
@@ -989,7 +973,6 @@
               +
             </button>
           </div>
-
           <div id="btnGroupWH" class="flex gap-2 mb-2 hidden">
             <button
               onclick="submitSmartAction('IN')"
@@ -1004,7 +987,6 @@
               <i class="fa-solid fa-truck-fast mb-1 block text-sm"></i> KELUAR
             </button>
           </div>
-
           <div id="btnGroupAssy" class="flex gap-2 hidden">
             <button
               onclick="submitSmartAction('ASSY_ADD')"
@@ -1397,6 +1379,6 @@
 
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=export_per_bulan"></script>
+    <script src="script.js?v=neo_brutalism_logic_update"></script>
   </body>
 </html>
