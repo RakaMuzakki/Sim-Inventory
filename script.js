@@ -1,5 +1,7 @@
-const SUPABASE_URL = "ISI_SUPABASE_URL",
-  SUPABASE_KEY = "ISI_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
+
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   global: { headers: { "x-sim-secret": "KunciGudang2026!" } },
 });
@@ -120,13 +122,11 @@ async function checkAndRunDailyRollover() {
     .select("*")
     .eq("username", "__SYSTEM_ROLLOVER__");
   if (!data || !data.length) {
-    await db
-      .from("Users")
-      .insert({
-        username: "__SYSTEM_ROLLOVER__",
-        password: today,
-        role: "SYSTEM",
-      });
+    await db.from("Users").insert({
+      username: "__SYSTEM_ROLLOVER__",
+      password: today,
+      role: "SYSTEM",
+    });
     return;
   }
   const old = data[0].password;
@@ -352,15 +352,13 @@ const ask = (title, val, txt) =>
     inputValidator: (v) => (v === "" || +v < 0 ? "Isi angka valid" : null),
   });
 const log = (t, pn, qty, note) =>
-  db
-    .from(t)
-    .insert({
-      Part_Number: pn,
-      qty,
-      petugas: user ? user.username : "-",
-      catatan: note,
-      tanggal: new Date().toISOString(),
-    });
+  db.from(t).insert({
+    Part_Number: pn,
+    qty,
+    petugas: user ? user.username : "-",
+    catatan: note,
+    tanggal: new Date().toISOString(),
+  });
 async function promptUpdateAssyFsg(pn) {
   await lock(async () => {
     const b = barang.find((x) => x.Part_Number === pn),
