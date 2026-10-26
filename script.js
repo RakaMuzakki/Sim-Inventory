@@ -1,2935 +1,2903 @@
-/**
- * ============================================================================
- * SIM-INVENTORY — NORDIC WORKSPACE (FULL SPA ENGINE)
- * ============================================================================
- */
-
-// 1. KONFIGURASI SUPABASE & CUSTOM HEADER RLS
+// =========================================================================
+// KONFIGURASI SUPABASE DATABASE (DENGAN RLS CUSTOM HEADER)
+// =========================================================================
+// ⚠️ GANTI DENGAN URL & KEY SUPABASE MILIK ANDA! ⚠️
 const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
 const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY,
-  {
-    global: {
-      headers: {
-        "x-sim-secret": "KunciGudang2026!",
-      },
+const RLS_SECRET = "KunciGudang2026!";
+
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  global: {
+    headers: {
+      "x-sim-secret": RLS_SECRET,
     },
   },
-);
+});
 
-// 2. STATE GLOBAL APLIKASI
-let masterBarangList = [];
-let masterCustomerList = [];
-let listOrderData = [];
-let transaksiMasukList = [];
-let transaksiKeluarList = [];
-let usersList = [];
-
-let currentUser = null; // { username, role }
-let activeTab = "dashboard";
+let currentUser = null;
+let appData = {
+  barang: [],
+  customer: [],
+  orders: [],
+  masuk: [],
+  keluar: [],
+  seatAssyControl: [],
+  users: [],
+};
+let activeScannedPart = null;
 let isProcessing = false;
-let pollingIntervalId = null;
 
-// Anti-Refresh Bulk Delete State
 let selectedForDelete = [];
+let batchTrolley = [];
+let currentEditPart = null;
+let currentEditCustomer = null;
+let currentEditUser = null;
 
-// Smart Scanner & Batch Trolley State
-let scannerMode = "GUN";
-let batchTrolley = []; // Array of { Part_Number, nama_barang, No_Rel, trolleyCount, qtyInput }
-let zxingReader = null;
-let activeScannedItem = null;
+let codeReader = null;
+let isCameraPaused = false;
 
-// Chart.js Instances
-let chartFastMovingInstance = null;
-let chartLowestStockInstance = null;
+let chartFastMoving = null;
+let chartStock = null;
 
-// SweetAlert2 Nordic Mixin (`swalUI`)
+// =========================================================================
+// GAYA VISUAL NORDIC FLAT (TOAST & SWEETALERT PILL THEME)
+// =========================================================================
+const style = document.createElement("style");
+style.innerHTML = `
+  @keyframes toastSlideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes toastSlideUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+  .animate-toast-in { animation: toastSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-toast-out { animation: toastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+`;
+document.head.appendChild(style);
+
+function showToast(type, title, message = "") {
+  let container = document.getElementById("toastContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    container.className =
+      "fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2.5 pointer-events-none w-[90%] max-w-sm";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  let iconColor = "text-emerald-500";
+  let icon = '<i class="fa-solid fa-circle-check text-lg"></i>';
+
+  if (type === "error") {
+    iconColor = "text-red-500";
+    icon = '<i class="fa-solid fa-circle-exclamation text-lg"></i>';
+  } else if (type === "warning") {
+    iconColor = "text-amber-500";
+    icon = '<i class="fa-solid fa-triangle-exclamation text-lg"></i>';
+  } else if (type === "info") {
+    iconColor = "text-gray-900";
+    icon = '<i class="fa-solid fa-circle-info text-lg"></i>';
+  }
+
+  toast.className = `flex items-center gap-3.5 bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.08)] px-5 py-3.5 rounded-full pointer-events-auto animate-toast-in`;
+  toast.innerHTML = `
+    <div class="${iconColor} flex-shrink-0">${icon}</div>
+    <div class="flex-1 min-w-0">
+      <h4 class="font-bold text-xs text-gray-900 truncate">${title}</h4>
+      ${message ? `<p class="text-[11px] font-medium text-gray-400 truncate">${message}</p>` : ""}
+    </div>
+    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 250)" class="text-gray-300 hover:text-gray-600 transition-colors">
+      <i class="fa-solid fa-xmark text-xs"></i>
+    </button>
+  `;
+  container.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.classList.replace("animate-toast-in", "animate-toast-out");
+      setTimeout(() => toast.remove(), 250);
+    }
+  }, 3000);
+}
+
 const swalUI = Swal.mixin({
   customClass: {
-    popup: "nordic-swal-popup",
+    popup: "rounded-3xl shadow-2xl bg-white border border-gray-100 p-6",
+    title: "font-extrabold text-gray-900 text-lg tracking-tight",
+    htmlContainer: "text-xs text-gray-500 font-medium",
     confirmButton:
-      "px-6 py-2.5 rounded-full bg-gray-900 text-white text-xs font-extrabold hover:bg-gray-800 mx-1 transition",
+      "px-6 py-2.5 bg-gray-900 text-white rounded-full font-semibold text-xs hover:bg-black transition-all mx-1.5",
     cancelButton:
-      "px-6 py-2.5 rounded-full bg-gray-100 text-gray-700 text-xs font-extrabold hover:bg-gray-200 mx-1 transition",
-    denyButton:
-      "px-6 py-2.5 rounded-full bg-rose-600 text-white text-xs font-extrabold hover:bg-rose-700 mx-1 transition",
-    input: "nordic-swal-input",
+      "px-6 py-2.5 bg-gray-100 text-gray-600 rounded-full font-semibold text-xs hover:bg-gray-200 transition-all mx-1.5",
+    input:
+      "w-full bg-gray-100/80 focus:bg-white border border-transparent focus:border-gray-300 rounded-2xl px-4 py-3 text-xl font-extrabold text-gray-900 outline-none mt-3 text-center transition-all",
   },
   buttonsStyling: false,
 });
 
-/**
- * ============================================================================
- * INISIALISASI APLIKASI SAAT DOM READY
- * ============================================================================
- */
-document.addEventListener("DOMContentLoaded", async () => {
-  initClockAndMonthDefault();
-  loadSessionUser();
+// =========================================================================
+// PENERJEMAH BARCODE CERDAS (YIMM / PDF417 / KANBAN)
+// =========================================================================
+function parseYimmBarcode(rawCode) {
+  let result = {
+    partNumberClean: rawCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase(),
+    original: rawCode,
+    qty: 1,
+  };
+  if (rawCode.startsWith("[)>")) {
+    let partMatch = rawCode.match(/P([A-Z0-9]+)V/);
+    if (partMatch && partMatch[1]) result.partNumberClean = partMatch[1];
+    else {
+      let fallbackPart = rawCode.match(/P([A-Z0-9]{10,15})/);
+      if (fallbackPart) result.partNumberClean = fallbackPart[1];
+    }
+    let qtyMatch = rawCode.match(/Q(\d{6})/);
+    if (qtyMatch && qtyMatch[1]) result.qty = parseInt(qtyMatch[1], 10);
+    return result;
+  }
+  if (rawCode.includes("|")) {
+    let segment1 = rawCode.split("|")[0];
+    let parts = segment1.split("-");
+    if (parts.length > 1) {
+      let possibleQty = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(possibleQty)) {
+        result.qty = possibleQty;
+        parts.pop();
+      }
+      result.partNumberClean = parts
+        .join("")
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .toUpperCase();
+    } else {
+      result.partNumberClean = segment1
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .toUpperCase();
+    }
+  }
+  return result;
+}
+
+// =========================================================================
+// LOGIKA ROLLOVER JAM 08:00 PAGI
+// =========================================================================
+function getOperationalDayInfo() {
+  const now = new Date();
+  const opStart = new Date(now);
+  opStart.setHours(8, 0, 0, 0);
+  if (now < opStart) {
+    opStart.setDate(opStart.getDate() - 1);
+  }
+  const yyyy = opStart.getFullYear();
+  const mm = String(opStart.getMonth() + 1).padStart(2, "0");
+  const dd = String(opStart.getDate()).padStart(2, "0");
+  return { opKey: `${yyyy}-${mm}-${dd}`, opStart };
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  startLiveClock();
+  const savedUser = sessionStorage.getItem("sim_inventory_user");
+  if (savedUser) currentUser = JSON.parse(savedUser);
   applyRbacUI();
-  setupGunScannerListener();
+  loadInitialOrMockData();
 
-  await fetchAllDatabaseData(false);
-  await checkAndRunDailyRollover();
+  setInterval(() => {
+    const overviewTab = document.getElementById("tab-overview");
+    const riwayatTab = document.getElementById("tab-riwayat");
+    const analitikTab = document.getElementById("tab-analitik");
+    const barangTab = document.getElementById("tab-barang");
+    const custTab = document.getElementById("tab-customer");
+    const usersTab = document.getElementById("tab-users");
 
-  // Live Andon Polling setiap 3000ms (3 detik)
-  pollingIntervalId = setInterval(async () => {
-    if (!document.hidden && !isProcessing) {
-      await fetchAllDatabaseData(true);
+    if (isProcessing) return;
+
+    if (
+      (overviewTab && !overviewTab.classList.contains("hidden")) ||
+      (riwayatTab && !riwayatTab.classList.contains("hidden")) ||
+      (analitikTab && !analitikTab.classList.contains("hidden")) ||
+      (barangTab && !barangTab.classList.contains("hidden")) ||
+      (custTab && !custTab.classList.contains("hidden")) ||
+      (usersTab && !usersTab.classList.contains("hidden"))
+    ) {
+      sendToBackend("apiGetMasterData").then(async (res) => {
+        if (res && res.success) {
+          appData.barang = res.barang || [];
+          appData.customer = res.customer || [];
+          appData.orders = res.orders || [];
+          appData.masuk = res.masuk || [];
+          appData.keluar = res.keluar || [];
+          appData.users = res.users || [];
+          await checkAndRunDailyRollover();
+          buildSeatAssyControlDataset();
+          refreshAllUI();
+        }
+      });
     }
   }, 3000);
 });
 
-/**
- * ============================================================================
- * UTILITAS WAKTU OPERASIONAL (ROLLOVER JAM 08:00 PAGI) & TOAST
- * ============================================================================
- */
-function getOperationalDateInfo() {
-  const now = new Date();
-  const opDate = new Date(now);
-  // Hari operasional dimulai jam 08:00 pagi. Jika sebelum 08:00, ikut tanggal kemarin.
-  if (now.getHours() < 8) {
-    opDate.setDate(opDate.getDate() - 1);
-  }
-  const yyyy = opDate.getFullYear();
-  const mm = String(opDate.getMonth() + 1).padStart(2, "0");
-  const dd = String(opDate.getDate()).padStart(2, "0");
-  const dateString = `${yyyy}-${mm}-${dd}`;
-
-  const startTime = new Date(`${dateString}T08:00:00`);
-  return { dateString, startTime };
-}
-
-function initClockAndMonthDefault() {
-  const updateClock = () => {
-    const now = new Date();
-    const clockEl = document.getElementById("liveClockDisplay");
-    if (clockEl) {
-      clockEl.textContent =
-        now.toLocaleTimeString("id-ID", { hour12: false }) + " WIB";
-    }
-    const { dateString } = getOperationalDateInfo();
-    const badgeEl = document.getElementById("operationalDateBadge");
-    if (badgeEl) {
-      badgeEl.textContent = dateString;
-    }
-  };
-  updateClock();
-  setInterval(updateClock, 1000);
-
-  const monthInput = document.getElementById("filterBulanRiwayat");
-  if (monthInput) {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    monthInput.value = `${yyyy}-${mm}`;
-  }
-}
-
-function showToast(type, title, message) {
-  const container = document.getElementById("toastContainer");
-  if (!container) return;
-
-  const iconMap = {
-    success:
-      '<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>',
-    error: '<i class="fa-solid fa-circle-xmark text-rose-400 text-base"></i>',
-    warning:
-      '<i class="fa-solid fa-triangle-exclamation text-amber-400 text-base"></i>',
-    info: '<i class="fa-solid fa-circle-info text-sky-400 text-base"></i>',
-  };
-
-  const pill = document.createElement("div");
-  pill.className =
-    "pointer-events-auto flex items-center gap-3 px-5 py-3 rounded-full bg-gray-900 text-white shadow-xl border border-gray-800 transform transition-all duration-300 -translate-y-4 opacity-0";
-  pill.innerHTML = `
-    ${iconMap[type] || iconMap.info}
-    <div class="text-left">
-      <p class="text-xs font-extrabold leading-tight">${escapeHtml(title)}</p>
-      <p class="text-[11px] font-medium text-gray-300 leading-tight">${escapeHtml(message)}</p>
-    </div>
-  `;
-
-  container.appendChild(pill);
-  requestAnimationFrame(() => {
-    pill.classList.remove("-translate-y-4", "opacity-0");
-    pill.classList.add("translate-y-0", "opacity-100");
-  });
-
-  setTimeout(() => {
-    pill.classList.remove("translate-y-0", "opacity-100");
-    pill.classList.add("-translate-y-4", "opacity-0");
-    setTimeout(() => pill.remove(), 300);
-  }, 3200);
-}
-
-function escapeHtml(str) {
-  if (str === null || str === undefined) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function cleanAlphanumeric(str) {
-  return String(str || "")
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .toUpperCase();
-}
-
-/**
- * ============================================================================
- * SINKRONISASI DATA SUPABASE & FALLBACK LOCALSTORAGE MULTI-CUSTOMER
- * ============================================================================
- */
-function getLocalOrderFallback() {
-  try {
-    const raw = localStorage.getItem("sim_inventory_list_order_fallback");
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveLocalOrderFallback(orders) {
-  try {
-    localStorage.setItem(
-      "sim_inventory_list_order_fallback",
-      JSON.stringify(orders),
-    );
-  } catch (e) {
-    // Abaikan jika storage penuh
-  }
-}
-
-async function fetchAllDatabaseData(silent = true) {
-  if (!silent) {
-    const spinner = document.getElementById("refreshSpinnerIcon");
-    if (spinner) spinner.classList.add("fa-spin");
-  }
-
-  try {
-    const [resBarang, resCustomer, resOrder, resMasuk, resKeluar, resUsers] =
-      await Promise.all([
-        supabaseClient.from("Master_Barang").select("*"),
-        supabaseClient.from("Master_Customer").select("*"),
-        supabaseClient.from("List_Order").select("*"),
-        supabaseClient
-          .from("Transaksi_Masuk")
-          .select("*")
-          .order("tanggal", { ascending: false })
-          .limit(1000),
-        supabaseClient
-          .from("Transaksi_Keluar")
-          .select("*")
-          .order("tanggal", { ascending: false })
-          .limit(1000),
-        supabaseClient.from("Users").select("*"),
-      ]);
-
-    if (!resBarang.error && resBarang.data) masterBarangList = resBarang.data;
-    if (!resCustomer.error && resCustomer.data)
-      masterCustomerList = resCustomer.data;
-
-    if (!resOrder.error && resOrder.data && resOrder.data.length > 0) {
-      listOrderData = resOrder.data;
-      saveLocalOrderFallback(listOrderData);
-    } else if (resOrder.data && resOrder.data.length === 0) {
-      listOrderData = getLocalOrderFallback();
-    }
-
-    if (!resMasuk.error && resMasuk.data) transaksiMasukList = resMasuk.data;
-    if (!resKeluar.error && resKeluar.data)
-      transaksiKeluarList = resKeluar.data;
-    if (!resUsers.error && resUsers.data) usersList = resUsers.data;
-
-    populateCustomerDropdowns();
-    renderAllActiveViews();
-  } catch (err) {
-    if (!silent) {
-      showToast(
-        "error",
-        "Koneksi Database",
-        "Gagal memuat data terbaru dari Supabase.",
-      );
-    }
-  } finally {
-    if (!silent) {
-      const spinner = document.getElementById("refreshSpinnerIcon");
-      if (spinner) spinner.classList.remove("fa-spin");
-    }
-  }
-}
-
-async function manualRefreshData() {
-  await fetchAllDatabaseData(false);
-  showToast(
-    "info",
-    "Sinkronisasi Selesai",
-    "Data Papan Kontrol telah diperbarui.",
-  );
-}
-
-function renderAllActiveViews() {
-  renderDashboardTable();
-  if (activeTab === "analytics") renderAnalyticsCharts();
-  if (activeTab === "history") renderHistoryTable();
-  if (activeTab === "master-barang") renderMasterBarangTable();
-  if (activeTab === "master-customer") renderMasterCustomerTable();
-  if (activeTab === "users") renderUsersTable();
-}
-
-/**
- * ============================================================================
- * LOGIKA AUTO-ROLLOVER JAM 08:00 PAGI (`checkAndRunDailyRollover`)
- * ============================================================================
- */
 async function checkAndRunDailyRollover() {
-  const { dateString } = getOperationalDateInfo();
+  if (isProcessing || !appData.barang || appData.barang.length === 0) return;
+  const { opKey } = getOperationalDayInfo();
+  const markerUser = (appData.users || []).find(
+    (u) => u.username === "__SYSTEM_ROLLOVER__",
+  );
 
-  try {
-    const { data: sysRow, error } = await supabaseClient
+  if (!markerUser) {
+    await _supabase
       .from("Users")
-      .select("*")
-      .eq("username", "__SYSTEM_ROLLOVER__")
-      .maybeSingle();
+      .insert([
+        { username: "__SYSTEM_ROLLOVER__", password: opKey, role: "SYSTEM" },
+      ]);
+    appData.users.push({
+      username: "__SYSTEM_ROLLOVER__",
+      password: opKey,
+      role: "SYSTEM",
+    });
+    return;
+  }
 
-    if (error) return;
+  if (markerUser.password !== opKey) {
+    isProcessing = true;
+    try {
+      await _supabase
+        .from("Users")
+        .update({ password: opKey })
+        .eq("username", "__SYSTEM_ROLLOVER__");
+      markerUser.password = opKey;
 
-    if (!sysRow) {
-      // Inisialisasi baris penanda tanggal operasional pertama kali
-      await supabaseClient.from("Users").insert({
-        username: "__SYSTEM_ROLLOVER__",
-        password: dateString,
-        role: "SYSTEM",
-      });
-      return;
-    }
-
-    // Jika tanggal operasional saat ini berbeda dengan yang tercatat di __SYSTEM_ROLLOVER__
-    if (sysRow.password !== dateString) {
-      isProcessing = true;
-      showToast(
-        "info",
-        "Auto-Rollover 08:00",
-        `Memproses tutup buku harian ke tanggal ${dateString}...`,
-      );
-
-      for (const item of masterBarangList) {
-        const partOrders = getOrdersForPart(item.Part_Number);
-        const totalQtyDay = partOrders.reduce(
-          (acc, o) => acc + (Number(o.qty_order) || 0),
+      for (const itemBarang of appData.barang) {
+        const partNum = String(itemBarang.Part_Number).trim();
+        const relatedOrders = appData.orders.filter(
+          (o) => String(o.Part_Number).trim() === partNum,
+        );
+        const totalQtyDay = relatedOrders.reduce(
+          (sum, o) => sum + (Number(o.qty_order) || 0),
           0,
         );
-        const currentStok = Number(item.stok) || 0;
-        const currentAssy = Number(item.assy_fsg) || 0;
+        const currentStock = Number(itemBarang.stok) || 0;
+        const assyFsg = Number(itemBarang.assy_fsg) || 0;
+        const newOpeningStock = currentStock + assyFsg - totalQtyDay;
 
-        const newOpeningStock = currentStok + currentAssy - totalQtyDay;
-
-        await supabaseClient
+        await _supabase
           .from("Master_Barang")
-          .update({
-            stok: newOpeningStock,
-            assy_fsg: 0,
-          })
-          .eq("Part_Number", item.Part_Number);
+          .update({ stok: newOpeningStock, assy_fsg: 0 })
+          .eq("Part_Number", itemBarang.Part_Number);
+        itemBarang.stok = newOpeningStock;
+        itemBarang.assy_fsg = 0;
       }
-
-      await supabaseClient
-        .from("Users")
-        .update({ password: dateString })
-        .eq("username", "__SYSTEM_ROLLOVER__");
-
-      await fetchAllDatabaseData(true);
-      showToast(
-        "success",
-        "Rollover Selesai",
-        "Stok awal telah diperbarui dan Assy FSG di-reset ke 0.",
-      );
+    } catch (e) {
+      console.error("Rollover error:", e);
     }
-  } catch (err) {
-    console.error("Rollover error:", err);
-  } finally {
     isProcessing = false;
   }
 }
 
-/**
- * ============================================================================
- * OTENTIKASI & HAK AKSES (RBAC)
- * ============================================================================
- */
-function loadSessionUser() {
-  try {
-    const saved = sessionStorage.getItem("sim_inventory_user");
-    if (saved) {
-      currentUser = JSON.parse(saved);
+// =========================================================================
+// HELPER MULTI-CUSTOMER
+// =========================================================================
+function resolveCustomerDisplay(custCode) {
+  if (
+    !custCode ||
+    custCode === "-" ||
+    String(custCode) === "undefined" ||
+    String(custCode) === "null"
+  )
+    return "-";
+  const cleanCode = String(custCode).trim();
+  const found = (appData.customer || []).find(
+    (c) =>
+      String(c.id_customer).trim().toLowerCase() === cleanCode.toLowerCase() ||
+      String(c.nama_customer).trim().toLowerCase() === cleanCode.toLowerCase(),
+  );
+  return found ? found.nama_customer || found.id_customer : cleanCode;
+}
+
+function extractCustomerFromCatatan(catatan) {
+  if (!catatan) return null;
+  const match = String(catatan).match(
+    /Kirim ke:\s*(.+?)(?:\s*\(\d+\s*Troli\))?$/i,
+  );
+  if (match && match[1]) {
+    const raw = match[1].trim();
+    if (raw && raw !== "-" && raw.toLowerCase() !== "undefined") {
+      return resolveCustomerDisplay(raw);
     }
+  }
+  const matchManual = String(catatan).match(
+    /(?:Kirim ke|Dari|Tujuan):\s*(.+)$/i,
+  );
+  if (matchManual && matchManual[1]) {
+    const raw = matchManual[1].trim();
+    if (raw && raw !== "-" && raw.toLowerCase() !== "undefined") {
+      return resolveCustomerDisplay(raw);
+    }
+  }
+  return null;
+}
+
+function getLocalMultiCustMap(partNum) {
+  try {
+    const raw = localStorage.getItem("multi_cust_orders_" + partNum);
+    return raw ? JSON.parse(raw) : {};
   } catch (e) {
-    currentUser = null;
+    return {};
   }
 }
-
-function applyRbacUI() {
-  const role = currentUser ? currentUser.role : "Guest";
-  const username = currentUser ? currentUser.username : "Mode Tamu";
-
-  const avatarEl = document.getElementById("userAvatarBadge");
-  const nameEl = document.getElementById("sidebarUserName");
-  const roleEl = document.getElementById("sidebarUserRole");
-  const btnAuth = document.getElementById("btnSidebarAuth");
-
-  if (avatarEl) avatarEl.textContent = username.charAt(0).toUpperCase();
-  if (nameEl) nameEl.textContent = username;
-  if (roleEl) roleEl.textContent = role === "Guest" ? "Read-Only" : role;
-
-  if (btnAuth) {
-    if (currentUser) {
-      btnAuth.innerHTML =
-        '<i class="fa-solid fa-right-from-bracket"></i><span>Keluar Sesi</span>';
-      btnAuth.className =
-        "w-full py-2.5 px-4 rounded-full bg-rose-50 text-rose-600 text-xs font-extrabold hover:bg-rose-100 transition flex items-center justify-center gap-2";
-      btnAuth.onclick = logoutSession;
-    } else {
-      btnAuth.innerHTML =
-        '<i class="fa-solid fa-right-to-bracket"></i><span>Masuk Akun</span>';
-      btnAuth.className =
-        "w-full py-2.5 px-4 rounded-full bg-gray-900 text-white text-xs font-extrabold hover:bg-gray-800 transition flex items-center justify-center gap-2";
-      btnAuth.onclick = openLoginModal;
-    }
-  }
-
-  const secOperasional = document.getElementById("sectionOperasional");
-  const secMaster = document.getElementById("sectionMasterData");
-
-  if (role === "Guest") {
-    secOperasional.classList.add("hidden");
-    secMaster.classList.add("hidden");
-    if (activeTab !== "dashboard" && activeTab !== "analytics") {
-      switchTab("dashboard");
-    }
-  } else if (role === "Warehouse" || role === "Produksi") {
-    secOperasional.classList.remove("hidden");
-    secMaster.classList.add("hidden");
-    if (["master-barang", "master-customer", "users"].includes(activeTab)) {
-      switchTab("dashboard");
-    }
-  } else if (role === "Admin") {
-    secOperasional.classList.remove("hidden");
-    secMaster.classList.remove("hidden");
-  }
-
-  // Visibilitas tombol pada Smart Scanner (Gun Batch & Camera Modal)
-  const btnBatchIn = document.getElementById("btnBatchIn");
-  const btnBatchOut = document.getElementById("btnBatchOut");
-  const btnBatchAssy = document.getElementById("btnBatchAssy");
-
-  const btnSmartIn = document.getElementById("btnSmartModalIn");
-  const btnSmartOut = document.getElementById("btnSmartModalOut");
-  const btnSmartAssy = document.getElementById("btnSmartModalAssy");
-  const smartCustWrap = document.getElementById("smartModalCustomerWrap");
-
-  if (role === "Admin") {
-    btnBatchIn?.classList.remove("hidden");
-    btnBatchOut?.classList.remove("hidden");
-    btnBatchAssy?.classList.remove("hidden");
-    btnSmartIn?.classList.remove("hidden");
-    btnSmartOut?.classList.remove("hidden");
-    btnSmartAssy?.classList.remove("hidden");
-    smartCustWrap?.classList.remove("hidden");
-  } else if (role === "Warehouse") {
-    btnBatchIn?.classList.remove("hidden");
-    btnBatchOut?.classList.remove("hidden");
-    btnBatchAssy?.classList.add("hidden");
-    btnSmartIn?.classList.remove("hidden");
-    btnSmartOut?.classList.remove("hidden");
-    btnSmartAssy?.classList.add("hidden");
-    smartCustWrap?.classList.remove("hidden");
-  } else if (role === "Produksi") {
-    btnBatchIn?.classList.add("hidden");
-    btnBatchOut?.classList.add("hidden");
-    btnBatchAssy?.classList.remove("hidden");
-    btnSmartIn?.classList.add("hidden");
-    btnSmartOut?.classList.add("hidden");
-    btnSmartAssy?.classList.remove("hidden");
-    smartCustWrap?.classList.add("hidden");
-  }
-
-  renderDashboardTable();
+function saveLocalMultiCustTarget(partNum, customerName, qtyOrder) {
+  const cName = resolveCustomerDisplay(customerName);
+  if (!cName || cName === "-") return;
+  const map = getLocalMultiCustMap(partNum);
+  if (qtyOrder !== undefined && qtyOrder !== null)
+    map[cName] = Number(qtyOrder) || 0;
+  else if (map[cName] === undefined) map[cName] = 0;
+  localStorage.setItem("multi_cust_orders_" + partNum, JSON.stringify(map));
+}
+function removeLocalMultiCustTarget(partNum, customerName) {
+  const cName = resolveCustomerDisplay(customerName);
+  const map = getLocalMultiCustMap(partNum);
+  delete map[cName];
+  localStorage.setItem("multi_cust_orders_" + partNum, JSON.stringify(map));
 }
 
-async function openLoginModal() {
-  const { value: formValues } = await swalUI.fire({
-    title: "Masuk SIM-INVENTORY",
-    html: `
-      <div class="space-y-3 text-left mt-3">
-        <div>
-          <label class="block text-[11px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Username</label>
-          <input id="swalLoginUser" type="text" placeholder="Masukkan username..." class="w-full px-4 py-3 rounded-full bg-gray-50 border border-gray-200 text-sm font-bold text-gray-900 focus:outline-none focus:border-gray-900">
-        </div>
-        <div>
-          <label class="block text-[11px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">Password</label>
-          <input id="swalLoginPass" type="password" placeholder="Masukkan password..." class="w-full px-4 py-3 rounded-full bg-gray-50 border border-gray-200 text-sm font-bold text-gray-900 focus:outline-none focus:border-gray-900">
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: "Masuk Sekarang",
-    cancelButtonText: "Batal",
-    preConfirm: () => {
-      const u = document.getElementById("swalLoginUser").value.trim();
-      const p = document.getElementById("swalLoginPass").value.trim();
-      if (!u || !p) {
-        Swal.showValidationMessage("Username dan Password wajib diisi");
-        return false;
-      }
-      return { username: u, password: p };
-    },
-  });
-
-  if (!formValues) return;
-
-  isProcessing = true;
+// =========================================================================
+// CORE ENGINE: KOMUNIKASI KE SUPABASE
+// =========================================================================
+async function sendToBackend(action, payload = {}) {
   try {
-    const { data: allUsers } = await supabaseClient.from("Users").select("*");
-    const realUsers = (allUsers || []).filter(
-      (u) => u.username !== "__SYSTEM_ROLLOVER__" && u.role !== "SYSTEM",
-    );
+    switch (action) {
+      case "apiGetMasterData":
+        const [resB, resC, resO, resM, resK, resU] = await Promise.all([
+          _supabase.from("Master_Barang").select("*"),
+          _supabase.from("Master_Customer").select("*"),
+          _supabase.from("List_Order").select("*"),
+          _supabase.from("Transaksi_Masuk").select("*"),
+          _supabase.from("Transaksi_Keluar").select("*"),
+          _supabase.from("Users").select("*"),
+        ]);
+        if (resB.error)
+          throw new Error("Tabel Master_Barang error: " + resB.error.message);
+        if (resO.error)
+          throw new Error("Tabel List_Order error: " + resO.error.message);
+        if (resM.error)
+          throw new Error("Tabel Transaksi_Masuk error: " + resM.error.message);
+        if (resK.error)
+          throw new Error(
+            "Tabel Transaksi_Keluar error: " + resK.error.message,
+          );
+        return {
+          success: true,
+          barang: resB.data,
+          customer: resC.data,
+          orders: resO.data,
+          masuk: resM.data,
+          keluar: resK.data,
+          users: resU.data,
+        };
 
-    // Auto-create admin/admin jika tabel Users belum memiliki akun sama sekali
-    if (
-      realUsers.length === 0 &&
-      formValues.username.toLowerCase() === "admin"
-    ) {
-      const newAdmin = {
-        username: "admin",
-        password: formValues.password,
-        role: "Admin",
-      };
-      await supabaseClient.from("Users").insert(newAdmin);
-      currentUser = { username: "admin", role: "Admin" };
-      sessionStorage.setItem("sim_inventory_user", JSON.stringify(currentUser));
-      await fetchAllDatabaseData(true);
-      applyRbacUI();
-      showToast(
-        "success",
-        "Inisialisasi Admin",
-        "Akun Admin perdana berhasil dibuat dan masuk.",
-      );
-      return;
+      case "apiLogin":
+        const { data: cekUsers, error: errCek } = await _supabase
+          .from("Users")
+          .select("*");
+        if (errCek) throw new Error("Gagal baca Users: " + errCek.message);
+        const realUsers = (cekUsers || []).filter(
+          (u) => u.username !== "__SYSTEM_ROLLOVER__",
+        );
+        if (realUsers.length === 0 && payload.username === "admin") {
+          const { error: errIns } = await _supabase
+            .from("Users")
+            .insert([{ username: "admin", password: "admin", role: "Admin" }]);
+          if (errIns) throw new Error(errIns.message);
+          return { success: true, user: { username: "admin", role: "Admin" } };
+        }
+        const { data: loginData } = await _supabase
+          .from("Users")
+          .select("*")
+          .eq("username", payload.username)
+          .eq("password", payload.password);
+        if (
+          loginData &&
+          loginData.length > 0 &&
+          loginData[0].username !== "__SYSTEM_ROLLOVER__"
+        ) {
+          return { success: true, user: loginData[0] };
+        }
+        return { success: false, message: "Username atau password salah!" };
+
+      case "apiSaveTransaksiKeluar":
+        if (payload.customer && payload.customer !== "-") {
+          const cleanCust = resolveCustomerDisplay(payload.customer);
+          saveLocalMultiCustTarget(payload.partNumber, cleanCust);
+          const { data: checkOrd } = await _supabase
+            .from("List_Order")
+            .select("*")
+            .eq("Part_Number", payload.partNumber);
+          const existingSameCust = (checkOrd || []).find(
+            (o) =>
+              resolveCustomerDisplay(o.id_customer).toLowerCase() ===
+              cleanCust.toLowerCase(),
+          );
+
+          if (!existingSameCust) {
+            const emptySlot = (checkOrd || []).find(
+              (o) =>
+                !o.id_customer ||
+                o.id_customer === "-" ||
+                o.id_customer === "undefined",
+            );
+            if (emptySlot && emptySlot.id !== undefined) {
+              await _supabase
+                .from("List_Order")
+                .update({ id_customer: cleanCust })
+                .eq("id", emptySlot.id);
+            } else {
+              await _supabase.from("List_Order").insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty_order: 0,
+                  id_customer: cleanCust,
+                },
+              ]);
+            }
+          }
+        }
+        await _supabase.from("Transaksi_Keluar").insert([
+          {
+            Part_Number: payload.partNumber,
+            qty: payload.qty,
+            petugas: payload.petugas,
+            catatan: payload.catatan,
+            tanggal: new Date().toISOString(),
+          },
+        ]);
+        return { success: true };
+
+      case "apiSaveTransaksiMasuk":
+        const { data: bIn } = await _supabase
+          .from("Master_Barang")
+          .select("stok")
+          .eq("Part_Number", payload.partNumber)
+          .single();
+        const newStokIn = (Number(bIn?.stok) || 0) + Number(payload.qty);
+        await _supabase
+          .from("Master_Barang")
+          .update({ stok: newStokIn })
+          .eq("Part_Number", payload.partNumber);
+        await _supabase.from("Transaksi_Masuk").insert([
+          {
+            Part_Number: payload.partNumber,
+            qty: payload.qty,
+            petugas: payload.petugas,
+            catatan: payload.catatan,
+            tanggal: new Date().toISOString(),
+          },
+        ]);
+        return { success: true };
+
+      case "apiUpdateAssyFsg":
+        const { data: bAssy, error: errAssy } = await _supabase
+          .from("Master_Barang")
+          .select("assy_fsg")
+          .eq("Part_Number", payload.partNumber)
+          .single();
+        if (errAssy) throw new Error(errAssy.message);
+
+        const currentAssy = Number(bAssy?.assy_fsg) || 0;
+        let finalAssy = currentAssy;
+        let diff = 0;
+
+        if (payload.mode === "ADD") {
+          diff = Number(payload.qty);
+          finalAssy = currentAssy + diff;
+        } else if (payload.mode === "SET") {
+          finalAssy = Number(payload.qty);
+          diff = finalAssy - currentAssy;
+        }
+
+        await _supabase
+          .from("Master_Barang")
+          .update({ assy_fsg: finalAssy })
+          .eq("Part_Number", payload.partNumber);
+
+        if (diff !== 0 && payload.petugas) {
+          if (diff > 0) {
+            await _supabase.from("Transaksi_Masuk").insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: diff,
+                petugas: payload.petugas,
+                catatan: "Masuk Gudang FSG (Hasil Assy)",
+                tanggal: new Date().toISOString(),
+              },
+            ]);
+          } else if (diff < 0) {
+            await _supabase.from("Transaksi_Masuk").insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: diff,
+                petugas: payload.petugas,
+                catatan: "Koreksi Pengurangan Stok Assy",
+                tanggal: new Date().toISOString(),
+              },
+            ]);
+          }
+        }
+        return { success: true };
+
+      case "apiUpdateQtyDay":
+        const custTarget = resolveCustomerDisplay(payload.customer);
+        if (custTarget && custTarget !== "-")
+          saveLocalMultiCustTarget(payload.partNumber, custTarget, payload.qty);
+        const { data: checkO } = await _supabase
+          .from("List_Order")
+          .select("*")
+          .eq("Part_Number", payload.partNumber);
+
+        const matchedOrder = (checkO || []).find(
+          (o) =>
+            resolveCustomerDisplay(o.id_customer).toLowerCase() ===
+            custTarget.toLowerCase(),
+        );
+        if (matchedOrder) {
+          if (matchedOrder.id !== undefined)
+            await _supabase
+              .from("List_Order")
+              .update({ qty_order: payload.qty })
+              .eq("id", matchedOrder.id);
+          else
+            await _supabase
+              .from("List_Order")
+              .update({ qty_order: payload.qty })
+              .eq("Part_Number", payload.partNumber)
+              .eq("id_customer", matchedOrder.id_customer);
+        } else if (
+          checkO &&
+          checkO.length === 1 &&
+          (!checkO[0].id_customer || checkO[0].id_customer === "-")
+        ) {
+          if (checkO[0].id !== undefined)
+            await _supabase
+              .from("List_Order")
+              .update({
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              })
+              .eq("id", checkO[0].id);
+          else
+            await _supabase
+              .from("List_Order")
+              .update({ qty_order: payload.qty })
+              .eq("Part_Number", payload.partNumber);
+        } else {
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: payload.qty,
+              id_customer: custTarget !== "-" ? custTarget : null,
+            },
+          ]);
+        }
+
+        if (payload.petugas) {
+          await _supabase.from("Transaksi_Masuk").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: 0,
+              petugas: payload.petugas,
+              catatan: `Set Target QTY/DAY menjadi ${payload.qty} Pcs (${custTarget})`,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
+        }
+        return { success: true };
+
+      case "apiUpdateCustomerPart":
+        const { data: checkOCust } = await _supabase
+          .from("List_Order")
+          .select("*")
+          .eq("Part_Number", payload.partNumber);
+        const newCustClean = resolveCustomerDisplay(payload.customer);
+        const oldCustClean = resolveCustomerDisplay(payload.oldCustomer);
+
+        if (payload.mode === "ADD_NEW") {
+          saveLocalMultiCustTarget(
+            payload.partNumber,
+            newCustClean,
+            Number(payload.qtyOrder) || 0,
+          );
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: Number(payload.qtyOrder) || 0,
+              id_customer: newCustClean,
+            },
+          ]);
+          return { success: true };
+        }
+
+        if (payload.mode === "DELETE_ROW") {
+          removeLocalMultiCustTarget(payload.partNumber, oldCustClean);
+          const rowToDelete = (checkOCust || []).find(
+            (o) =>
+              resolveCustomerDisplay(o.id_customer).toLowerCase() ===
+              oldCustClean.toLowerCase(),
+          );
+          if (rowToDelete && rowToDelete.id !== undefined)
+            await _supabase
+              .from("List_Order")
+              .delete()
+              .eq("id", rowToDelete.id);
+          return { success: true };
+        }
+
+        const oldMap = getLocalMultiCustMap(payload.partNumber);
+        const prevQty = oldMap[oldCustClean] || 0;
+        removeLocalMultiCustTarget(payload.partNumber, oldCustClean);
+        if (newCustClean !== "-")
+          saveLocalMultiCustTarget(payload.partNumber, newCustClean, prevQty);
+
+        if (checkOCust && checkOCust.length > 0) {
+          const targetRow =
+            checkOCust.find(
+              (o) =>
+                resolveCustomerDisplay(o.id_customer).toLowerCase() ===
+                oldCustClean.toLowerCase(),
+            ) || checkOCust[0];
+          if (targetRow.id !== undefined)
+            await _supabase
+              .from("List_Order")
+              .update({ id_customer: newCustClean })
+              .eq("id", targetRow.id);
+          else
+            await _supabase
+              .from("List_Order")
+              .update({ id_customer: newCustClean })
+              .eq("Part_Number", payload.partNumber);
+        } else {
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: 0,
+              id_customer: newCustClean,
+            },
+          ]);
+        }
+        localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
+        return { success: true };
+
+      case "apiSaveBarang":
+        if (payload.isEdit) {
+          if (payload.item.Part_Number !== payload.oldPartNumber) {
+            const { data: checkB } = await _supabase
+              .from("Master_Barang")
+              .select("Part_Number")
+              .eq("Part_Number", payload.item.Part_Number);
+            if (checkB && checkB.length > 0)
+              throw new Error("Part Number baru sudah dipakai barang lain!");
+          }
+
+          const { error: errUpd } = await _supabase
+            .from("Master_Barang")
+            .update(payload.item)
+            .eq("Part_Number", payload.oldPartNumber);
+          if (errUpd) throw new Error(errUpd.message);
+
+          if (payload.item.Part_Number !== payload.oldPartNumber) {
+            await _supabase
+              .from("List_Order")
+              .update({ Part_Number: payload.item.Part_Number })
+              .eq("Part_Number", payload.oldPartNumber);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .update({ Part_Number: payload.item.Part_Number })
+              .eq("Part_Number", payload.oldPartNumber);
+            await _supabase
+              .from("Transaksi_Keluar")
+              .update({ Part_Number: payload.item.Part_Number })
+              .eq("Part_Number", payload.oldPartNumber);
+
+            let oldMapLS = localStorage.getItem(
+              "multi_cust_orders_" + payload.oldPartNumber,
+            );
+            if (oldMapLS) {
+              localStorage.setItem(
+                "multi_cust_orders_" + payload.item.Part_Number,
+                oldMapLS,
+              );
+              localStorage.removeItem(
+                "multi_cust_orders_" + payload.oldPartNumber,
+              );
+            }
+            let custMapLS = localStorage.getItem(
+              "cust_map_" + payload.oldPartNumber,
+            );
+            if (custMapLS) {
+              localStorage.setItem(
+                "cust_map_" + payload.item.Part_Number,
+                custMapLS,
+              );
+              localStorage.removeItem("cust_map_" + payload.oldPartNumber);
+            }
+          }
+        } else {
+          const { data: checkB } = await _supabase
+            .from("Master_Barang")
+            .select("Part_Number")
+            .eq("Part_Number", payload.item.Part_Number);
+          if (checkB && checkB.length > 0)
+            throw new Error("Part Number sudah ada di Master Data!");
+          const { error: errIns } = await _supabase
+            .from("Master_Barang")
+            .insert([payload.item]);
+          if (errIns) throw new Error(errIns.message);
+        }
+
+        if (payload.customer && payload.customer !== "-") {
+          const cClean = resolveCustomerDisplay(payload.customer);
+          localStorage.setItem("cust_map_" + payload.item.Part_Number, cClean);
+          saveLocalMultiCustTarget(payload.item.Part_Number, cClean, 0);
+          const { data: checkOrdB } = await _supabase
+            .from("List_Order")
+            .select("*")
+            .eq("Part_Number", payload.item.Part_Number);
+          if (!checkOrdB || checkOrdB.length === 0) {
+            await _supabase.from("List_Order").insert([
+              {
+                Part_Number: payload.item.Part_Number,
+                qty_order: 0,
+                id_customer: cClean,
+              },
+            ]);
+          } else if (payload.isEdit) {
+            if (checkOrdB[0].id !== undefined)
+              await _supabase
+                .from("List_Order")
+                .update({ id_customer: cClean })
+                .eq("id", checkOrdB[0].id);
+            else
+              await _supabase
+                .from("List_Order")
+                .update({ id_customer: cClean })
+                .eq("Part_Number", payload.item.Part_Number);
+          }
+        }
+        return {
+          success: true,
+          message: payload.isEdit
+            ? "Data barang berhasil diubah!"
+            : "Barang baru berhasil ditambahkan!",
+        };
+
+      case "apiSaveCustomer":
+        if (payload.isEdit) {
+          if (payload.cust.id_customer !== payload.oldIdCustomer) {
+            const { data: checkC } = await _supabase
+              .from("Master_Customer")
+              .select("id_customer")
+              .eq("id_customer", payload.cust.id_customer);
+            if (checkC && checkC.length > 0)
+              throw new Error(
+                "ID Customer baru sudah terdaftar untuk perusahaan lain!",
+              );
+          }
+          const { error: errUpd } = await _supabase
+            .from("Master_Customer")
+            .update(payload.cust)
+            .eq("id_customer", payload.oldIdCustomer);
+          if (errUpd) throw new Error(errUpd.message);
+          if (payload.cust.id_customer !== payload.oldIdCustomer) {
+            await _supabase
+              .from("List_Order")
+              .update({ id_customer: payload.cust.id_customer })
+              .eq("id_customer", payload.oldIdCustomer);
+          }
+        } else {
+          const { data: checkC } = await _supabase
+            .from("Master_Customer")
+            .select("*")
+            .eq("id_customer", payload.cust.id_customer);
+          if (checkC && checkC.length > 0)
+            throw new Error("ID Customer sudah ada!");
+          const { error: errIns } = await _supabase
+            .from("Master_Customer")
+            .insert([payload.cust]);
+          if (errIns) throw new Error(errIns.message);
+        }
+        return {
+          success: true,
+          message: payload.isEdit
+            ? "Data Customer diperbarui!"
+            : "Customer baru tersimpan!",
+        };
+
+      case "apiSaveUser":
+        if (payload.isEdit) {
+          if (payload.userData.username !== payload.oldUsername) {
+            const { data: checkU } = await _supabase
+              .from("Users")
+              .select("username")
+              .eq("username", payload.userData.username);
+            if (checkU && checkU.length > 0)
+              throw new Error("Username baru sudah dipakai oleh orang lain!");
+          }
+          const { error: errUpd } = await _supabase
+            .from("Users")
+            .update(payload.userData)
+            .eq("username", payload.oldUsername);
+          if (errUpd) throw new Error(errUpd.message);
+          if (payload.userData.username !== payload.oldUsername) {
+            await _supabase
+              .from("Transaksi_Masuk")
+              .update({ petugas: payload.userData.username })
+              .eq("petugas", payload.oldUsername);
+            await _supabase
+              .from("Transaksi_Keluar")
+              .update({ petugas: payload.userData.username })
+              .eq("petugas", payload.oldUsername);
+            if (currentUser && currentUser.username === payload.oldUsername) {
+              currentUser.username = payload.userData.username;
+              sessionStorage.setItem(
+                "sim_inventory_user",
+                JSON.stringify(currentUser),
+              );
+              applyRbacUI();
+            }
+          }
+        } else {
+          const { data: checkU } = await _supabase
+            .from("Users")
+            .select("*")
+            .eq("username", payload.userData.username);
+          if (checkU && checkU.length > 0)
+            throw new Error("Username sudah terdaftar!");
+          const { error: errIns } = await _supabase
+            .from("Users")
+            .insert([payload.userData]);
+          if (errIns) throw new Error(errIns.message);
+        }
+        return {
+          success: true,
+          message: payload.isEdit
+            ? "User berhasil diperbarui!"
+            : "User baru berhasil didaftarkan!",
+        };
+
+      case "apiDeleteBarang":
+        await _supabase
+          .from("Master_Barang")
+          .delete()
+          .eq("Part_Number", payload.partNumber);
+        await _supabase
+          .from("List_Order")
+          .delete()
+          .eq("Part_Number", payload.partNumber);
+        localStorage.removeItem("cust_map_" + payload.partNumber);
+        localStorage.removeItem("multi_cust_orders_" + payload.partNumber);
+        return { success: true, message: "Barang terhapus permanen!" };
+
+      case "apiBulkDeleteBarang":
+        await _supabase
+          .from("Master_Barang")
+          .delete()
+          .in("Part_Number", payload.partNumbers);
+        await _supabase
+          .from("List_Order")
+          .delete()
+          .in("Part_Number", payload.partNumbers);
+        payload.partNumbers.forEach((pn) => {
+          localStorage.removeItem("cust_map_" + pn);
+          localStorage.removeItem("multi_cust_orders_" + pn);
+        });
+        return { success: true, message: "Barang terpilih terhapus permanen!" };
+
+      case "apiDeleteCustomer":
+        await _supabase
+          .from("Master_Customer")
+          .delete()
+          .eq("id_customer", payload.id_customer);
+        return { success: true, message: "Customer terhapus!" };
+
+      case "apiDeleteUser":
+        await _supabase
+          .from("Users")
+          .delete()
+          .eq("username", payload.usernameTarget);
+        return { success: true, message: "User telah dihapus!" };
+
+      default:
+        return { success: false, message: "Aksi tidak dikenal." };
     }
-
-    const matched = realUsers.find(
-      (u) =>
-        u.username.toLowerCase() === formValues.username.toLowerCase() &&
-        u.password === formValues.password,
-    );
-
-    if (!matched) {
-      showToast("error", "Gagal Masuk", "Username atau password tidak sesuai.");
-      return;
-    }
-
-    currentUser = { username: matched.username, role: matched.role };
-    sessionStorage.setItem("sim_inventory_user", JSON.stringify(currentUser));
-    applyRbacUI();
-    showToast(
-      "success",
-      `Selamat Datang, ${matched.username}`,
-      `Anda masuk dengan hak akses ${matched.role}.`,
-    );
   } catch (err) {
-    showToast(
-      "error",
-      "Kesalahan Sistem",
-      "Tidak dapat memverifikasi sesi login.",
-    );
-  } finally {
-    isProcessing = false;
+    return { success: false, message: err.message };
   }
 }
 
-function logoutSession() {
-  sessionStorage.removeItem("sim_inventory_user");
-  currentUser = null;
-  stopCameraScanner();
-  applyRbacUI();
-  showToast("info", "Sesi Berakhir", "Anda kembali ke Mode Tamu (Read-Only).");
+// =========================================================================
+// UI & NAVIGASI NORDIC
+// =========================================================================
+function startLiveClock() {
+  setInterval(() => {
+    const el = document.getElementById("liveClock");
+    if (el)
+      el.innerText = new Date().toLocaleTimeString("id-ID", { hour12: false });
+  }, 1000);
+}
+function toggleSidebar() {
+  const sb = document.getElementById("mainSidebar"),
+    bd = document.getElementById("sidebarBackdrop");
+  if (sb.classList.contains("-translate-x-full")) {
+    sb.classList.remove("-translate-x-full");
+    bd.classList.remove("opacity-0", "pointer-events-none");
+    bd.classList.add("opacity-100");
+  } else {
+    closeSidebar();
+  }
+}
+function closeSidebar() {
+  document.getElementById("mainSidebar").classList.add("-translate-x-full");
+  const bd = document.getElementById("sidebarBackdrop");
+  bd.classList.add("opacity-0", "pointer-events-none");
+  bd.classList.remove("opacity-100");
 }
 
-/**
- * ============================================================================
- * NAVIGASI TAB & SIDEBAR
- * ============================================================================
- */
 function switchTab(tabId) {
-  activeTab = tabId;
-
   document
     .querySelectorAll(".tab-pane")
     .forEach((el) => el.classList.add("hidden"));
-  const targetPane = document.getElementById(`tab-${tabId}`);
-  if (targetPane) targetPane.classList.remove("hidden");
+  const activeTab = document.getElementById(`tab-${tabId}`);
+  if (activeTab) activeTab.classList.remove("hidden");
 
-  document.querySelectorAll(".nav-pill").forEach((btn) => {
-    btn.className =
-      "nav-pill w-full flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all text-gray-600 hover:bg-gray-100";
+  document.querySelectorAll(".nav-item").forEach((btn) => {
+    btn.classList.remove("bg-gray-900", "text-white", "font-semibold");
+    btn.classList.add("text-gray-500", "font-medium");
   });
-  const activeBtn = document.getElementById(`nav-${tabId}`);
-  if (activeBtn) {
-    activeBtn.className =
-      "nav-pill w-full flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all bg-gray-900 text-white";
+  const activeNav = document.getElementById(`btn-tab-${tabId}`);
+  if (activeNav) {
+    activeNav.classList.add("bg-gray-900", "text-white", "font-semibold");
+    activeNav.classList.remove("text-gray-500", "font-medium");
   }
 
-  const headerMap = {
-    dashboard: [
-      "Papan Kontrol Seat Assy",
-      "Live Andon Monitoring & Kalkulasi Otomatis Multi-Customer (Auto-refresh 3 dtk)",
-    ],
-    analytics: [
-      "Analitik Visual",
-      "Top 5 Fast-Moving Seat Assy & Radar 10 Stok Terendah",
-    ],
-    scanner: [
-      "Smart Scanner Operasional",
-      "Penerjemah Barcode Otomotif ISO/EDI & Keranjang Troli Massal",
-    ],
-    history: [
-      "Riwayat Transaksi & Log Target",
-      "Rekapitulasi Pergerakan Stok Masuk, Pengiriman, dan Koreksi",
-    ],
-    "master-barang": [
-      "Master Database Barang",
-      "Manajemen SKU Seat Assy, Cetak Barcode CODE128 & Cascading Update",
-    ],
-    "master-customer": [
-      "Master Database Customer",
-      "Manajemen Pelanggan & Tujuan Pengiriman",
-    ],
-    users: [
-      "Kelola Pengguna (RBAC)",
-      "Pengaturan Akun Admin, Warehouse, dan Produksi",
-    ],
-  };
-
-  if (headerMap[tabId]) {
-    document.getElementById("pageHeaderTitle").textContent =
-      headerMap[tabId][0];
-    document.getElementById("pageHeaderSubtitle").textContent =
-      headerMap[tabId][1];
-  }
-
-  if (tabId !== "scanner") {
-    stopCameraScanner();
-  } else if (scannerMode === "GUN") {
-    setTimeout(() => document.getElementById("gunScannerInput")?.focus(), 100);
-  }
-
-  renderAllActiveViews();
-
-  // Tutup sidebar mobile jika terbuka
-  const sidebar = document.getElementById("mainSidebar");
-  if (
-    window.innerWidth < 1024 &&
-    sidebar &&
-    !sidebar.classList.contains("-translate-x-full")
-  ) {
-    sidebar.classList.add("-translate-x-full");
-  }
-}
-
-function toggleSidebarMobile() {
-  const sidebar = document.getElementById("mainSidebar");
-  if (sidebar) {
-    sidebar.classList.toggle("-translate-x-full");
-  }
-}
-
-/**
- * ============================================================================
- * PAPAN KONTROL SEAT ASSY (MULTI-CUSTOMER, ROWSPAN, & KALKULATOR SELISIH)
- * ============================================================================
- */
-function getCustomerDisplayName(idOrName) {
-  if (!idOrName || idOrName === "-") return "-";
-  const found = masterCustomerList.find(
-    (c) => c.id_customer === idOrName || c.nama_customer === idOrName,
-  );
-  return found ? found.nama_customer : idOrName;
-}
-
-function getOrdersForPart(partNumber) {
-  const orders = listOrderData.filter((o) => o.Part_Number === partNumber);
-  if (orders.length > 0) return orders;
-
-  // Fallback jika belum ada baris di List_Order: gunakan id_customer dari Master_Barang
-  const barang = masterBarangList.find((b) => b.Part_Number === partNumber);
-  return [
-    {
-      id: null,
-      Part_Number: partNumber,
-      id_customer: barang && barang.id_customer ? barang.id_customer : "-",
-      qty_order: 0,
-    },
-  ];
-}
-
-function calculateQtyOutToday(partNumber, customerIdOrName) {
-  const { startTime } = getOperationalDateInfo();
-  const custName = getCustomerDisplayName(customerIdOrName).toUpperCase();
-  const custCode = String(customerIdOrName || "-").toUpperCase();
-  const partOrders = getOrdersForPart(partNumber);
-
-  return transaksiKeluarList
-    .filter((tx) => {
-      if (tx.Part_Number !== partNumber) return false;
-      const txTime = new Date(tx.tanggal);
-      if (txTime < startTime) return false;
-
-      const note = String(tx.catatan || "").toUpperCase();
-      if (custName !== "-" && note.includes(custName)) return true;
-      if (custCode !== "-" && note.includes(custCode)) return true;
-
-      // Jika Part hanya memiliki 1 Customer dan catatan tidak mencantumkan nama customer lain
-      if (
-        partOrders.length === 1 &&
-        !note.includes("TUJUAN:") &&
-        !note.includes("DARI:")
-      ) {
-        return true;
-      }
-      return false;
-    })
-    .reduce((sum, tx) => sum + (Number(tx.qty) || 0), 0);
-}
-
-function buildExpandedDashboardRows() {
-  const searchVal = (
-    document.getElementById("searchDashboardInput")?.value || ""
-  )
-    .trim()
-    .toLowerCase();
-  const filterCust =
-    document.getElementById("filterCustomerDashboard")?.value || "ALL";
-
-  const rows = [];
-
-  for (const item of masterBarangList) {
-    const partOrders = getOrdersForPart(item.Part_Number);
-    const totalQtyDayAllCustomers = partOrders.reduce(
-      (acc, o) => acc + (Number(o.qty_order) || 0),
-      0,
+  if (tabId === "overview") renderSeatAssyControlBoard();
+  if (tabId === "riwayat") renderRiwayatTable();
+  if (tabId === "barang")
+    renderMasterBarangTable(
+      document.getElementById("searchMasterBarang")?.value || "",
     );
-    const stokAwal = Number(item.stok) || 0;
-    const assyFsg = Number(item.assy_fsg) || 0;
-    const variance = stokAwal + assyFsg - totalQtyDayAllCustomers;
+  if (tabId === "customer")
+    renderCustomerTable(
+      document.getElementById("searchMasterCustomer")?.value || "",
+    );
+  if (tabId === "users")
+    renderUsersTable(document.getElementById("searchMasterUser")?.value || "");
+  if (tabId === "analitik") renderAnalitikCharts();
+  if (tabId !== "scanner") stopSmartScanner();
 
-    for (const ord of partOrders) {
-      const custName = getCustomerDisplayName(ord.id_customer);
-      const qtyDay = Number(ord.qty_order) || 0;
-      const qtyOut = calculateQtyOutToday(item.Part_Number, ord.id_customer);
-      const sisaDel = Math.max(0, qtyDay - qtyOut);
+  if (tabId === "scanner") {
+    populateCustomerDropdown(
+      document.getElementById("batchSelectCustomer"),
+      "-",
+    );
+    updateBatchTrolleyUI();
+    setTimeout(() => document.getElementById("manualSmartInput")?.focus(), 100);
+  }
+  closeSidebar();
+}
 
-      if (
-        filterCust !== "ALL" &&
-        custName !== filterCust &&
-        ord.id_customer !== filterCust
-      ) {
-        continue;
+function applyRbacUI() {
+  const pCard = document.getElementById("userProfileCard"),
+    gPrompt = document.getElementById("guestLoginPrompt");
+  document
+    .querySelectorAll(".role-admin, .role-auth")
+    .forEach((el) => el.classList.add("hidden"));
+  const bWH = document.getElementById("batchBtnGroupWH"),
+    bAssy = document.getElementById("batchBtnGroupAssy"),
+    bCust = document.getElementById("batchCustWrapper");
+
+  if (currentUser) {
+    pCard.classList.remove("hidden");
+    pCard.classList.add("flex");
+    gPrompt.classList.add("hidden");
+    document.getElementById("userNameDisplay").innerText = currentUser.username;
+    document.getElementById("userRoleBadge").innerText = currentUser.role;
+    document.getElementById("avatarLetter").innerText = currentUser.username
+      .charAt(0)
+      .toUpperCase();
+    document
+      .querySelectorAll(".role-auth")
+      .forEach((el) => el.classList.remove("hidden"));
+    if (currentUser.role === "Admin")
+      document
+        .querySelectorAll(".role-admin")
+        .forEach((el) => el.classList.remove("hidden"));
+
+    if (bWH && bAssy && bCust) {
+      if (currentUser.role === "Admin") {
+        bWH.classList.remove("hidden");
+        bAssy.classList.remove("hidden");
+        bCust.classList.remove("hidden");
+      } else if (currentUser.role === "Produksi") {
+        bWH.classList.add("hidden");
+        bAssy.classList.remove("hidden");
+        bCust.classList.add("hidden");
+      } else {
+        bWH.classList.remove("hidden");
+        bAssy.classList.add("hidden");
+        bCust.classList.remove("hidden");
       }
+    }
+  } else {
+    pCard.classList.add("hidden");
+    pCard.classList.remove("flex");
+    gPrompt.classList.remove("hidden");
+  }
+}
 
-      if (searchVal) {
-        const haystack =
-          `${item.Part_Number} ${item.nama_barang} ${item.No_Rel} ${custName}`.toLowerCase();
-        if (!haystack.includes(searchVal)) continue;
+// =========================================================================
+// DASHBOARD LOGIC
+// =========================================================================
+function showSyncSpinner(show) {
+  const s = document.getElementById("syncSpinner");
+  if (s) s.classList.toggle("animate-spin", show);
+}
+function refreshAllData() {
+  showSyncSpinner(true);
+  loadInitialOrMockData();
+}
+
+function loadInitialOrMockData() {
+  showSyncSpinner(true);
+  sendToBackend("apiGetMasterData")
+    .then(async (res) => {
+      showSyncSpinner(false);
+      if (res && res.success) {
+        appData.barang = res.barang || [];
+        appData.customer = res.customer || [];
+        appData.orders = res.orders || [];
+        appData.masuk = res.masuk || [];
+        appData.keluar = res.keluar || [];
+        appData.users = res.users || [];
+        await checkAndRunDailyRollover();
+        buildSeatAssyControlDataset();
+        refreshAllUI();
+      } else
+        showToast(
+          "error",
+          "Koneksi Gagal",
+          res.message || "Gagal memuat data dari Supabase",
+        );
+    })
+    .catch((err) => {
+      showSyncSpinner(false);
+      showToast("error", "Error", err.message);
+    });
+}
+
+function refreshAllUI() {
+  renderSeatAssyControlBoard(
+    document.getElementById("globalSearchInput")?.value || "",
+  );
+  renderRiwayatTable();
+  renderMasterBarangTable(
+    document.getElementById("searchMasterBarang")?.value || "",
+  );
+  renderCustomerTable(
+    document.getElementById("searchMasterCustomer")?.value || "",
+  );
+  renderUsersTable(document.getElementById("searchMasterUser")?.value || "");
+  populateCustomerDropdown(
+    document.getElementById("batchSelectCustomer"),
+    document.getElementById("batchSelectCustomer")?.value || "-",
+  );
+  if (!document.getElementById("tab-analitik").classList.contains("hidden"))
+    renderAnalitikCharts();
+}
+
+function buildSeatAssyControlDataset() {
+  const list = [];
+  const { opStart } = getOperationalDayInfo();
+
+  appData.barang.forEach((itemBarang) => {
+    const partNum = String(itemBarang.Part_Number).trim();
+    const relatedOrders = appData.orders.filter(
+      (o) => String(o.Part_Number).trim() === partNum,
+    );
+    const currentStock = Number(itemBarang.stok) || 0;
+    const assyFsg = Number(itemBarang.assy_fsg) || 0;
+
+    const partOutLogs = appData.keluar.filter(
+      (k) =>
+        String(k.Part_Number).trim() === partNum &&
+        new Date(k.tanggal || k.created_at) >= opStart,
+    );
+    const customerMap = new Map();
+
+    relatedOrders.forEach((ord) => {
+      const cName = resolveCustomerDisplay(ord.id_customer);
+      if (cName && cName !== "-") {
+        const key = cName.toLowerCase();
+        customerMap.set(key, {
+          name: cName,
+          qty_day:
+            (customerMap.get(key)?.qty_day || 0) + (Number(ord.qty_order) || 0),
+        });
       }
+    });
 
-      rows.push({
-        orderId: ord.id,
-        id_customer: ord.id_customer || "-",
-        customerName: custName,
-        No_Rel: item.No_Rel || "-",
-        Part_Number: item.Part_Number,
-        nama_barang: item.nama_barang || "-",
-        stokAwal,
-        qtyDay,
-        qtyOut,
-        sisaDel,
-        assyFsg,
-        variance,
-        totalQtyDayAllCustomers,
+    const localMap = getLocalMultiCustMap(partNum);
+    Object.keys(localMap).forEach((cRaw) => {
+      const cName = resolveCustomerDisplay(cRaw);
+      if (cName && cName !== "-") {
+        const key = cName.toLowerCase();
+        if (!customerMap.has(key))
+          customerMap.set(key, {
+            name: cName,
+            qty_day: Number(localMap[cRaw]) || 0,
+          });
+        else if (
+          customerMap.get(key).qty_day === 0 &&
+          Number(localMap[cRaw]) > 0
+        )
+          customerMap.get(key).qty_day = Number(localMap[cRaw]);
+      }
+    });
+
+    partOutLogs.forEach((k) => {
+      const extractedCust = extractCustomerFromCatatan(k.catatan);
+      if (extractedCust && extractedCust !== "-") {
+        const key = extractedCust.toLowerCase();
+        if (!customerMap.has(key))
+          customerMap.set(key, {
+            name: extractedCust,
+            qty_day: Number(localMap[extractedCust]) || 0,
+          });
+      }
+    });
+
+    if (customerMap.size === 0) {
+      let fallbackCust = resolveCustomerDisplay(
+        itemBarang.id_customer ||
+          localStorage.getItem("cust_map_" + partNum) ||
+          "-",
+      );
+      const fallbackQtyDay = relatedOrders.reduce(
+        (s, o) => s + (Number(o.qty_order) || 0),
+        0,
+      );
+      customerMap.set(fallbackCust.toLowerCase(), {
+        name: fallbackCust,
+        qty_day: fallbackQtyDay,
       });
     }
-  }
 
-  // Urutkan berdasarkan Customer (A-Z), lalu No_Rel (A-Z), lalu Part_Number
-  rows.sort((a, b) => {
-    const cComp = a.customerName.localeCompare(b.customerName, "id", {
-      sensitivity: "base",
+    let totalQtyDayAllCust = 0;
+    customerMap.forEach((val) => {
+      totalQtyDayAllCust += val.qty_day;
     });
-    if (cComp !== 0) return cComp;
-    const rComp = String(a.No_Rel).localeCompare(String(b.No_Rel), "id", {
-      numeric: true,
-      sensitivity: "base",
+    const variancePart = currentStock + assyFsg - totalQtyDayAllCust;
+
+    const custEntries = Array.from(customerMap.values());
+    custEntries.forEach((custObj, idx) => {
+      const qtyOutCust = partOutLogs
+        .filter((k) => {
+          const logCust = extractCustomerFromCatatan(k.catatan);
+          if (logCust)
+            return logCust.toLowerCase() === custObj.name.toLowerCase();
+          return idx === 0;
+        })
+        .reduce((sum, k) => sum + (Number(k.qty) || 0), 0);
+
+      list.push({
+        Customer: custObj.name,
+        CustomerCount: custEntries.length,
+        No_Rel: itemBarang.No_Rel || "-",
+        Part_Number: partNum,
+        nama_barang: itemBarang.nama_barang || "-",
+        stock: currentStock,
+        qty_day: custObj.qty_day,
+        qty_out: qtyOutCust,
+        sisa_del: Math.max(0, custObj.qty_day - qtyOutCust),
+        assy_fsg: assyFsg,
+        variance: variancePart,
+      });
     });
-    if (rComp !== 0) return rComp;
-    return a.Part_Number.localeCompare(b.Part_Number);
   });
-
-  return rows;
+  appData.seatAssyControl = list;
 }
 
-function renderDashboardTable() {
-  const tbody = document.getElementById("dashboardTableBody");
+// =========================================================================
+// FUNGSI POPUP INTERAKTIF (DASHBOARD)
+// =========================================================================
+function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
+  if (isProcessing) return;
+  if (!appData.customer || appData.customer.length === 0)
+    return showToast("info", "Info", "Tambahkan data di Master Customer dulu!");
+
+  let optionsHtml = `<option value="-">-- Kosongkan --</option>`;
+  appData.customer.forEach((c) => {
+    const val = c.nama_customer || c.id_customer;
+    optionsHtml += `<option value="${val}" ${String(val).toLowerCase() === String(currentCust).toLowerCase() ? "selected" : ""}>${c.nama_customer ? `${c.nama_customer} (${c.id_customer})` : c.id_customer}</option>`;
+  });
+
+  swalUI
+    .fire({
+      title: "Pengaturan Customer",
+      html: `<div class="text-left space-y-3 mt-2"><p class="text-xs text-gray-500">Part: <b class="text-gray-900">${partNumber}</b></p>
+      <div><label class="block text-[11px] font-semibold text-gray-400 mb-1">Pilih Customer:</label><select id="swalSelectCust" class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none">${optionsHtml}</select></div>
+      <div><label class="block text-[11px] font-semibold text-gray-400 mb-1">Tindakan:</label>
+        <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none">
+          <option value="UPDATE">Ubah Customer Baris Ini</option><option value="ADD_NEW">+ Tambah Customer Baru (Part Sama)</option>
+          ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Customer Ini</option>` : ""}
+        </select>
+      </div>
+      <div id="swalWrapQtyBaru" class="hidden"><label class="block text-[11px] font-semibold text-gray-400 mb-1">Target Harian Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none" /></div>
+    </div>`,
+      showCancelButton: true,
+      confirmButtonText: "Simpan",
+      cancelButtonText: "Batal",
+      preConfirm: () => ({
+        customer: document.getElementById("swalSelectCust").value,
+        mode: document.getElementById("swalModeCust").value,
+        qtyOrder: document.getElementById("swalQtyOrderBaru").value,
+      }),
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        if (
+          res.value.mode === "ADD_NEW" &&
+          (!res.value.customer || res.value.customer === "-")
+        )
+          return showToast(
+            "warning",
+            "Pilih Customer!",
+            "Pilih nama Customer baru yang ingin ditambahkan.",
+          );
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menyimpan...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiUpdateCustomerPart", {
+          partNumber,
+          oldCustomer: currentCust,
+          ...res.value,
+        }).then((r) => {
+          isProcessing = false;
+          Swal.close();
+          if (r.success) {
+            showToast("success", "Tersimpan!");
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", r.message);
+          }
+        });
+      }
+    });
+}
+
+function promptUpdateAssyFsg(partNumber, currentQty) {
+  if (!currentUser) return openLoginModal();
+  if (isProcessing) return;
+
+  swalUI
+    .fire({
+      title: "Update Stok Assy",
+      html: `<p class="text-xs text-gray-400 mb-3">${partNumber}</p>
+           <div class="inline-block bg-purple-50 text-purple-700 px-4 py-1.5 rounded-full text-xs font-bold mb-3">Stok Saat Ini: ${currentQty} Pcs</div>
+           <p class="text-[11px] text-gray-400">Ketik <b class="text-gray-800">Total Akhir</b>. Selisih angka otomatis dicatat ke Riwayat.</p>`,
+      input: "number",
+      inputValue: currentQty,
+      inputAttributes: { min: 0 },
+      showCancelButton: true,
+      confirmButtonText: "Simpan",
+      cancelButtonText: "Batal",
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        const newTotal = Number(res.value);
+        if (newTotal < 0)
+          return showToast("error", "Error", "Total tidak boleh minus");
+        if (newTotal === currentQty)
+          return showToast("info", "Tidak berubah", "Angka masih sama");
+
+        isProcessing = true;
+        swalUI.fire({
+          title: "Memproses...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+
+        sendToBackend("apiUpdateAssyFsg", {
+          partNumber: partNumber,
+          qty: newTotal,
+          mode: "SET",
+          petugas: currentUser.username,
+        }).then((response) => {
+          isProcessing = false;
+          Swal.close();
+          if (response.success) {
+            showToast("success", "Assy Diperbarui");
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", response.message);
+          }
+        });
+      }
+    });
+}
+
+function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
+  if (!currentUser) return openLoginModal();
+  if (isProcessing) return;
+
+  swalUI
+    .fire({
+      title: "Target Harian",
+      html: `<p class="text-xs text-gray-400 mb-2">${partNumber} &bull; <span class="text-gray-700 font-semibold">${customerName}</span></p>
+           <p class="text-[11px] text-gray-400">Perubahan target akan tercatat di log riwayat.</p>`,
+      input: "number",
+      inputValue: currentQty > 0 ? currentQty : "",
+      showCancelButton: true,
+      confirmButtonText: "Simpan",
+      cancelButtonText: "Batal",
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menyimpan...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiUpdateQtyDay", {
+          partNumber: partNumber,
+          qty: Number(res.value) || 0,
+          customer: customerName,
+          petugas: currentUser.username,
+        }).then((response) => {
+          isProcessing = false;
+          Swal.close();
+          if (response.success) {
+            showToast("success", "Target Disimpan");
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", response.message);
+          }
+        });
+      }
+    });
+}
+
+function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
+  if (!currentUser) return openLoginModal();
+  if (isProcessing) return;
+
+  swalUI
+    .fire({
+      title: "Update Terkirim (Out)",
+      html: `<p class="text-xs text-gray-400 mb-3">${partNumber} &bull; <span class="text-gray-700 font-semibold">${customerName}</span></p>
+           <div class="inline-block bg-gray-100 text-gray-800 px-4 py-1.5 rounded-full text-xs font-bold mb-3">Terkirim Saat Ini: ${currentQtyOut} Pcs</div>
+           <p class="text-[11px] text-gray-400">Ketik <b class="text-gray-800">Total Akhir</b> pengiriman. Selisihnya otomatis masuk ke Riwayat.</p>`,
+      input: "number",
+      inputValue: currentQtyOut,
+      inputAttributes: { min: 0 },
+      showCancelButton: true,
+      confirmButtonText: "Simpan",
+      cancelButtonText: "Batal",
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        const newTotal = Number(res.value);
+        if (newTotal < 0)
+          return showToast("error", "Error", "Total tidak boleh minus");
+        if (newTotal === currentQtyOut)
+          return showToast("info", "Tidak berubah", "Angka masih sama");
+
+        const diff = newTotal - currentQtyOut;
+        isProcessing = true;
+        swalUI.fire({
+          title: "Mencatat...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+
+        let catatanStr =
+          diff > 0
+            ? `Pengiriman Papan Kontrol - Tujuan: ${customerName}`
+            : `Koreksi Batal Kirim - Dari: ${customerName}`;
+
+        sendToBackend("apiSaveTransaksiKeluar", {
+          partNumber: partNumber,
+          qty: diff,
+          petugas: currentUser.username,
+          customer: customerName,
+          catatan: catatanStr,
+        }).then((response) => {
+          isProcessing = false;
+          Swal.close();
+          if (response.success) {
+            showToast("success", "Pengiriman Diperbarui");
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", response.message);
+          }
+        });
+      }
+    });
+}
+
+// =========================================================================
+// PAPAN KONTROL NORDIC FLAT (BORDERLESS VERTICAL, HIRARKI ANGKA)
+// =========================================================================
+function renderSeatAssyControlBoard(filterKeyword = "") {
+  const tbody = document.getElementById("tblSeatAssyControlBody");
   if (!tbody) return;
+  let dataset = appData.seatAssyControl || [];
 
-  const rows = buildExpandedDashboardRows();
+  if (filterKeyword) {
+    const kw = filterKeyword.toLowerCase();
+    dataset = dataset.filter(
+      (d) =>
+        d.Part_Number.toLowerCase().includes(kw) ||
+        d.No_Rel.toLowerCase().includes(kw) ||
+        d.Customer.toLowerCase().includes(kw),
+    );
+  }
 
-  // Update KPI Cards
-  const uniqueParts = new Set(masterBarangList.map((b) => b.Part_Number)).size;
-  const totalTarget = rows.reduce((acc, r) => acc + r.qtyDay, 0);
-  const totalOut = rows.reduce((acc, r) => acc + r.qtyOut, 0);
-  const totalAssy = masterBarangList.reduce(
-    (acc, b) => acc + (Number(b.assy_fsg) || 0),
-    0,
-  );
-
-  document.getElementById("kpiTotalParts").textContent =
-    uniqueParts.toLocaleString("id-ID");
-  document.getElementById("kpiTotalTarget").textContent =
-    totalTarget.toLocaleString("id-ID");
-  document.getElementById("kpiTotalOut").textContent =
-    totalOut.toLocaleString("id-ID");
-  document.getElementById("kpiTotalAssy").textContent =
-    totalAssy.toLocaleString("id-ID");
-
-  if (rows.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="9" class="py-12 px-4 text-center text-xs font-bold text-gray-400">
-          Tidak ada data Seat Assy yang cocok dengan filter pencarian.
-        </td>
-      </tr>
-    `;
+  document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
+  if (dataset.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="py-16 text-center text-gray-400 text-xs font-medium">Tidak ada data untuk ditampilkan.</td></tr>`;
     return;
   }
 
-  // Hitung rowspan untuk kolom Customer yang berurutan sama
-  const customerRowSpans = new Array(rows.length).fill(0);
-  let i = 0;
-  while (i < rows.length) {
-    let j = i + 1;
-    while (j < rows.length && rows[j].customerName === rows[i].customerName) {
-      j++;
-    }
-    customerRowSpans[i] = j - i;
-    i = j;
-  }
+  dataset.sort((a, b) => {
+    if (a.Customer < b.Customer) return -1;
+    if (a.Customer > b.Customer) return 1;
+    if (a.No_Rel < b.No_Rel) return -1;
+    if (a.No_Rel > b.No_Rel) return 1;
+    return 0;
+  });
 
-  const role = currentUser ? currentUser.role : "Guest";
-  const canEditCust = role === "Admin" || role === "Warehouse";
-  const canEditQtyDay = role === "Admin";
-  const canEditQtyOut = role === "Admin" || role === "Warehouse";
-  const canEditAssy = role === "Admin" || role === "Produksi";
+  const isAdmin = currentUser && currentUser.role === "Admin";
+  const canEditCust =
+    currentUser &&
+    (currentUser.role === "Admin" || currentUser.role === "Warehouse");
+  const canEditAssy =
+    currentUser &&
+    (currentUser.role === "Admin" || currentUser.role === "Produksi");
 
   let html = "";
 
-  rows.forEach((row, idx) => {
-    const spanCount = customerRowSpans[idx];
+  for (let i = 0; i < dataset.length; i++) {
+    let row = dataset[i];
+    const formatNum = (num) => (num === 0 ? "-" : num);
+    let varFormat =
+      row.variance > 0
+        ? "+" + row.variance
+        : row.variance < 0
+          ? row.variance
+          : "0";
 
-    const varianceBadge =
-      row.variance >= 0
-        ? `<span class="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700">+${row.variance}</span>`
-        : `<span class="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-extrabold bg-rose-50 text-rose-700">${row.variance}</span>`;
+    // Pill Badges Lembut
+    let varBadge =
+      row.variance > 0
+        ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600">${varFormat}</span>`
+        : row.variance < 0
+          ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600">${varFormat}</span>`
+          : `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-400">-</span>`;
 
-    const sisaBadge =
-      row.sisaDel === 0 && row.qtyDay > 0
-        ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700">SELESAI (0)</span>`
-        : `<span class="text-sm font-extrabold text-gray-700">${row.sisaDel}</span>`;
+    const custClass = canEditCust
+      ? "cursor-pointer hover:text-gray-900 transition-colors"
+      : "";
+    const custAction = canEditCust
+      ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
+      : "";
 
-    html += `<tr class="hover:bg-gray-50/70 transition">`;
+    const qtyDayClass = isAdmin
+      ? "cursor-pointer hover:bg-gray-100 px-3 py-1 rounded-full transition-all inline-block"
+      : "";
+    const qtyDayAction = isAdmin
+      ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
+      : "";
 
-    // Kolom CUST dengan penggabungan sel vertikal (rowspan)
-    if (spanCount > 0) {
-      html += `
-        <td rowspan="${spanCount}" class="py-4 px-4 align-top bg-white">
-          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gray-900 text-white text-xs font-extrabold shadow-xs">
-            <i class="fa-solid fa-industry text-[10px] text-gray-300"></i>
-            <span>${escapeHtml(row.customerName)}</span>
-          </div>
-        </td>
-      `;
+    const qtyOutClass = canEditCust
+      ? "cursor-pointer hover:bg-gray-100 px-3 py-1 rounded-full transition-all inline-block"
+      : "";
+    const qtyOutAction = canEditCust
+      ? `onclick="promptUpdateQtyOut('${row.Part_Number}', '${row.Customer}', ${row.qty_out})"`
+      : "";
+
+    const assyClass = canEditAssy
+      ? "cursor-pointer hover:bg-purple-100/60 bg-purple-50/50 px-3.5 py-1 rounded-full transition-all inline-block"
+      : "";
+    const assyAction = canEditAssy
+      ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
+      : "";
+
+    let isFirstOfGroup = false;
+    let rowspan = 1;
+
+    if (i === 0 || dataset[i].Customer !== dataset[i - 1].Customer) {
+      isFirstOfGroup = true;
+      for (let j = i + 1; j < dataset.length; j++) {
+        if (dataset[j].Customer === row.Customer) rowspan++;
+        else break;
+      }
     }
 
-    // Kolom NO REL + tombol ubah Customer per baris Part
+    html += `<tr class="hover:bg-gray-50/60 transition-colors group">`;
+    if (isFirstOfGroup) {
+      html += `<td rowspan="${rowspan}" class="py-4 pr-4 align-top text-xs font-bold text-gray-400 uppercase tracking-wider ${custClass}" ${custAction} title="Atur Customer">${row.Customer}</td>`;
+    }
     html += `
-      <td class="py-4 px-4">
-        <div class="flex items-center gap-2">
-          <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-extrabold">${escapeHtml(row.No_Rel)}</span>
-          ${
-            canEditCust
-              ? `
-            <button
-              onclick="promptUpdateCustomerPart('${escapeHtml(row.Part_Number)}', '${escapeHtml(row.id_customer)}', ${row.orderId || "null"})"
-              title="Ubah / Tambah Customer untuk Part ini"
-              class="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-900 hover:text-white text-gray-500 text-[10px] flex items-center justify-center transition"
-            >
-              <i class="fa-solid fa-user-gear"></i>
-            </button>
-          `
-              : ""
-          }
-        </div>
+      <td class="py-4 px-4 align-middle"><span class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-semibold text-xs">${row.No_Rel}</span></td>
+      <td class="py-4 px-4 align-middle">
+        <div class="text-base font-extrabold text-gray-900 tracking-tight">${row.Part_Number}</div>
+        <div class="text-xs font-medium text-gray-400 mt-0.5 uppercase">${row.nama_barang}</div>
       </td>
-    `;
-
-    // Kolom PART NUMBER & NAMA BARANG (Hirarki Tipografi Sesuai Design System)
-    html += `
-      <td class="py-4 px-4">
-        <div class="text-base lg:text-lg font-extrabold text-gray-900 tracking-tight leading-snug">${escapeHtml(row.Part_Number)}</div>
-        <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">${escapeHtml(row.nama_barang)}</div>
-      </td>
-    `;
-
-    // Kolom STOK AWAL
-    html += `
-      <td class="py-4 px-4 text-right">
-        <span class="text-base lg:text-lg font-extrabold text-gray-900">${row.stokAwal}</span>
-      </td>
-    `;
-
-    // Kolom QTY/DAY
-    html += `
-      <td class="py-4 px-4 text-center">
-        ${
-          canEditQtyDay
-            ? `
-          <button
-            onclick="promptUpdateQtyDay('${escapeHtml(row.Part_Number)}', '${escapeHtml(row.id_customer)}', ${row.qtyDay}, ${row.orderId || "null"})"
-            class="px-4 py-1.5 rounded-full bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 text-sm font-extrabold transition"
-          >
-            ${row.qtyDay}
-          </button>
-        `
-            : `<span class="text-sm font-extrabold text-gray-800">${row.qtyDay}</span>`
-        }
-      </td>
-    `;
-
-    // Kolom QTY/OUT
-    html += `
-      <td class="py-4 px-4 text-center">
-        ${
-          canEditQtyOut
-            ? `
-          <button
-            onclick="promptUpdateQtyOut('${escapeHtml(row.Part_Number)}', '${escapeHtml(row.id_customer)}', ${row.qtyOut})"
-            class="px-4 py-1.5 rounded-full bg-amber-50 hover:bg-amber-500 hover:text-white text-amber-800 text-sm font-extrabold transition"
-          >
-            ${row.qtyOut}
-          </button>
-        `
-            : `<span class="text-sm font-extrabold text-gray-800">${row.qtyOut}</span>`
-        }
-      </td>
-    `;
-
-    // Kolom SISA DEL
-    html += `<td class="py-4 px-4 text-center">${sisaBadge}</td>`;
-
-    // Kolom ASSY IN STORE FSG
-    html += `
-      <td class="py-4 px-4 text-center">
-        ${
-          canEditAssy
-            ? `
-          <button
-            onclick="promptUpdateAssyFsg('${escapeHtml(row.Part_Number)}', ${row.assyFsg})"
-            class="px-4 py-1.5 rounded-full bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 text-sm font-extrabold transition"
-          >
-            ${row.assyFsg}
-          </button>
-        `
-            : `<span class="text-sm font-extrabold text-gray-800">${row.assyFsg}</span>`
-        }
-      </td>
-    `;
-
-    // Kolom VARIANCE [+/-]
-    html += `<td class="py-4 px-4 text-right">${varianceBadge}</td>`;
-
-    html += `</tr>`;
-  });
-
+      <td class="py-4 px-4 align-middle text-center"><span class="text-lg font-extrabold text-gray-900">${formatNum(row.stock)}</span></td>
+      <td class="py-4 px-4 align-middle text-center"><span class="text-sm font-semibold text-gray-600 ${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
+      <td class="py-4 px-4 align-middle text-center"><span class="text-sm font-semibold text-gray-600 ${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
+      <td class="py-4 px-4 align-middle text-center"><span class="text-sm font-bold ${row.sisa_del > 0 ? "text-red-500" : "text-gray-300"}">${formatNum(row.sisa_del)}</span></td>
+      <td class="py-4 px-4 align-middle text-center"><span class="text-base font-extrabold text-purple-600 ${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
+      <td class="py-4 pl-4 align-middle text-right">${varBadge}</td>
+    </tr>`;
+  }
   tbody.innerHTML = html;
 }
 
-/**
- * ============================================================================
- * 4 POPUP KALKULATOR SELISIH OTOMATIS PAPAN KONTROL
- * ============================================================================
- */
-
-// 1. Klik Kolom Stok Assy (`promptUpdateAssyFsg`) - Hanya Admin & Produksi
-async function promptUpdateAssyFsg(partNumber, currentAssy) {
-  const role = currentUser ? currentUser.role : "Guest";
-  if (role !== "Admin" && role !== "Produksi") {
-    showToast(
-      "warning",
-      "Akses Ditolak",
-      "Hanya Produksi dan Admin yang diizinkan mengubah ASSY IN STORE FSG.",
-    );
-    return;
-  }
-
-  const { value: newTotalRaw } = await swalUI.fire({
-    title: "Update ASSY IN STORE FSG",
-    html: `
-      <p class="text-xs font-bold text-gray-400 uppercase mb-2">${escapeHtml(partNumber)}</p>
-      <div class="p-3 rounded-2xl bg-gray-50 border border-gray-100 mb-3">
-        <span class="text-xs font-semibold text-gray-500">Stok Assy Saat Ini:</span>
-        <span class="text-lg font-extrabold text-indigo-600 ml-1">${currentAssy} PCS</span>
-      </div>
-      <p class="text-xs text-gray-500">Masukkan <b>Total Akhir</b> stok Assy yang baru:</p>
-    `,
-    input: "number",
-    inputValue: currentAssy,
-    showCancelButton: true,
-    confirmButtonText: "Simpan Total Baru",
-    cancelButtonText: "Batal",
-  });
-
-  if (newTotalRaw === undefined || newTotalRaw === null || newTotalRaw === "")
-    return;
-  const newTotal = parseInt(newTotalRaw, 10);
-  if (isNaN(newTotal) || newTotal < 0) {
-    showToast(
-      "error",
-      "Input Tidak Valid",
-      "Total akhir Assy tidak boleh negatif.",
-    );
-    return;
-  }
-
-  const diff = newTotal - Number(currentAssy);
-  if (diff === 0) return;
-
-  isProcessing = true;
-  try {
-    await supabaseClient
-      .from("Master_Barang")
-      .update({ assy_fsg: newTotal })
-      .eq("Part_Number", partNumber);
-
-    const catatanLog =
-      diff > 0
-        ? "Masuk Gudang FSG (Hasil Assy)"
-        : "Koreksi Pengurangan Stok Assy";
-
-    await supabaseClient.from("Transaksi_Masuk").insert({
-      Part_Number: partNumber,
-      qty: diff,
-      petugas: currentUser.username,
-      catatan: catatanLog,
-      tanggal: new Date().toISOString(),
-    });
-
-    await fetchAllDatabaseData(true);
-    showToast(
-      "success",
-      "Assy Diperbarui",
-      `${partNumber}: Selisih ${diff > 0 ? "+" + diff : diff} tercatat.`,
-    );
-  } catch (err) {
-    showToast(
-      "error",
-      "Gagal Update Assy",
-      "Terjadi kesalahan saat menyimpan ke database.",
-    );
-  } finally {
-    isProcessing = false;
-  }
+function handleGlobalSearch(kw) {
+  renderSeatAssyControlBoard(kw);
 }
 
-// 2. Klik Kolom Terkirim / QTY/OUT (`promptUpdateQtyOut`) - Hanya Admin & Warehouse
-async function promptUpdateQtyOut(partNumber, idCustomer, currentQtyOut) {
-  const role = currentUser ? currentUser.role : "Guest";
-  if (role !== "Admin" && role !== "Warehouse") {
-    showToast(
-      "warning",
-      "Akses Ditolak",
-      "Hanya Warehouse dan Admin yang dapat mengubah QTY/OUT.",
-    );
-    return;
-  }
-
-  const customerName = getCustomerDisplayName(idCustomer);
-
-  const { value: newTotalRaw } = await swalUI.fire({
-    title: "Update Pengiriman (QTY/OUT)",
-    html: `
-      <p class="text-xs font-bold text-gray-400 uppercase">${escapeHtml(partNumber)}</p>
-      <p class="text-xs font-extrabold text-gray-800 mb-3">Tujuan: ${escapeHtml(customerName)}</p>
-      <div class="p-3 rounded-2xl bg-amber-50/70 border border-amber-100 mb-3">
-        <span class="text-xs font-semibold text-amber-800">Terkirim Hari Ini:</span>
-        <span class="text-lg font-extrabold text-amber-900 ml-1">${currentQtyOut} PCS</span>
-      </div>
-      <p class="text-xs text-gray-500">Masukkan <b>Total Akhir</b> pengiriman hari ini:</p>
-    `,
-    input: "number",
-    inputValue: currentQtyOut,
-    showCancelButton: true,
-    confirmButtonText: "Simpan Pengiriman",
-    cancelButtonText: "Batal",
-  });
-
-  if (newTotalRaw === undefined || newTotalRaw === null || newTotalRaw === "")
-    return;
-  const newTotal = parseInt(newTotalRaw, 10);
-  if (isNaN(newTotal) || newTotal < 0) {
-    showToast(
-      "error",
-      "Input Tidak Valid",
-      "Total pengiriman tidak boleh kurang dari 0.",
-    );
-    return;
-  }
-
-  const diff = newTotal - Number(currentQtyOut);
-  if (diff === 0) return;
-
-  isProcessing = true;
-  try {
-    const catatanLog =
-      diff > 0
-        ? `Pengiriman Papan Kontrol - Tujuan: ${customerName}`
-        : `Koreksi Batal Kirim - Dari: ${customerName}`;
-
-    await supabaseClient.from("Transaksi_Keluar").insert({
-      Part_Number: partNumber,
-      qty: diff,
-      petugas: currentUser.username,
-      catatan: catatanLog,
-      tanggal: new Date().toISOString(),
-    });
-
-    await fetchAllDatabaseData(true);
-    showToast(
-      "success",
-      "QTY/OUT Diperbarui",
-      `${partNumber} (${customerName}): Selisih ${diff > 0 ? "+" + diff : diff} PCS.`,
-    );
-  } catch (err) {
-    showToast(
-      "error",
-      "Gagal Update QTY/OUT",
-      "Terjadi kendala koneksi database.",
-    );
-  } finally {
-    isProcessing = false;
-  }
+// =========================================================================
+// SCANNER SMART YIMM PARSING
+// =========================================================================
+function triggerManualGunButton() {
+  handleScannerGun({ key: "Enter", preventDefault: () => {} });
 }
 
-// 3. Klik Kolom Target/Hari / QTY/DAY (`promptUpdateQtyDay`) - Hanya Admin
-async function promptUpdateQtyDay(
-  partNumber,
-  idCustomer,
-  currentQtyDay,
-  orderId,
-) {
-  const role = currentUser ? currentUser.role : "Guest";
-  if (role !== "Admin") {
-    showToast(
-      "warning",
-      "Akses Ditolak",
-      "Hanya Admin yang dapat mengubah Target Harian (QTY/DAY).",
+function handleScannerGun(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    const inputField = document.getElementById("manualSmartInput");
+    const code = inputField.value.trim();
+    if (!code) return;
+
+    const parsed = parseYimmBarcode(code);
+
+    const matchingRows = appData.seatAssyControl.filter(
+      (item) =>
+        item.Part_Number.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() ===
+          parsed.partNumberClean ||
+        item.Part_Number.toLowerCase() === code.toLowerCase(),
     );
-    return;
-  }
 
-  const customerName = getCustomerDisplayName(idCustomer);
-
-  const { value: newTargetRaw } = await swalUI.fire({
-    title: "Set Target Harian (QTY/DAY)",
-    html: `
-      <p class="text-xs font-bold text-gray-400 uppercase">${escapeHtml(partNumber)}</p>
-      <p class="text-xs font-extrabold text-blue-600 mb-3">Customer: ${escapeHtml(customerName)}</p>
-      <p class="text-xs text-gray-500">Masukkan target kuantitas order harian:</p>
-    `,
-    input: "number",
-    inputValue: currentQtyDay,
-    showCancelButton: true,
-    confirmButtonText: "Simpan Target",
-    cancelButtonText: "Batal",
-  });
-
-  if (
-    newTargetRaw === undefined ||
-    newTargetRaw === null ||
-    newTargetRaw === ""
-  )
-    return;
-  const newTarget = parseInt(newTargetRaw, 10);
-  if (isNaN(newTarget) || newTarget < 0) return;
-
-  isProcessing = true;
-  try {
-    if (orderId) {
-      await supabaseClient
-        .from("List_Order")
-        .update({ qty_order: newTarget })
-        .eq("id", orderId);
-    } else {
-      const { data: existing } = await supabaseClient
-        .from("List_Order")
-        .select("*")
-        .eq("Part_Number", partNumber)
-        .eq("id_customer", idCustomer)
-        .maybeSingle();
-
-      if (existing) {
-        await supabaseClient
-          .from("List_Order")
-          .update({ qty_order: newTarget })
-          .eq("id", existing.id);
-      } else {
-        await supabaseClient.from("List_Order").insert({
-          Part_Number: partNumber,
-          id_customer: idCustomer,
-          qty_order: newTarget,
-        });
-      }
-    }
-
-    // Catat ke Transaksi_Masuk dengan qty: 0
-    await supabaseClient.from("Transaksi_Masuk").insert({
-      Part_Number: partNumber,
-      qty: 0,
-      petugas: currentUser.username,
-      catatan: `Set Target QTY/DAY menjadi ${newTarget} Pcs (${customerName})`,
-      tanggal: new Date().toISOString(),
-    });
-
-    await fetchAllDatabaseData(true);
-    showToast(
-      "success",
-      "Target Disimpan",
-      `Target ${partNumber} (${customerName}) diset ke ${newTarget} PCS.`,
-    );
-  } catch (err) {
-    showToast("error", "Gagal Update Target", "Periksa koneksi database.");
-  } finally {
-    isProcessing = false;
-  }
-}
-
-// 4. Klik Pengaturan Customer Baris Part (`promptUpdateCustomerPart`) - Admin & Warehouse
-async function promptUpdateCustomerPart(
-  partNumber,
-  currentCustomerId,
-  orderId,
-) {
-  const role = currentUser ? currentUser.role : "Guest";
-  if (role !== "Admin" && role !== "Warehouse") return;
-
-  const partOrders = getOrdersForPart(partNumber);
-  const optionsHtml = masterCustomerList
-    .map(
-      (c) =>
-        `<option value="${escapeHtml(c.id_customer)}" ${c.id_customer === currentCustomerId ? "selected" : ""}>${escapeHtml(c.nama_customer)} (${escapeHtml(c.id_customer)})</option>`,
-    )
-    .join("");
-
-  const result = await swalUI.fire({
-    title: "Kelola Customer Part",
-    html: `
-      <p class="text-xs font-extrabold text-gray-900 mb-3">${escapeHtml(partNumber)}</p>
-      <div class="text-left space-y-3">
-        <div>
-          <label class="block text-[11px] font-extrabold uppercase text-gray-400 mb-1">Pilih Customer</label>
-          <select id="swalSelectCustPart" class="w-full px-4 py-3 rounded-full bg-gray-50 border border-gray-200 text-xs font-bold text-gray-900">
-            <option value="-">-- Belum Ditentukan (-) --</option>
-            ${optionsHtml}
-          </select>
-        </div>
-        <div>
-          <label class="block text-[11px] font-extrabold uppercase text-gray-400 mb-1">Mode Aksi</label>
-          <select id="swalModeCustAction" class="w-full px-4 py-3 rounded-full bg-gray-50 border border-gray-200 text-xs font-bold text-gray-900">
-            <option value="UPDATE">Ubah Customer pada Baris Ini</option>
-            <option value="ADD">Tambah Customer Baru untuk Part Ini (Multi-Customer)</option>
-          </select>
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    showDenyButton: partOrders.length > 1,
-    confirmButtonText: "Terapkan",
-    denyButtonText: "Hapus Baris Customer Ini",
-    cancelButtonText: "Batal",
-    preConfirm: () => {
-      return {
-        selectedCust: document.getElementById("swalSelectCustPart").value,
-        actionMode: document.getElementById("swalModeCustAction").value,
-      };
-    },
-  });
-
-  isProcessing = true;
-  try {
-    if (result.isDenied && orderId) {
-      await supabaseClient.from("List_Order").delete().eq("id", orderId);
-      await fetchAllDatabaseData(true);
-      showToast(
-        "info",
-        "Baris Dihapus",
-        "Alokasi customer untuk part tersebut telah dihapus.",
-      );
+    if (matchingRows.length === 0) {
+      showToast("error", "Tidak Dikenali", `Part ${code} tidak terdaftar.`);
+      inputField.value = "";
       return;
     }
 
-    if (result.isConfirmed && result.value) {
-      const { selectedCust, actionMode } = result.value;
+    const foundData =
+      matchingRows.find((r) => r.sisa_del > 0) || matchingRows[0];
+    foundData._tempScanQty = parsed.qty;
 
-      if (actionMode === "ADD") {
-        await supabaseClient.from("List_Order").insert({
-          Part_Number: partNumber,
-          id_customer: selectedCust,
-          qty_order: 0,
-        });
-        showToast(
-          "success",
-          "Multi-Customer Ditambahkan",
-          `Part ${partNumber} kini memiliki alokasi untuk ${getCustomerDisplayName(selectedCust)}.`,
-        );
-      } else {
-        if (orderId) {
-          await supabaseClient
-            .from("List_Order")
-            .update({ id_customer: selectedCust })
-            .eq("id", orderId);
-        } else {
-          await supabaseClient.from("List_Order").insert({
-            Part_Number: partNumber,
-            id_customer: selectedCust,
-            qty_order: 0,
-          });
-        }
-        await supabaseClient
-          .from("Master_Barang")
-          .update({ id_customer: selectedCust })
-          .eq("Part_Number", partNumber);
-        showToast(
-          "success",
-          "Customer Diubah",
-          `Customer untuk ${partNumber} diperbarui.`,
-        );
-      }
-      await fetchAllDatabaseData(true);
-    }
-  } catch (err) {
-    showToast(
-      "error",
-      "Gagal Memproses Customer",
-      "Terjadi kesalahan pada database.",
-    );
-  } finally {
-    isProcessing = false;
+    addToBatchTrolley(foundData);
+    inputField.value = "";
+    inputField.focus();
   }
 }
 
-/**
- * ============================================================================
- * PENERJEMAH BARCODE CERDAS (`parseYimmBarcode`) & DUAL SCANNER
- * ============================================================================
- */
-function parseYimmBarcode(rawCode) {
-  const raw = String(rawCode || "").trim();
-  if (!raw) return { partNumber: "", qty: 1, format: "UNKNOWN" };
-
-  // 1. Format 1 — Standar Otomotif Global (ISO/IEC 15434 / EDI): Diawali `[)>`
-  if (raw.startsWith("[)>")) {
-    const partMatch = raw.match(/P([A-Z0-9]+)V/i);
-    const qtyMatch = raw.match(/Q(\d{6})/i);
-
-    const extractedPart = partMatch ? partMatch[1].toUpperCase() : raw;
-    const extractedQty = qtyMatch ? parseInt(qtyMatch[1], 10) : 1;
-
-    return {
-      partNumber: extractedPart,
-      qty: isNaN(extractedQty) || extractedQty <= 0 ? 1 : extractedQty,
-      format: "ISO_EDI_2D",
-    };
-  }
-
-  // 2. Format 2 — Kanban / Troli Internal: Mengandung `|`
-  if (raw.includes("|")) {
-    const beforePipe = raw.split("|")[0].trim();
-    const segments = beforePipe.split("-");
-
-    if (segments.length > 1) {
-      const lastSeg = segments[segments.length - 1];
-      if (/^\d+$/.test(lastSeg)) {
-        const extractedQty = parseInt(lastSeg, 10);
-        const extractedPart = segments.slice(0, -1).join("-");
-        return {
-          partNumber: extractedPart,
-          qty: isNaN(extractedQty) || extractedQty <= 0 ? 1 : extractedQty,
-          format: "KANBAN_INTERNAL",
-        };
-      }
-    }
-
-    return {
-      partNumber: beforePipe,
-      qty: 1,
-      format: "KANBAN_INTERNAL",
-    };
-  }
-
-  // 3. Fallback Barcode 1D Standar (atau berakhiran -QTY)
-  if (raw.includes("-")) {
-    const segments = raw.split("-");
-    const lastSeg = segments[segments.length - 1];
-    // Jika segmen terakhir 3 digit dengan leading zero seperti -020 atau -040 dan bukan bagian dari kode part di DB
-    const exactMatchInDb = masterBarangList.some(
-      (b) => cleanAlphanumeric(b.Part_Number) === cleanAlphanumeric(raw),
-    );
-    if (!exactMatchInDb && /^\d{3}$/.test(lastSeg)) {
-      const extractedQty = parseInt(lastSeg, 10);
-      const extractedPart = segments.slice(0, -1).join("-");
-      return {
-        partNumber: extractedPart,
-        qty: extractedQty > 0 ? extractedQty : 1,
-        format: "KANBAN_SHORT",
-      };
-    }
-  }
-
-  return {
-    partNumber: raw,
-    qty: 1,
-    format: "STANDARD_1D",
-  };
-}
-
-function findMasterItemByScannedPart(scannedPart) {
-  const targetClean = cleanAlphanumeric(scannedPart);
-  if (!targetClean) return null;
-
-  return (
-    masterBarangList.find(
-      (item) => cleanAlphanumeric(item.Part_Number) === targetClean,
-    ) || null
+function addToBatchTrolley(item) {
+  const selectedBatchCust = document.getElementById(
+    "batchSelectCustomer",
+  )?.value;
+  const custToUse =
+    selectedBatchCust && selectedBatchCust !== "-"
+      ? selectedBatchCust
+      : item.Customer;
+  const existing = batchTrolley.find(
+    (b) => b.Part_Number === item.Part_Number && b.Customer === custToUse,
   );
-}
 
-function switchScannerMode(mode) {
-  scannerMode = mode;
-  const gunWrap = document.getElementById("scannerGunContainer");
-  const camWrap = document.getElementById("scannerCameraContainer");
-  const btnGun = document.getElementById("btnModeGun");
-  const btnCam = document.getElementById("btnModeCamera");
+  const addQty = item._tempScanQty || 1;
 
-  if (mode === "GUN") {
-    stopCameraScanner();
-    gunWrap.classList.remove("hidden");
-    camWrap.classList.add("hidden");
-    btnGun.className =
-      "px-5 py-2.5 rounded-full text-xs font-extrabold transition bg-gray-900 text-white flex items-center gap-2";
-    btnCam.className =
-      "px-5 py-2.5 rounded-full text-xs font-extrabold transition bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-2";
-    setTimeout(() => document.getElementById("gunScannerInput")?.focus(), 100);
-  } else {
-    gunWrap.classList.add("hidden");
-    camWrap.classList.remove("hidden");
-    btnCam.className =
-      "px-5 py-2.5 rounded-full text-xs font-extrabold transition bg-gray-900 text-white flex items-center gap-2";
-    btnGun.className =
-      "px-5 py-2.5 rounded-full text-xs font-extrabold transition bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-2";
-    startCameraScanner();
-  }
-}
-
-// MODE 1: GUN SCANNER (BATCH TROLLEY)
-function setupGunScannerListener() {
-  const input = document.getElementById("gunScannerInput");
-  if (!input) return;
-
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleGunScannerSubmit();
-    }
-  });
-}
-
-function handleGunScannerSubmit() {
-  const input = document.getElementById("gunScannerInput");
-  if (!input) return;
-  const rawCode = input.value.trim();
-  if (!rawCode) return;
-
-  const parsed = parseYimmBarcode(rawCode);
-  const matchedItem = findMasterItemByScannedPart(parsed.partNumber);
-
-  if (!matchedItem) {
-    showToast(
-      "error",
-      "Part Tidak Ditemukan",
-      `Kode "${parsed.partNumber}" tidak cocok dengan Master Barang.`,
-    );
-    input.value = "";
-    input.focus();
-    return;
-  }
-
-  const existingIndex = batchTrolley.findIndex(
-    (t) => t.Part_Number === matchedItem.Part_Number,
-  );
-  if (existingIndex > -1) {
-    batchTrolley[existingIndex].trolleyCount += 1;
-    batchTrolley[existingIndex].qtyInput += parsed.qty;
+  if (existing) {
+    existing.trolleyCount += 1;
+    existing.qtyInput += addQty;
   } else {
     batchTrolley.push({
-      Part_Number: matchedItem.Part_Number,
-      nama_barang: matchedItem.nama_barang,
-      No_Rel: matchedItem.No_Rel || "-",
+      Part_Number: item.Part_Number,
+      nama_barang: item.nama_barang,
+      No_Rel: item.No_Rel,
+      Customer: custToUse,
+      stock: item.stock,
+      assy_fsg: item.assy_fsg,
       trolleyCount: 1,
-      qtyInput: parsed.qty,
+      qtyInput: addQty,
     });
   }
 
-  input.value = "";
-  input.focus();
-  renderBatchTrolleyTable();
-  showToast(
-    "success",
-    "Masuk Troli",
-    `${matchedItem.Part_Number} (+${parsed.qty} PCS) ditambahkan.`,
-  );
+  item._tempScanQty = null;
+  updateBatchTrolleyUI();
+  new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3")
+    .play()
+    .catch(() => {});
 }
 
-function renderBatchTrolleyTable() {
-  const tbody = document.getElementById("batchTrolleyTableBody");
-  const badge = document.getElementById("trolleyBadgeCount");
-  if (!tbody) return;
+function clearBatchTrolley() {
+  batchTrolley = [];
+  updateBatchTrolleyUI();
+}
 
-  const totalTrolleys = batchTrolley.reduce(
-    (acc, i) => acc + i.trolleyCount,
-    0,
-  );
-  if (badge) badge.textContent = totalTrolleys;
-
+function updateBatchTrolleyUI() {
+  const container = document.getElementById("batchTrolleyInlineList");
+  if (!container) return;
   if (batchTrolley.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="5" class="py-10 px-4 text-center text-xs font-bold text-gray-400">
-          Keranjang Troli masih kosong. Silakan tembak barcode menggunakan Gun Scanner.
-        </td>
-      </tr>
-    `;
+    container.innerHTML = `<div class="py-14 text-center text-gray-400 text-xs font-medium bg-gray-50/70 rounded-2xl">Belum ada item yang di-scan.</div>`;
     return;
   }
 
-  tbody.innerHTML = batchTrolley
+  container.innerHTML = batchTrolley
     .map(
-      (item, idx) => `
-    <tr class="hover:bg-gray-50/70 transition">
-      <td class="py-4 px-4">
-        <div class="text-base font-extrabold text-gray-900">${escapeHtml(item.Part_Number)}</div>
-        <div class="text-xs font-medium text-gray-400 uppercase">${escapeHtml(item.nama_barang)}</div>
-      </td>
-      <td class="py-4 px-4 text-center">
-        <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-extrabold">${escapeHtml(item.No_Rel)}</span>
-      </td>
-      <td class="py-4 px-4 text-center">
-        <span class="px-3.5 py-1 rounded-full bg-gray-900 text-white text-xs font-extrabold">${item.trolleyCount}x Scan</span>
-      </td>
-      <td class="py-4 px-4 text-center">
-        <input
-          type="number"
-          value="${item.qtyInput}"
-          onchange="updateBatchTrolleyQty(${idx}, this.value)"
-          class="w-28 py-1.5 px-3 rounded-full bg-gray-50 border border-gray-200 text-center text-sm font-extrabold text-gray-900 focus:outline-none focus:border-gray-900"
-        />
-      </td>
-      <td class="py-4 px-4 text-right">
-        <button
-          onclick="removeBatchTrolleyItem(${idx})"
-          class="w-8 h-8 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition inline-flex items-center justify-center"
-        >
-          <i class="fa-solid fa-trash-can text-xs"></i>
-        </button>
-      </td>
-    </tr>
+      (b, idx) => `
+    <div class="flex items-center justify-between p-4 bg-gray-50/80 hover:bg-gray-100/70 rounded-2xl transition-colors">
+      <div class="text-left pr-3">
+        <div class="flex items-center gap-2 mb-0.5">
+           <span class="px-2 py-0.5 bg-white text-gray-600 font-bold text-[10px] rounded-full shadow-2xs">${b.No_Rel}</span>
+           <span class="font-extrabold text-sm text-gray-900">${b.Part_Number}</span>
+        </div>
+        <div class="text-[11px] font-medium text-gray-400 uppercase">${b.nama_barang}</div>
+        <div class="text-[11px] font-semibold text-gray-600 mt-1">${b.trolleyCount}x Troli &bull; <span class="text-gray-400">${b.Customer}</span></div>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="w-16 bg-white border border-gray-200/80 px-2 py-1.5 text-center font-extrabold text-sm rounded-full outline-none focus:border-gray-900 text-gray-900" />
+        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-8 h-8 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark text-xs"></i></button>
+      </div>
+    </div>
   `,
     )
     .join("");
 }
 
-function updateBatchTrolleyQty(idx, val) {
-  const num = parseInt(val, 10);
-  if (!isNaN(num) && num > 0 && batchTrolley[idx]) {
-    batchTrolley[idx].qtyInput = num;
-  }
-}
-
-function removeBatchTrolleyItem(idx) {
-  batchTrolley.splice(idx, 1);
-  renderBatchTrolleyTable();
-}
-
-function clearBatchTrolley() {
-  batchTrolley = [];
-  renderBatchTrolleyTable();
-}
-
-async function executeBatchTrolley(actionType) {
-  if (batchTrolley.length === 0) {
-    showToast(
+async function submitBatchTrolley(tipeAction) {
+  if (!currentUser) return openLoginModal();
+  if (batchTrolley.length === 0)
+    return showToast(
       "warning",
-      "Keranjang Kosong",
-      "Scan minimal 1 barang terlebih dahulu.",
+      "Daftar Kosong",
+      "Scan barang terlebih dahulu.",
     );
-    return;
-  }
+  if (isProcessing) return;
 
-  const role = currentUser ? currentUser.role : "Guest";
-  if (actionType === "ASSY" && role !== "Admin" && role !== "Produksi") {
-    showToast(
+  const invalidQty = batchTrolley.find(
+    (b) => !b.qtyInput || Number(b.qtyInput) <= 0,
+  );
+  if (invalidQty)
+    return showToast(
       "error",
-      "Akses Ditolak",
-      "Warehouse dilarang mengisi ASSY IN STORE FSG.",
+      "Qty Tidak Valid",
+      `Cek jumlah untuk ${invalidQty.Part_Number}`,
     );
-    return;
-  }
-  if (
-    (actionType === "IN" || actionType === "OUT") &&
-    role !== "Admin" &&
-    role !== "Warehouse"
-  ) {
-    showToast(
-      "error",
-      "Akses Ditolak",
-      "Akun Produksi hanya untuk pengisian Assy FSG.",
-    );
-    return;
-  }
 
-  const selectedCustDropdown =
-    document.getElementById("batchCustomerSelect")?.value || "-";
+  const overrideCust =
+    document.getElementById("batchSelectCustomer")?.value || "-";
+  if (tipeAction === "OUT") {
+    for (const item of batchTrolley) {
+      const targetCust =
+        overrideCust && overrideCust !== "-" ? overrideCust : item.Customer;
+      if (!targetCust || targetCust === "-")
+        return showToast(
+          "warning",
+          "Pilih Customer",
+          "Tentukan tujuan pengiriman di atas.",
+        );
+    }
+  }
 
   isProcessing = true;
+  swalUI.fire({
+    title: "Memproses...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
   try {
-    for (const trolleyItem of batchTrolley) {
-      const master = masterBarangList.find(
-        (b) => b.Part_Number === trolleyItem.Part_Number,
-      );
-      if (!master) continue;
-      const qty = Number(trolleyItem.qtyInput) || 0;
-      if (qty <= 0) continue;
-
-      if (actionType === "IN") {
-        const newStok = (Number(master.stok) || 0) + qty;
-        await supabaseClient
-          .from("Master_Barang")
-          .update({ stok: newStok })
-          .eq("Part_Number", master.Part_Number);
-
-        await supabaseClient.from("Transaksi_Masuk").insert({
-          Part_Number: master.Part_Number,
-          qty,
+    for (const item of batchTrolley) {
+      const qty = Number(item.qtyInput);
+      if (tipeAction === "IN") {
+        await sendToBackend("apiSaveTransaksiMasuk", {
+          partNumber: item.Part_Number,
+          qty: qty,
           petugas: currentUser.username,
-          catatan: `Batch Gun Scanner Masuk (${trolleyItem.trolleyCount} Troli)`,
-          tanggal: new Date().toISOString(),
+          catatan: `Batch Gun Masuk (${item.trolleyCount} Troli)`,
         });
-      } else if (actionType === "OUT") {
+      } else if (tipeAction === "OUT") {
         const targetCust =
-          selectedCustDropdown !== "-"
-            ? selectedCustDropdown
-            : master.id_customer || "-";
-        const custDisplay = getCustomerDisplayName(targetCust);
-
-        await supabaseClient.from("Transaksi_Keluar").insert({
-          Part_Number: master.Part_Number,
-          qty,
+          overrideCust && overrideCust !== "-" ? overrideCust : item.Customer;
+        await sendToBackend("apiSaveTransaksiKeluar", {
+          partNumber: item.Part_Number,
+          qty: qty,
           petugas: currentUser.username,
-          catatan: `Batch Scanner Delivery - Tujuan: ${custDisplay}`,
-          tanggal: new Date().toISOString(),
+          customer: targetCust,
+          catatan: `Kirim ke: ${targetCust}`,
         });
-      } else if (actionType === "ASSY") {
-        const newAssy = (Number(master.assy_fsg) || 0) + qty;
-        await supabaseClient
-          .from("Master_Barang")
-          .update({ assy_fsg: newAssy })
-          .eq("Part_Number", master.Part_Number);
-
-        await supabaseClient.from("Transaksi_Masuk").insert({
-          Part_Number: master.Part_Number,
-          qty,
+      } else if (tipeAction === "ASSY_ADD") {
+        await sendToBackend("apiUpdateAssyFsg", {
+          partNumber: item.Part_Number,
+          qty: qty,
+          mode: "ADD",
           petugas: currentUser.username,
-          catatan: `Masuk Gudang FSG (Hasil Assy - ${trolleyItem.trolleyCount} Troli)`,
-          tanggal: new Date().toISOString(),
         });
       }
     }
-
     batchTrolley = [];
-    renderBatchTrolleyTable();
-    await fetchAllDatabaseData(true);
-    showToast(
-      "success",
-      "Eksekusi Massal Berhasil",
-      "Seluruh item di keranjang troli telah disimpan ke database.",
-    );
+    updateBatchTrolleyUI();
+    Swal.close();
+    showToast("success", "Selesai", "Seluruh batch berhasil dicatat.");
+    refreshAllData();
   } catch (err) {
-    showToast(
-      "error",
-      "Eksekusi Gagal",
-      "Terjadi kesalahan saat menyimpan transaksi batch.",
-    );
-  } finally {
-    isProcessing = false;
+    Swal.close();
+    showToast("error", "Gagal", err.message);
   }
+  isProcessing = false;
 }
 
-// MODE 2: KAMERA HP ZXING (`BrowserMultiFormatReader`)
-async function startCameraScanner() {
-  try {
-    if (!zxingReader) {
-      zxingReader = new ZXing.BrowserMultiFormatReader();
+function startSmartScanner() {
+  if (!currentUser) {
+    openLoginModal();
+    return;
+  }
+  document.getElementById("smartReaderWrapper").classList.remove("hidden");
+  document.getElementById("btnStartScan").classList.add("hidden");
+  document.getElementById("btnStopScan").classList.remove("hidden");
+
+  if (!codeReader) {
+    codeReader = new ZXing.BrowserMultiFormatReader();
+  }
+
+  isCameraPaused = false;
+
+  codeReader
+    .decodeFromVideoDevice(null, "smartReaderVideo", (result, err) => {
+      if (result && !isCameraPaused) {
+        new Audio("https://www.soundjay.com/buttons/sounds/button-3.mp3")
+          .play()
+          .catch(() => {});
+        processSmartScanCamera(result.getText());
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+}
+
+function stopSmartScanner() {
+  if (codeReader) {
+    codeReader.reset();
+    codeReader = null;
+  }
+  document.getElementById("smartReaderWrapper").classList.add("hidden");
+  document.getElementById("btnStartScan").classList.remove("hidden");
+  document.getElementById("btnStopScan").classList.add("hidden");
+}
+
+function populateCustomerDropdown(selectEl, selectedVal = "-") {
+  if (!selectEl) return;
+  const isBatch = selectEl.id === "batchSelectCustomer";
+  let html = `<option value="-">${isBatch ? "-- Sesuai Default Part --" : "-- Pilih Customer --"}</option>`;
+  (appData.customer || []).forEach((c) => {
+    const val = c.nama_customer || c.id_customer;
+    const label = c.nama_customer
+      ? `${c.nama_customer} (${c.id_customer})`
+      : c.id_customer;
+    const isSel =
+      String(val).toLowerCase() === String(selectedVal).toLowerCase() ||
+      String(c.id_customer).toLowerCase() === String(selectedVal).toLowerCase()
+        ? "selected"
+        : "";
+    html += `<option value="${val}" ${isSel}>${label}</option>`;
+  });
+  selectEl.innerHTML = html;
+}
+
+function handleChangeScannerCustomer(val) {
+  const badge = document.getElementById("smInfoCustomer");
+  if (badge) badge.innerText = "TUJUAN: " + (val && val !== "-" ? val : "-");
+  if (activeScannedPart) {
+    const matchingRow = appData.seatAssyControl.find(
+      (item) =>
+        item.Part_Number.toLowerCase() ===
+          activeScannedPart.Part_Number.toLowerCase() &&
+        item.Customer.toLowerCase() === String(val).toLowerCase(),
+    );
+    if (matchingRow) {
+      activeScannedPart = matchingRow;
+      document.getElementById("smInfoTarget").innerText = matchingRow.sisa_del;
+    } else {
+      document.getElementById("smInfoTarget").innerText = 0;
     }
-    const videoInputDevices = await zxingReader.listVideoInputDevices();
-    const selectEl = document.getElementById("cameraVideoSelect");
-
-    if (
-      selectEl &&
-      selectEl.options.length === 0 &&
-      videoInputDevices.length > 0
-    ) {
-      selectEl.innerHTML = videoInputDevices
-        .map(
-          (dev, idx) =>
-            `<option value="${dev.deviceId}">${escapeHtml(dev.label || "Kamera " + (idx + 1))}</option>`,
-        )
-        .join("");
-    }
-
-    const selectedDeviceId =
-      selectEl?.value ||
-      (videoInputDevices[0] ? videoInputDevices[0].deviceId : undefined);
-
-    await zxingReader.decodeFromVideoDevice(
-      selectedDeviceId,
-      "zxingVideoPreview",
-      (result, err) => {
-        if (result) {
-          const rawText = result.getText();
-          handleCameraCodeDetected(rawText);
-        }
-      },
-    );
-  } catch (err) {
-    showToast(
-      "warning",
-      "Kamera Tidak Aktif",
-      "Pastikan izin kamera diberikan pada browser Anda.",
-    );
   }
 }
 
-function restartCameraScanner() {
-  stopCameraScanner();
-  startCameraScanner();
-}
+function processSmartScanCamera(scannedCode) {
+  if (isCameraPaused) return;
 
-function stopCameraScanner() {
-  if (zxingReader) {
-    zxingReader.reset();
-  }
-}
+  const code = scannedCode.trim();
+  const parsed = parseYimmBarcode(code);
 
-function handleCameraCodeDetected(rawCode) {
-  // Jeda kamera saat barcode terbaca
-  stopCameraScanner();
+  const matchingRows = appData.seatAssyControl.filter(
+    (item) =>
+      item.Part_Number.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() ===
+        parsed.partNumberClean ||
+      item.Part_Number.toLowerCase() === code.toLowerCase(),
+  );
 
-  const parsed = parseYimmBarcode(rawCode);
-  const matched = findMasterItemByScannedPart(parsed.partNumber);
-
-  if (!matched) {
-    showToast(
-      "error",
-      "Barcode Tidak Dikenal",
-      `Part "${parsed.partNumber}" tidak ditemukan di Master Barang.`,
-    );
-    setTimeout(() => startCameraScanner(), 1500);
+  if (matchingRows.length === 0) {
+    showToast("error", "Tidak Dikenali", `Part tidak terdaftar.`);
+    isCameraPaused = true;
+    setTimeout(() => {
+      isCameraPaused = false;
+    }, 2000);
     return;
   }
 
-  activeScannedItem = matched;
+  isCameraPaused = true;
+  const foundData = matchingRows.find((r) => r.sisa_del > 0) || matchingRows[0];
+  activeScannedPart = foundData;
 
-  document.getElementById("smartModalPartNumber").textContent =
-    matched.Part_Number;
-  document.getElementById("smartModalNamaBarang").textContent =
-    matched.nama_barang;
-  document.getElementById("smartModalNoRel").textContent =
-    `No Rel: ${matched.No_Rel || "-"}`;
-  document.getElementById("smartModalCurrentStock").textContent =
-    `Stok Awal: ${matched.stok || 0}`;
-  document.getElementById("smartModalCurrentAssy").textContent =
-    `Assy FSG: ${matched.assy_fsg || 0}`;
-  document.getElementById("smartModalQtyInput").value = parsed.qty;
+  const custDisplay =
+    foundData.Customer &&
+    foundData.Customer !== "-" &&
+    foundData.Customer !== "undefined"
+      ? foundData.Customer
+      : "-";
+  populateCustomerDropdown(
+    document.getElementById("smSelectCustomer"),
+    custDisplay,
+  );
 
-  // Isi pilihan customer untuk part tersebut
-  const custSelect = document.getElementById("smartModalCustomerSelect");
-  if (custSelect) {
-    const partOrders = getOrdersForPart(matched.Part_Number);
-    custSelect.innerHTML = partOrders
-      .map(
-        (o) =>
-          `<option value="${escapeHtml(o.id_customer)}">${escapeHtml(getCustomerDisplayName(o.id_customer))}</option>`,
-      )
-      .join("");
+  document.getElementById("smInfoCustomer").innerText =
+    "TUJUAN: " + custDisplay;
+  document.getElementById("smInfoRell").innerText = foundData.No_Rel;
+  document.getElementById("smInfoPart").innerText = foundData.Part_Number;
+  document.getElementById("smInfoNama").innerText = foundData.nama_barang;
+  document.getElementById("smInfoStok").innerText = foundData.stock;
+  document.getElementById("smInfoTarget").innerText = foundData.sisa_del;
+  document.getElementById("smInfoAssy").innerText = foundData.assy_fsg;
+
+  document.getElementById("smInputQty").value = parsed.qty;
+
+  const btnWH = document.getElementById("btnGroupWH"),
+    btnAssy = document.getElementById("btnGroupAssy"),
+    wrapCust = document.getElementById("wrapperSelectCustomer");
+  if (currentUser.role === "Admin") {
+    btnWH.classList.remove("hidden");
+    btnAssy.classList.remove("hidden");
+    wrapCust.classList.remove("hidden");
+  } else if (currentUser.role === "Produksi") {
+    btnWH.classList.add("hidden");
+    btnAssy.classList.remove("hidden");
+    wrapCust.classList.add("hidden");
+  } else {
+    btnWH.classList.remove("hidden");
+    btnAssy.classList.add("hidden");
+    wrapCust.classList.remove("hidden");
   }
 
   document.getElementById("modalSmartAction").classList.remove("hidden");
 }
 
-function closeSmartActionModal() {
+function closeSmartAction() {
   document.getElementById("modalSmartAction").classList.add("hidden");
-  activeScannedItem = null;
-  if (activeTab === "scanner" && scannerMode === "CAMERA") {
-    startCameraScanner();
-  }
+  activeScannedPart = null;
+  setTimeout(() => {
+    isCameraPaused = false;
+  }, 1000);
 }
 
-async function submitSmartCameraAction(actionType) {
-  if (!activeScannedItem) return;
-  const qty = parseInt(document.getElementById("smartModalQtyInput").value, 10);
-  if (isNaN(qty) || qty <= 0) {
-    showToast(
-      "warning",
-      "Kuantitas Tidak Valid",
-      "Masukkan jumlah lebih dari 0.",
-    );
-    return;
-  }
+function adjSmartQty(amt) {
+  const input = document.getElementById("smInputQty");
+  input.value = Math.max(1, (parseInt(input.value) || 0) + amt);
+}
 
-  const custId =
-    document.getElementById("smartModalCustomerSelect")?.value ||
-    activeScannedItem.id_customer ||
-    "-";
-  const custName = getCustomerDisplayName(custId);
+function submitSmartAction(tipeAction) {
+  if (!activeScannedPart || !currentUser) return;
+  const qty = parseInt(document.getElementById("smInputQty").value) || 0;
+  if (qty <= 0) return showToast("error", "Error", "Jumlah harus > 0");
 
   isProcessing = true;
-  try {
-    if (actionType === "IN") {
-      const newStok = (Number(activeScannedItem.stok) || 0) + qty;
-      await supabaseClient
-        .from("Master_Barang")
-        .update({ stok: newStok })
-        .eq("Part_Number", activeScannedItem.Part_Number);
-
-      await supabaseClient.from("Transaksi_Masuk").insert({
-        Part_Number: activeScannedItem.Part_Number,
-        qty,
-        petugas: currentUser.username,
-        catatan: "Scan Kamera Masuk (Stok Utama)",
-        tanggal: new Date().toISOString(),
-      });
-    } else if (actionType === "OUT") {
-      await supabaseClient.from("Transaksi_Keluar").insert({
-        Part_Number: activeScannedItem.Part_Number,
-        qty,
-        petugas: currentUser.username,
-        catatan: `Scan Kamera Delivery - Tujuan: ${custName}`,
-        tanggal: new Date().toISOString(),
-      });
-    } else if (actionType === "ASSY") {
-      const newAssy = (Number(activeScannedItem.assy_fsg) || 0) + qty;
-      await supabaseClient
-        .from("Master_Barang")
-        .update({ assy_fsg: newAssy })
-        .eq("Part_Number", activeScannedItem.Part_Number);
-
-      await supabaseClient.from("Transaksi_Masuk").insert({
-        Part_Number: activeScannedItem.Part_Number,
-        qty,
-        petugas: currentUser.username,
-        catatan: "Masuk Gudang FSG (Hasil Assy via Kamera)",
-        tanggal: new Date().toISOString(),
-      });
+  if (tipeAction === "OUT") {
+    const selectedCustomer =
+      document.getElementById("smSelectCustomer")?.value ||
+      activeScannedPart.Customer;
+    if (!selectedCustomer || selectedCustomer === "-") {
+      isProcessing = false;
+      return showToast(
+        "warning",
+        "Pilih Customer",
+        "Tentukan tujuan pengiriman.",
+      );
     }
-
-    await fetchAllDatabaseData(true);
-    showToast(
-      "success",
-      "Transaksi Berhasil",
-      `${activeScannedItem.Part_Number} (${qty} PCS) berhasil diproses.`,
-    );
-    closeSmartActionModal();
-  } catch (err) {
-    showToast("error", "Transaksi Gagal", "Gagal menyimpan transaksi kamera.");
-  } finally {
-    isProcessing = false;
+    swalUI.fire({
+      title: "Menyimpan...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+    sendToBackend("apiSaveTransaksiKeluar", {
+      partNumber: activeScannedPart.Part_Number,
+      qty,
+      petugas: currentUser.username,
+      customer: selectedCustomer,
+      catatan: `Kirim ke: ${selectedCustomer}`,
+    }).then((res) => {
+      isProcessing = false;
+      Swal.close();
+      if (res.success) {
+        closeSmartAction();
+        refreshAllData();
+        showToast("success", "Berhasil Keluar");
+      } else showToast("error", "Gagal", res.message);
+    });
+  } else if (tipeAction === "IN") {
+    swalUI.fire({
+      title: "Menyimpan...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+    sendToBackend("apiSaveTransaksiMasuk", {
+      partNumber: activeScannedPart.Part_Number,
+      qty,
+      petugas: currentUser.username,
+      catatan: "Scan Kamera Masuk",
+    }).then((res) => {
+      isProcessing = false;
+      Swal.close();
+      if (res.success) {
+        closeSmartAction();
+        refreshAllData();
+        showToast("success", "Berhasil Masuk");
+      } else showToast("error", "Gagal", res.message);
+    });
+  } else if (tipeAction === "ASSY_ADD") {
+    swalUI.fire({
+      title: "Menyimpan...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+    sendToBackend("apiUpdateAssyFsg", {
+      partNumber: activeScannedPart.Part_Number,
+      qty: qty,
+      mode: "ADD",
+      petugas: currentUser.username,
+    }).then((res) => {
+      isProcessing = false;
+      Swal.close();
+      if (res.success) {
+        closeSmartAction();
+        refreshAllData();
+        showToast("success", "Assy Ditambahkan");
+      } else showToast("error", "Gagal", res.message);
+    });
+  } else if (tipeAction === "ASSY_SET") {
+    swalUI.fire({
+      title: "Menyimpan...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+    sendToBackend("apiUpdateAssyFsg", {
+      partNumber: activeScannedPart.Part_Number,
+      qty: qty,
+      mode: "SET",
+      petugas: currentUser.username,
+    }).then((res) => {
+      isProcessing = false;
+      Swal.close();
+      if (res.success) {
+        closeSmartAction();
+        refreshAllData();
+        showToast("success", "Assy Disetel");
+      } else showToast("error", "Gagal", res.message);
+    });
   }
 }
 
-/**
- * ============================================================================
- * MASTER DATA SUPER UNLOCKED (CASCADING PRIMARY KEY) & BULK DELETE ANTI-REFRESH
- * ============================================================================
- */
-function renderMasterBarangTable() {
-  const tbody = document.getElementById("masterBarangTableBody");
+// =========================================================================
+// TABEL MASTER DATA NORDIC FLAT (HIRARKI TEKS & TOMBOL PIL)
+// =========================================================================
+
+// --- MASTER BARANG ---
+function renderMasterBarangTable(keyword = "") {
+  const tbody = document.getElementById("tblMasterBarangBody");
   if (!tbody) return;
 
-  const q = (document.getElementById("searchMasterBarangInput")?.value || "")
-    .trim()
-    .toLowerCase();
-  const filtered = masterBarangList.filter((b) => {
-    if (!q) return true;
-    return `${b.Part_Number} ${b.nama_barang} ${b.No_Rel} ${b.kategori}`
-      .toLowerCase()
-      .includes(q);
-  });
-
-  // Bersihkan item di selectedForDelete yang sudah tidak ada di database
-  selectedForDelete = selectedForDelete.filter((pn) =>
-    masterBarangList.some((b) => b.Part_Number === pn),
-  );
-  updateBulkDeleteButtonUI();
-
-  const selectAllEl = document.getElementById("checkboxSelectAllBarang");
-  if (selectAllEl) {
-    selectAllEl.checked =
-      filtered.length > 0 &&
-      filtered.every((b) => selectedForDelete.includes(b.Part_Number));
+  let dataset = appData.barang || [];
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    dataset = dataset.filter(
+      (b) =>
+        String(b.Part_Number).toLowerCase().includes(kw) ||
+        String(b.nama_barang).toLowerCase().includes(kw),
+    );
   }
 
-  if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="py-10 text-center text-xs font-bold text-gray-400">Belum ada data Master Barang.</td></tr>`;
+  if (dataset.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="py-16 text-center text-gray-400 text-xs font-medium">Tidak ada part ditemukan.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = filtered
-    .map((item) => {
-      const isChecked = selectedForDelete.includes(item.Part_Number)
+  tbody.innerHTML = dataset
+    .map((b) => {
+      const isChecked = selectedForDelete.includes(String(b.Part_Number))
         ? "checked"
         : "";
-      const custDisplay = getCustomerDisplayName(item.id_customer);
-
       return `
-      <tr class="hover:bg-gray-50/70 transition">
-        <td class="py-4 px-4 text-center">
-          <input
-            type="checkbox"
-            ${isChecked}
-            onchange="toggleSelectBarangItem('${escapeHtml(item.Part_Number)}', this.checked)"
-            class="w-4 h-4 rounded accent-gray-900 cursor-pointer"
-          />
-        </td>
-        <td class="py-4 px-4">
-          <div class="text-base font-extrabold text-gray-900">${escapeHtml(item.Part_Number)}</div>
-          <div class="text-xs font-medium text-gray-400 uppercase">${escapeHtml(item.nama_barang)}</div>
-        </td>
-        <td class="py-4 px-4">
-          <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-extrabold">${escapeHtml(item.No_Rel || "-")}</span>
-        </td>
-        <td class="py-4 px-4">
-          <span class="text-xs font-bold text-gray-700">${escapeHtml(custDisplay)}</span>
-        </td>
-        <td class="py-4 px-4 text-center">
-          <span class="text-xs font-extrabold text-gray-600">${item.standar_packing || 1} ${escapeHtml(item.satuan || "PCS")}</span>
-        </td>
-        <td class="py-4 px-4 text-right">
-          <span class="text-base font-extrabold text-gray-900">${item.stok || 0}</span>
-        </td>
-        <td class="py-4 px-4 text-right">
-          <span class="text-base font-extrabold text-indigo-600">${item.assy_fsg || 0}</span>
-        </td>
-        <td class="py-4 px-4 text-right space-x-1">
-          <button
-            onclick="printItemBarcode('${escapeHtml(item.Part_Number)}', '${escapeHtml(item.nama_barang)}', '${escapeHtml(item.No_Rel || "-")}')"
-            title="Cetak Label Barcode CODE128"
-            class="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-900 hover:text-white text-gray-700 text-xs font-bold transition"
-          >
-            <i class="fa-solid fa-print"></i>
-          </button>
-          <button
-            onclick="openModalMasterBarang('${escapeHtml(item.Part_Number)}')"
-            title="Edit Barang (Termasuk Part Number)"
-            class="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-900 hover:text-white text-gray-700 text-xs font-bold transition"
-          >
-            <i class="fa-solid fa-pen"></i>
-          </button>
-        </td>
-      </tr>
-    `;
+    <tr class="hover:bg-gray-50/60 transition-colors">
+      <td class="py-4 pr-4 text-center align-middle"><input type="checkbox" class="chk-barang w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer accent-gray-900" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
+      <td class="py-4 px-4 align-middle">
+        <div class="text-base font-extrabold text-gray-900 tracking-tight">${b.Part_Number}</div>
+        <div class="text-xs font-medium text-gray-400 mt-0.5 uppercase">${b.nama_barang}</div>
+      </td>
+      <td class="py-4 px-4 align-middle"><span class="text-lg font-extrabold text-gray-900">${b.stok}</span> <span class="text-xs text-gray-400 font-medium">${b.satuan || "Pcs"}</span></td>
+      <td class="py-4 px-4 align-middle"><span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 font-semibold text-xs">${b.No_Rel || "-"}</span></td>
+      <td class="py-4 pl-4 align-middle text-right">
+        <div class="flex items-center justify-end gap-1.5">
+           <button onclick="editBarang('${b.Part_Number}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors" title="Edit"><i class="fa-solid fa-pen text-[11px]"></i></button>
+           <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors" title="Print"><i class="fa-solid fa-print text-[11px]"></i></button>
+           <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors" title="Hapus"><i class="fa-regular fa-trash-can text-[11px]"></i></button>
+        </div>
+      </td>
+    </tr>`;
     })
     .join("");
-}
 
-function toggleSelectBarangItem(partNumber, checked) {
-  if (checked) {
-    if (!selectedForDelete.includes(partNumber))
-      selectedForDelete.push(partNumber);
-  } else {
-    selectedForDelete = selectedForDelete.filter((id) => id !== partNumber);
+  const chkAll = document.getElementById("chkAllBarang");
+  if (chkAll) {
+    const allDisplayedParts = dataset.map((b) => String(b.Part_Number));
+    const allChecked =
+      allDisplayedParts.length > 0 &&
+      allDisplayedParts.every((p) => selectedForDelete.includes(p));
+    chkAll.checked = allChecked;
   }
-  updateBulkDeleteButtonUI();
+
+  updateBulkDeleteUI();
 }
 
-function toggleSelectAllBarang(checkbox) {
-  const q = (document.getElementById("searchMasterBarangInput")?.value || "")
-    .trim()
-    .toLowerCase();
-  const visibleItems = masterBarangList.filter((b) => {
-    if (!q) return true;
-    return `${b.Part_Number} ${b.nama_barang} ${b.No_Rel} ${b.kategori}`
-      .toLowerCase()
-      .includes(q);
+function toggleSingleBarang(el) {
+  const val = String(el.value);
+  if (el.checked) {
+    if (!selectedForDelete.includes(val)) selectedForDelete.push(val);
+  } else {
+    selectedForDelete = selectedForDelete.filter((p) => p !== val);
+  }
+  updateBulkDeleteUI();
+}
+
+function toggleAllBarang(el) {
+  const checkboxes = document.querySelectorAll(".chk-barang");
+  checkboxes.forEach((chk) => {
+    chk.checked = el.checked;
+    const val = String(chk.value);
+    if (el.checked) {
+      if (!selectedForDelete.includes(val)) selectedForDelete.push(val);
+    } else {
+      selectedForDelete = selectedForDelete.filter((p) => p !== val);
+    }
   });
-
-  if (checkbox.checked) {
-    visibleItems.forEach((b) => {
-      if (!selectedForDelete.includes(b.Part_Number)) {
-        selectedForDelete.push(b.Part_Number);
-      }
-    });
-  } else {
-    const visibleIds = visibleItems.map((b) => b.Part_Number);
-    selectedForDelete = selectedForDelete.filter(
-      (id) => !visibleIds.includes(id),
-    );
-  }
-  renderMasterBarangTable();
+  updateBulkDeleteUI();
 }
 
-function updateBulkDeleteButtonUI() {
-  const btn = document.getElementById("btnBulkDeleteBarang");
-  const txt = document.getElementById("bulkDeleteText");
-  if (!btn || !txt) return;
+function updateBulkDeleteUI() {
+  const btnBulk = document.getElementById("btnBulkDeleteBarang");
+  const lblCount = document.getElementById("lblCountDelete");
 
   if (selectedForDelete.length > 0) {
-    btn.classList.remove("hidden");
-    txt.textContent = `Hapus (${selectedForDelete.length})`;
+    btnBulk.classList.remove("hidden");
+    btnBulk.classList.add("flex");
+    lblCount.innerText = selectedForDelete.length;
   } else {
-    btn.classList.add("hidden");
+    btnBulk.classList.add("hidden");
+    btnBulk.classList.remove("flex");
+    lblCount.innerText = "0";
   }
 }
 
-async function confirmBulkDeleteBarang() {
+function bulkDeleteBarang() {
   if (selectedForDelete.length === 0) return;
 
-  const { isConfirmed } = await swalUI.fire({
-    title: `Hapus ${selectedForDelete.length} Barang?`,
-    text: "Data barang beserta relasi ordernya akan dihapus secara permanen.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Ya, Hapus Semua",
-    cancelButtonText: "Batal",
-  });
-
-  if (!isConfirmed) return;
-
-  isProcessing = true;
-  try {
-    await supabaseClient
-      .from("List_Order")
-      .delete()
-      .in("Part_Number", selectedForDelete);
-    await supabaseClient
-      .from("Master_Barang")
-      .delete()
-      .in("Part_Number", selectedForDelete);
-
-    selectedForDelete = [];
-    await fetchAllDatabaseData(true);
-    showToast(
-      "success",
-      "Bulk Delete Selesai",
-      "Data barang terpilih berhasil dihapus.",
-    );
-  } catch (err) {
-    showToast(
-      "error",
-      "Gagal Menghapus",
-      "Terjadi kesalahan saat penghapusan massal.",
-    );
-  } finally {
-    isProcessing = false;
-  }
+  swalUI
+    .fire({
+      title: "Hapus Item Terpilih?",
+      html: `Menghapus permanen <b class="text-red-600">${selectedForDelete.length}</b> part dari sistem.`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus",
+      cancelButtonText: "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiBulkDeleteBarang", {
+          partNumbers: selectedForDelete,
+        }).then((res) => {
+          isProcessing = false;
+          Swal.close();
+          if (res.success) {
+            showToast("success", "Terhapus");
+            selectedForDelete = [];
+            document.getElementById("searchMasterBarang").value = "";
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", res.message);
+          }
+        });
+      }
+    });
 }
 
-// Form Tambah / Edit Master Barang (Primary Key Unlocked + Cascading Update)
-async function openModalMasterBarang(editPartNumber = null) {
-  const existing = editPartNumber
-    ? masterBarangList.find((b) => b.Part_Number === editPartNumber)
-    : null;
-
-  const custOptions = masterCustomerList
-    .map(
-      (c) =>
-        `<option value="${escapeHtml(c.id_customer)}" ${existing && existing.id_customer === c.id_customer ? "selected" : ""}>${escapeHtml(c.nama_customer)} (${escapeHtml(c.id_customer)})</option>`,
-    )
-    .join("");
-
-  const { value: formData } = await swalUI.fire({
-    title: existing
-      ? "Edit Master Barang (PK Unlocked)"
-      : "Tambah Master Barang",
-    html: `
-      <div class="space-y-3 text-left mt-2 text-xs">
-        <div>
-          <label class="font-extrabold text-gray-500 uppercase">Part Number (Primary Key - Bisa Diedit)</label>
-          <input id="mbPartNumber" type="text" value="${escapeHtml(existing ? existing.Part_Number : "")}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-extrabold text-gray-900">
-        </div>
-        <div>
-          <label class="font-extrabold text-gray-500 uppercase">Nama / Deskripsi Barang</label>
-          <input id="mbNama" type="text" value="${escapeHtml(existing ? existing.nama_barang : "")}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-bold text-gray-900">
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="font-extrabold text-gray-500 uppercase">No Rel</label>
-            <input id="mbNoRel" type="text" value="${escapeHtml(existing ? existing.No_Rel : "-")}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-bold text-gray-900">
-          </div>
-          <div>
-            <label class="font-extrabold text-gray-500 uppercase">Customer Utama</label>
-            <select id="mbCustomer" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-bold text-gray-900">
-              <option value="-">-- Pilih --</option>
-              ${custOptions}
-            </select>
-          </div>
-        </div>
-        <div class="grid grid-cols-3 gap-2">
-          <div>
-            <label class="font-extrabold text-gray-500 uppercase">Stok Awal</label>
-            <input id="mbStok" type="number" value="${existing ? existing.stok : 0}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-extrabold text-gray-900">
-          </div>
-          <div>
-            <label class="font-extrabold text-gray-500 uppercase">Assy FSG</label>
-            <input id="mbAssy" type="number" value="${existing ? existing.assy_fsg : 0}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-extrabold text-gray-900">
-          </div>
-          <div>
-            <label class="font-extrabold text-gray-500 uppercase">Std Packing</label>
-            <input id="mbStdPack" type="number" value="${existing ? existing.standar_packing : 1}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-extrabold text-gray-900">
-          </div>
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: "Simpan Data",
-    cancelButtonText: "Batal",
-    preConfirm: () => {
-      const pn = document.getElementById("mbPartNumber").value.trim();
-      const nama = document.getElementById("mbNama").value.trim();
-      if (!pn || !nama) {
-        Swal.showValidationMessage("Part Number dan Nama Barang wajib diisi");
-        return false;
-      }
-      return {
-        Part_Number: pn,
-        nama_barang: nama,
-        No_Rel: document.getElementById("mbNoRel").value.trim() || "-",
-        id_customer: document.getElementById("mbCustomer").value,
-        stok: parseInt(document.getElementById("mbStok").value, 10) || 0,
-        assy_fsg: parseInt(document.getElementById("mbAssy").value, 10) || 0,
-        standar_packing:
-          parseInt(document.getElementById("mbStdPack").value, 10) || 1,
-        kategori: existing ? existing.kategori : "SEAT ASSY",
-        satuan: existing ? existing.satuan : "PCS",
-        stok_minimum: existing ? existing.stok_minimum : 10,
-      };
-    },
-  });
-
-  if (!formData) return;
-
-  isProcessing = true;
-  try {
-    if (!existing) {
-      await supabaseClient.from("Master_Barang").insert(formData);
-      await supabaseClient.from("List_Order").insert({
-        Part_Number: formData.Part_Number,
-        id_customer: formData.id_customer,
-        qty_order: 0,
-      });
-      showToast(
-        "success",
-        "Barang Ditambahkan",
-        `${formData.Part_Number} berhasil disimpan.`,
-      );
-    } else {
-      const oldPK = existing.Part_Number;
-      const newPK = formData.Part_Number;
-
-      if (oldPK !== newPK) {
-        // Cascading Primary Key Update: Insert baru, update seluruh tabel anak, lalu hapus PK lama
-        await supabaseClient.from("Master_Barang").insert(formData);
-        await Promise.all([
-          supabaseClient
-            .from("List_Order")
-            .update({ Part_Number: newPK })
-            .eq("Part_Number", oldPK),
-          supabaseClient
-            .from("Transaksi_Masuk")
-            .update({ Part_Number: newPK })
-            .eq("Part_Number", oldPK),
-          supabaseClient
-            .from("Transaksi_Keluar")
-            .update({ Part_Number: newPK })
-            .eq("Part_Number", oldPK),
-        ]);
-        await supabaseClient
-          .from("Master_Barang")
-          .delete()
-          .eq("Part_Number", oldPK);
-        showToast(
-          "success",
-          "Cascading Update Berhasil",
-          `Part Number ${oldPK} diubah menjadi ${newPK} di seluruh transaksi.`,
-        );
-      } else {
-        await supabaseClient
-          .from("Master_Barang")
-          .update(formData)
-          .eq("Part_Number", oldPK);
-        showToast(
-          "success",
-          "Data Diperbarui",
-          `${newPK} berhasil diperbarui.`,
+function deleteBarang(partNum, namaBarang) {
+  swalUI
+    .fire({
+      title: "Hapus Part?",
+      html: `Hapus permanen <b class="text-gray-900">${partNum}</b> (${namaBarang})?`,
+      showCancelButton: true,
+      confirmButtonText: "Hapus",
+      cancelButtonText: "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiDeleteBarang", { partNumber: partNum }).then(
+          (res) => {
+            isProcessing = false;
+            Swal.close();
+            if (res.success) {
+              showToast("success", "Terhapus");
+              selectedForDelete = selectedForDelete.filter(
+                (p) => p !== String(partNum),
+              );
+              refreshAllData();
+            } else {
+              showToast("error", "Gagal", res.message);
+            }
+          },
         );
       }
-    }
-    await fetchAllDatabaseData(true);
-  } catch (err) {
-    showToast(
-      "error",
-      "Gagal Menyimpan",
-      "Periksa apakah Part Number sudah digunakan.",
-    );
-  } finally {
-    isProcessing = false;
-  }
+    });
 }
 
-// Cetak Barcode CODE128 ke Jendela Print
-function printItemBarcode(partNumber, namaBarang, noRel) {
+function printBarcode(partNumber, namaBarang) {
   const canvas = document.getElementById("hiddenBarcodeCanvas");
-  if (!canvas) return;
-
-  JsBarcode(canvas, partNumber, {
+  JsBarcode(canvas, String(partNumber).trim(), {
     format: "CODE128",
-    lineColor: "#111827",
     width: 2,
     height: 60,
     displayValue: true,
-    fontSize: 14,
-    font: "Plus Jakarta Sans",
-    margin: 10,
   });
-
-  const dataUrl = canvas.toDataURL("image/png");
-  const printWin = window.open("", "_blank", "width=500,height=400");
-  if (!printWin) {
-    showToast(
-      "warning",
-      "Popup Diblokir",
-      "Izinkan popup pada browser untuk mencetak label barcode.",
-    );
-    return;
-  }
-
-  printWin.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Cetak Label — ${escapeHtml(partNumber)}</title>
-      <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; margin: 0; }
-        .label-box { border: 2px solid #000; border-radius: 12px; padding: 16px; display: inline-block; max-width: 340px; }
-        .rel { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
-        .desc { font-size: 11px; color: #444; text-transform: uppercase; margin-bottom: 10px; }
-        img { max-width: 100%; height: auto; }
-      </style>
-    </head>
-    <body onload="window.print(); setTimeout(() => window.close(), 500);">
-      <div class="label-box">
-        <div class="rel">NO REL: ${escapeHtml(noRel)}</div>
-        <div class="desc">${escapeHtml(namaBarang)}</div>
-        <img src="${dataUrl}" alt="Barcode" />
-      </div>
-    </body>
-    </html>
-  `);
-  printWin.document.close();
+  const printWindow = window.open("", "_blank", "width=400,height=400");
+  printWindow.document.write(
+    `<html><body style="text-align:center;font-family:sans-serif;padding-top:10px;"><b>${namaBarang}</b><br><img src="${canvas.toDataURL()}"></body></html>`,
+  );
+  printWindow.document.close();
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 300);
 }
 
-/**
- * ============================================================================
- * MASTER CUSTOMER & KELOLA PENGGUNA (PRIMARY KEY UNLOCKED)
- * ============================================================================
- */
-function populateCustomerDropdowns() {
-  const dashSelect = document.getElementById("filterCustomerDashboard");
-  const batchSelect = document.getElementById("batchCustomerSelect");
-
-  if (dashSelect) {
-    const currentVal = dashSelect.value || "ALL";
-    dashSelect.innerHTML =
-      `<option value="ALL">Semua Customer</option>` +
-      masterCustomerList
-        .map(
-          (c) =>
-            `<option value="${escapeHtml(c.nama_customer)}">${escapeHtml(c.nama_customer)}</option>`,
-        )
-        .join("");
-    dashSelect.value = currentVal;
-  }
-
-  if (batchSelect) {
-    const currentBatch = batchSelect.value || "-";
-    batchSelect.innerHTML =
-      `<option value="-">Pilih Otomatis / Default Part</option>` +
-      masterCustomerList
-        .map(
-          (c) =>
-            `<option value="${escapeHtml(c.id_customer)}">${escapeHtml(c.nama_customer)}</option>`,
-        )
-        .join("");
-    batchSelect.value = currentBatch;
-  }
-}
-
-function renderMasterCustomerTable() {
-  const tbody = document.getElementById("masterCustomerTableBody");
+// --- MASTER CUSTOMER ---
+function renderCustomerTable(keyword = "") {
+  const tbody = document.getElementById("tblCustomerBody");
   if (!tbody) return;
 
-  if (masterCustomerList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-xs font-bold text-gray-400">Belum ada data Master Customer.</td></tr>`;
+  let dataset = appData.customer || [];
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    dataset = dataset.filter(
+      (c) =>
+        String(c.id_customer).toLowerCase().includes(kw) ||
+        String(c.nama_customer).toLowerCase().includes(kw),
+    );
+  }
+
+  if (dataset.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="py-16 text-center text-gray-400 text-xs font-medium">Tidak ada customer.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = masterCustomerList
+  tbody.innerHTML = dataset
     .map(
       (c) => `
-    <tr class="hover:bg-gray-50/70 transition">
-      <td class="py-4 px-4">
-        <span class="px-3.5 py-1 rounded-full bg-gray-900 text-white text-xs font-extrabold">${escapeHtml(c.id_customer)}</span>
+    <tr class="hover:bg-gray-50/60 transition-colors">
+      <td class="py-4 pr-4 font-extrabold text-gray-900">${c.id_customer}</td>
+      <td class="py-4 px-4 font-semibold text-gray-700">${c.nama_customer}</td>
+      <td class="py-4 px-4 text-xs text-gray-400 font-medium">${c.alamat || "-"}</td>
+      <td class="py-4 pl-4 text-right">
+        <div class="flex items-center justify-end gap-1.5">
+           <button onclick="editCustomer('${c.id_customer}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"><i class="fa-solid fa-pen text-[11px]"></i></button>
+           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors"><i class="fa-regular fa-trash-can text-[11px]"></i></button>
+        </div>
       </td>
-      <td class="py-4 px-4 font-extrabold text-gray-900">${escapeHtml(c.nama_customer)}</td>
-      <td class="py-4 px-4 text-xs font-semibold text-gray-600">${escapeHtml(c.kontak || "-")}</td>
-      <td class="py-4 px-4 text-xs font-medium text-gray-500">${escapeHtml(c.alamat || "-")}</td>
-      <td class="py-4 px-4 text-right space-x-1">
-        <button onclick="openModalMasterCustomer('${escapeHtml(c.id_customer)}')" class="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-900 hover:text-white text-gray-700 text-xs font-bold transition">
-          <i class="fa-solid fa-pen"></i>
-        </button>
-        <button onclick="deleteMasterCustomer('${escapeHtml(c.id_customer)}')" class="px-3 py-1.5 rounded-full bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 text-xs font-bold transition">
-          <i class="fa-solid fa-trash-can"></i>
-        </button>
-      </td>
-    </tr>
-  `,
+    </tr>`,
     )
     .join("");
 }
 
-async function openModalMasterCustomer(editId = null) {
-  const existing = editId
-    ? masterCustomerList.find((c) => c.id_customer === editId)
-    : null;
-
-  const { value: formData } = await swalUI.fire({
-    title: existing
-      ? "Edit Master Customer (PK Unlocked)"
-      : "Tambah Customer Baru",
-    html: `
-      <div class="space-y-3 text-left mt-2 text-xs">
-        <div>
-          <label class="font-extrabold text-gray-500 uppercase">ID Customer (Primary Key)</label>
-          <input id="mcId" type="text" value="${escapeHtml(existing ? existing.id_customer : "")}" placeholder="Contoh: YIMM / SIM" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-extrabold text-gray-900">
-        </div>
-        <div>
-          <label class="font-extrabold text-gray-500 uppercase">Nama Perusahaan / Customer</label>
-          <input id="mcNama" type="text" value="${escapeHtml(existing ? existing.nama_customer : "")}" placeholder="Contoh: PT. YIMM" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-bold text-gray-900">
-        </div>
-        <div>
-          <label class="font-extrabold text-gray-500 uppercase">Kontak PIC</label>
-          <input id="mcKontak" type="text" value="${escapeHtml(existing ? existing.kontak : "-")}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-bold text-gray-900">
-        </div>
-        <div>
-          <label class="font-extrabold text-gray-500 uppercase">Alamat</label>
-          <input id="mcAlamat" type="text" value="${escapeHtml(existing ? existing.alamat : "-")}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-bold text-gray-900">
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: "Simpan Customer",
-    cancelButtonText: "Batal",
-    preConfirm: () => {
-      const id = document.getElementById("mcId").value.trim();
-      const nama = document.getElementById("mcNama").value.trim();
-      if (!id || !nama) {
-        Swal.showValidationMessage("ID Customer dan Nama wajib diisi");
-        return false;
+function deleteCustomer(idCust, namaCust) {
+  swalUI
+    .fire({
+      title: "Hapus Customer?",
+      html: `Hapus <b class="text-gray-900">${namaCust}</b> (${idCust})?`,
+      showCancelButton: true,
+      confirmButtonText: "Hapus",
+      cancelButtonText: "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiDeleteCustomer", { id_customer: idCust }).then(
+          (res) => {
+            isProcessing = false;
+            Swal.close();
+            if (res.success) {
+              showToast("success", "Customer Dihapus");
+              refreshAllData();
+            } else {
+              showToast("error", "Gagal", res.message);
+            }
+          },
+        );
       }
-      return {
-        id_customer: id,
-        nama_customer: nama,
-        kontak: document.getElementById("mcKontak").value.trim() || "-",
-        alamat: document.getElementById("mcAlamat").value.trim() || "-",
-      };
-    },
-  });
-
-  if (!formData) return;
-
-  isProcessing = true;
-  try {
-    if (!existing) {
-      await supabaseClient.from("Master_Customer").insert(formData);
-    } else {
-      const oldId = existing.id_customer;
-      const newId = formData.id_customer;
-      if (oldId !== newId) {
-        await supabaseClient.from("Master_Customer").insert(formData);
-        await Promise.all([
-          supabaseClient
-            .from("Master_Barang")
-            .update({ id_customer: newId })
-            .eq("id_customer", oldId),
-          supabaseClient
-            .from("List_Order")
-            .update({ id_customer: newId })
-            .eq("id_customer", oldId),
-        ]);
-        await supabaseClient
-          .from("Master_Customer")
-          .delete()
-          .eq("id_customer", oldId);
-      } else {
-        await supabaseClient
-          .from("Master_Customer")
-          .update(formData)
-          .eq("id_customer", oldId);
-      }
-    }
-    await fetchAllDatabaseData(true);
-    showToast(
-      "success",
-      "Customer Disimpan",
-      `Data ${formData.nama_customer} berhasil diperbarui.`,
-    );
-  } catch (err) {
-    showToast(
-      "error",
-      "Gagal Menyimpan Customer",
-      "Pastikan ID Customer tidak duplikat.",
-    );
-  } finally {
-    isProcessing = false;
-  }
+    });
 }
 
-async function deleteMasterCustomer(idCust) {
-  const { isConfirmed } = await swalUI.fire({
-    title: `Hapus Customer ${idCust}?`,
-    text: "Data customer akan dihapus dari daftar.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Ya, Hapus",
-    cancelButtonText: "Batal",
-  });
-  if (!isConfirmed) return;
-
-  isProcessing = true;
-  try {
-    await supabaseClient
-      .from("Master_Customer")
-      .delete()
-      .eq("id_customer", idCust);
-    await fetchAllDatabaseData(true);
-    showToast("info", "Customer Dihapus", `${idCust} telah dihapus.`);
-  } finally {
-    isProcessing = false;
-  }
-}
-
-function renderUsersTable() {
-  const tbody = document.getElementById("usersTableBody");
+// --- KELOLA PENGGUNA ---
+function renderUsersTable(keyword = "") {
+  const tbody = document.getElementById("tblUsersBody");
   if (!tbody) return;
 
-  const visibleUsers = usersList.filter(
-    (u) => u.username !== "__SYSTEM_ROLLOVER__" && u.role !== "SYSTEM",
+  let usersList = (appData.users || []).filter(
+    (u) => u.username !== "__SYSTEM_ROLLOVER__",
   );
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    usersList = usersList.filter(
+      (u) =>
+        String(u.username).toLowerCase().includes(kw) ||
+        String(u.role).toLowerCase().includes(kw),
+    );
+  }
 
-  if (visibleUsers.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-xs font-bold text-gray-400">Belum ada pengguna terdaftar.</td></tr>`;
+  if (usersList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" class="py-16 text-center text-gray-400 text-xs font-medium">Tidak ada pengguna.</td></tr>`;
     return;
   }
 
-  const descMap = {
-    Admin: "Akses Penuh (Master Data, Scanner, Semua Kolom Papan Kontrol)",
-    Warehouse: "Scanner (Masuk & Keluar), Edit CUST & QTY/OUT di Papan Kontrol",
-    Produksi: "Scanner (Tambah Assy), Edit ASSY IN STORE FSG di Papan Kontrol",
-  };
-
-  tbody.innerHTML = visibleUsers
-    .map(
-      (u) => `
-    <tr class="hover:bg-gray-50/70 transition">
-      <td class="py-4 px-4 font-extrabold text-gray-900">${escapeHtml(u.username)}</td>
-      <td class="py-4 px-4">
-        <span class="px-3.5 py-1 rounded-full bg-gray-900 text-white text-xs font-extrabold">${escapeHtml(u.role)}</span>
-      </td>
-      <td class="py-4 px-4 text-xs font-medium text-gray-500">${escapeHtml(descMap[u.role] || "-")}</td>
-      <td class="py-4 px-4 text-right space-x-1">
-        <button onclick="openModalUser('${escapeHtml(u.username)}')" class="px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-900 hover:text-white text-gray-700 text-xs font-bold transition">
-          <i class="fa-solid fa-pen"></i>
-        </button>
-        <button onclick="deleteUserAccount('${escapeHtml(u.username)}')" class="px-3 py-1.5 rounded-full bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 text-xs font-bold transition">
-          <i class="fa-solid fa-trash-can"></i>
-        </button>
-      </td>
-    </tr>
-  `,
-    )
-    .join("");
-}
-
-async function openModalUser(editUsername = null) {
-  const existing = editUsername
-    ? usersList.find((u) => u.username === editUsername)
-    : null;
-
-  const { value: formData } = await swalUI.fire({
-    title: existing ? "Edit Pengguna (PK Unlocked)" : "Tambah Pengguna Baru",
-    html: `
-      <div class="space-y-3 text-left mt-2 text-xs">
-        <div>
-          <label class="font-extrabold text-gray-500 uppercase">Username</label>
-          <input id="usrName" type="text" value="${escapeHtml(existing ? existing.username : "")}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-extrabold text-gray-900">
-        </div>
-        <div>
-          <label class="font-extrabold text-gray-500 uppercase">Password</label>
-          <input id="usrPass" type="text" value="${escapeHtml(existing ? existing.password : "")}" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-bold text-gray-900">
-        </div>
-        <div>
-          <label class="font-extrabold text-gray-500 uppercase">Role / Hak Akses</label>
-          <select id="usrRole" class="w-full mt-1 px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 font-bold text-gray-900">
-            <option value="Admin" ${existing && existing.role === "Admin" ? "selected" : ""}>Admin</option>
-            <option value="Warehouse" ${existing && existing.role === "Warehouse" ? "selected" : ""}>Warehouse</option>
-            <option value="Produksi" ${existing && existing.role === "Produksi" ? "selected" : ""}>Produksi</option>
-          </select>
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: "Simpan Akun",
-    cancelButtonText: "Batal",
-    preConfirm: () => {
-      const u = document.getElementById("usrName").value.trim();
-      const p = document.getElementById("usrPass").value.trim();
-      const r = document.getElementById("usrRole").value;
-      if (!u || !p) {
-        Swal.showValidationMessage("Username dan Password wajib diisi");
-        return false;
-      }
-      return { username: u, password: p, role: r };
-    },
-  });
-
-  if (!formData) return;
-
-  isProcessing = true;
-  try {
-    if (!existing) {
-      await supabaseClient.from("Users").insert(formData);
-    } else {
-      const oldU = existing.username;
-      const newU = formData.username;
-      if (oldU !== newU) {
-        await supabaseClient.from("Users").insert(formData);
-        await Promise.all([
-          supabaseClient
-            .from("Transaksi_Masuk")
-            .update({ petugas: newU })
-            .eq("petugas", oldU),
-          supabaseClient
-            .from("Transaksi_Keluar")
-            .update({ petugas: newU })
-            .eq("petugas", oldU),
-        ]);
-        await supabaseClient.from("Users").delete().eq("username", oldU);
-      } else {
-        await supabaseClient
-          .from("Users")
-          .update(formData)
-          .eq("username", oldU);
-      }
-    }
-    await fetchAllDatabaseData(true);
-    showToast(
-      "success",
-      "Akun Disimpan",
-      `Pengguna ${formData.username} (${formData.role}) berhasil disimpan.`,
-    );
-  } catch (err) {
-    showToast(
-      "error",
-      "Gagal Menyimpan Akun",
-      "Username mungkin sudah terdaftar.",
-    );
-  } finally {
-    isProcessing = false;
-  }
-}
-
-async function deleteUserAccount(username) {
-  const { isConfirmed } = await swalUI.fire({
-    title: `Hapus Akun ${username}?`,
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Ya, Hapus",
-    cancelButtonText: "Batal",
-  });
-  if (!isConfirmed) return;
-
-  isProcessing = true;
-  try {
-    await supabaseClient.from("Users").delete().eq("username", username);
-    await fetchAllDatabaseData(true);
-    showToast("info", "Akun Dihapus", `${username} telah dihapus.`);
-  } finally {
-    isProcessing = false;
-  }
-}
-
-/**
- * ============================================================================
- * FILTER BULANAN, RIWAYAT CERDAS, & EKSPOR EXCEL (.XLSX)
- * ============================================================================
- */
-function getFilteredHistoryRecords() {
-  const monthFilter =
-    document.getElementById("filterBulanRiwayat")?.value || ""; // YYYY-MM
-  const typeFilter =
-    document.getElementById("filterTipeRiwayat")?.value || "ALL";
-  const searchVal = (document.getElementById("searchHistoryInput")?.value || "")
-    .trim()
-    .toLowerCase();
-
-  const merged = [];
-
-  if (typeFilter === "ALL" || typeFilter === "IN") {
-    transaksiMasukList.forEach((tx) => {
-      merged.push({ ...tx, txType: "IN" });
-    });
-  }
-
-  if (typeFilter === "ALL" || typeFilter === "OUT") {
-    transaksiKeluarList.forEach((tx) => {
-      merged.push({ ...tx, txType: "OUT" });
-    });
-  }
-
-  const filtered = merged.filter((tx) => {
-    if (monthFilter && tx.tanggal) {
-      const d = new Date(tx.tanggal);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      if (`${yyyy}-${mm}` !== monthFilter) return false;
-    }
-
-    if (searchVal) {
-      const barang = masterBarangList.find(
-        (b) => b.Part_Number === tx.Part_Number,
-      );
-      const nama = barang ? barang.nama_barang : "";
-      const hay =
-        `${tx.Part_Number} ${nama} ${tx.petugas} ${tx.catatan}`.toLowerCase();
-      if (!hay.includes(searchVal)) return false;
-    }
-
-    return true;
-  });
-
-  filtered.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
-  return filtered;
-}
-
-function renderHistoryTable() {
-  const tbody = document.getElementById("historyTableBody");
-  if (!tbody) return;
-
-  const records = getFilteredHistoryRecords();
-
-  if (records.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="py-12 text-center text-xs font-bold text-gray-400">
-          Tidak ada riwayat transaksi pada periode bulan dan filter yang dipilih.
-        </td>
-      </tr>
-    `;
-    return;
-  }
-
-  tbody.innerHTML = records
-    .map((tx) => {
-      const barang = masterBarangList.find(
-        (b) => b.Part_Number === tx.Part_Number,
-      );
-      const namaBarang = barang ? barang.nama_barang : "-";
-      const waktuStr = tx.tanggal
-        ? new Date(tx.tanggal).toLocaleString("id-ID", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          })
-        : "-";
-
-      const note = String(tx.catatan || "");
-      const qtyNum = Number(tx.qty) || 0;
-
-      let typeBadgeHtml = "";
-      let qtyDisplayHtml = "";
-
-      // Logika tampilan kolom Jumlah di tabel Riwayat sesuai spesifikasi
-      if (note.toUpperCase().includes("QTY/DAY")) {
-        typeBadgeHtml = `<span class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-extrabold">SET</span>`;
-        qtyDisplayHtml = `<span class="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-extrabold">TARGET</span>`;
-      } else if (tx.txType === "IN") {
-        typeBadgeHtml = `<span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-extrabold">IN</span>`;
-        if (qtyNum >= 0) {
-          qtyDisplayHtml = `<span class="text-base font-extrabold text-emerald-600">+${qtyNum}</span>`;
-        } else {
-          qtyDisplayHtml = `<span class="text-base font-extrabold text-rose-600">${qtyNum}</span>`;
-        }
-      } else {
-        typeBadgeHtml = `<span class="px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-extrabold">OUT</span>`;
-        if (qtyNum >= 0) {
-          qtyDisplayHtml = `<span class="text-base font-extrabold text-rose-600">-${qtyNum}</span>`;
-        } else {
-          qtyDisplayHtml = `<span class="text-base font-extrabold text-emerald-600">+${Math.abs(qtyNum)}</span>`;
-        }
-      }
+  tbody.innerHTML = usersList
+    .map((u) => {
+      let roleBadge = `<span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 font-semibold text-xs">${u.role}</span>`;
+      if (u.role === "Admin")
+        roleBadge = `<span class="px-3 py-1 rounded-full bg-gray-900 text-white font-semibold text-xs">${u.role}</span>`;
+      if (u.role === "Produksi")
+        roleBadge = `<span class="px-3 py-1 rounded-full bg-purple-50 text-purple-600 font-semibold text-xs">${u.role}</span>`;
 
       return `
-      <tr class="hover:bg-gray-50/70 transition">
-        <td class="py-4 px-4 text-xs font-bold text-gray-500">${escapeHtml(waktuStr)}</td>
-        <td class="py-4 px-4">${typeBadgeHtml}</td>
-        <td class="py-4 px-4">
-          <div class="text-base font-extrabold text-gray-900">${escapeHtml(tx.Part_Number)}</div>
-          <div class="text-xs font-medium text-gray-400 uppercase">${escapeHtml(namaBarang)}</div>
-        </td>
-        <td class="py-4 px-4 text-center">${qtyDisplayHtml}</td>
-        <td class="py-4 px-4">
-          <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold">${escapeHtml(tx.petugas || "System")}</span>
-        </td>
-        <td class="py-4 px-4 text-xs font-semibold text-gray-700">${escapeHtml(note)}</td>
-      </tr>
-    `;
+    <tr class="hover:bg-gray-50/60 transition-colors">
+      <td class="py-4 pr-4 font-extrabold text-gray-900">${u.username}</td>
+      <td class="py-4 px-4">${roleBadge}</td>
+      <td class="py-4 pl-4 text-right">
+        <div class="flex items-center justify-end gap-1.5">
+           <button onclick="editUser('${u.username}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"><i class="fa-solid fa-pen text-[11px]"></i></button>
+           <button onclick="deleteUser('${u.username}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors"><i class="fa-regular fa-trash-can text-[11px]"></i></button>
+        </div>
+      </td>
+    </tr>`;
     })
     .join("");
 }
 
-// Ekspor Papan Kontrol ke Excel (.xlsx)
-function exportDashboardToExcel() {
-  const rows = buildExpandedDashboardRows();
-  const { dateString } = getOperationalDateInfo();
-
-  const excelData = rows.map((r) => ({
-    CUSTOMER: r.customerName,
-    "NO REL": r.No_Rel,
-    "PART NUMBER": r.Part_Number,
-    "NAMA BARANG": r.nama_barang,
-    "STOK AWAL": r.stokAwal,
-    "QTY/DAY (TARGET)": r.qtyDay,
-    "QTY/OUT (TERKIRIM)": r.qtyOut,
-    "SISA DELIVERY": r.sisaDel,
-    "ASSY IN STORE FSG": r.assyFsg,
-    "VARIANCE [+/-]": r.variance,
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(excelData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Papan_Kontrol");
-  XLSX.writeFile(wb, `Laporan_Papan_Kontrol_${dateString}.xlsx`);
-  showToast(
-    "success",
-    "Ekspor Berhasil",
-    `File Laporan_Papan_Kontrol_${dateString}.xlsx diunduh.`,
-  );
-}
-
-// Ekspor Riwayat Transaksi ke Excel (.xlsx)
-function exportHistoryToExcel() {
-  const records = getFilteredHistoryRecords();
-  const monthFilter =
-    document.getElementById("filterBulanRiwayat")?.value || "ALL";
-
-  const excelData = records.map((tx) => {
-    const barang = masterBarangList.find(
-      (b) => b.Part_Number === tx.Part_Number,
+function deleteUser(usernameTarget) {
+  if (currentUser && currentUser.username === usernameTarget)
+    return showToast(
+      "warning",
+      "Ditolak",
+      "Tidak bisa menghapus akun yang sedang aktif.",
     );
-    return {
-      "WAKTU TRANSAKSI": tx.tanggal
-        ? new Date(tx.tanggal).toLocaleString("id-ID")
-        : "-",
-      TIPE: String(tx.catatan || "").includes("QTY/DAY")
-        ? "SET TARGET"
-        : tx.txType,
-      "PART NUMBER": tx.Part_Number,
-      "NAMA BARANG": barang ? barang.nama_barang : "-",
-      JUMLAH: tx.qty,
-      PETUGAS: tx.petugas || "System",
-      CATATAN: tx.catatan || "-",
-    };
-  });
-
-  const ws = XLSX.utils.json_to_sheet(excelData);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Riwayat_Transaksi");
-  XLSX.writeFile(wb, `Laporan_Riwayat_Transaksi_${monthFilter}.xlsx`);
-  showToast(
-    "success",
-    "Ekspor Berhasil",
-    `File Laporan_Riwayat_Transaksi_${monthFilter}.xlsx diunduh.`,
-  );
+  swalUI
+    .fire({
+      title: "Hapus Akun?",
+      html: `Hapus pengguna <b class="text-gray-900">${usernameTarget}</b>?`,
+      showCancelButton: true,
+      confirmButtonText: "Hapus",
+      cancelButtonText: "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiDeleteUser", { usernameTarget }).then((res) => {
+          isProcessing = false;
+          Swal.close();
+          if (res.success) {
+            showToast("success", "Akun Dihapus");
+            refreshAllData();
+          } else {
+            showToast("error", "Gagal", res.message);
+          }
+        });
+      }
+    });
 }
 
-/**
- * ============================================================================
- * ANALITIK VISUAL (CHART.JS MINIMALIS NORDIC)
- * ============================================================================
- */
-function renderAnalyticsCharts() {
-  const ctxFast = document.getElementById("chartFastMoving");
-  const ctxLow = document.getElementById("chartLowestStock");
-  if (!ctxFast || !ctxLow) return;
+// --- RIWAYAT TRANSAKSI ---
+function renderRiwayatTable() {
+  const tbody = document.getElementById("tblRiwayatBody");
+  if (!tbody) return;
+  const fTipe = document.getElementById("filterRiwayat")?.value || "ALL";
+  const fBulan = document.getElementById("filterBulanRiwayat")?.value || "";
 
-  // 1. Hitung Top 5 Fast-Moving dari akumulasi Transaksi_Keluar
-  const outMap = {};
-  transaksiKeluarList.forEach((tx) => {
-    const q = Number(tx.qty) || 0;
-    if (q > 0) {
-      outMap[tx.Part_Number] = (outMap[tx.Part_Number] || 0) + q;
-    }
-  });
+  let logs = [];
 
-  const sortedFast = Object.entries(outMap)
+  const isMatchMonth = (dateStr) => {
+    if (!fBulan) return true;
+    const d = new Date(dateStr);
+    const ym =
+      d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    return ym === fBulan;
+  };
+
+  if (fTipe === "ALL" || fTipe === "IN") {
+    appData.masuk.forEach((m) => {
+      if (isMatchMonth(m.tanggal || m.created_at)) {
+        logs.push({
+          waktu: new Date(m.tanggal || m.created_at),
+          tipe: "IN",
+          part: m.Part_Number,
+          qty: m.qty,
+          petugas: m.petugas,
+          catatan: m.catatan,
+        });
+      }
+    });
+  }
+  if (fTipe === "ALL" || fTipe === "OUT") {
+    appData.keluar.forEach((k) => {
+      if (isMatchMonth(k.tanggal || k.created_at)) {
+        logs.push({
+          waktu: new Date(k.tanggal || k.created_at),
+          tipe: "OUT",
+          part: k.Part_Number,
+          qty: k.qty,
+          petugas: k.petugas,
+          catatan: k.catatan,
+        });
+      }
+    });
+  }
+  logs.sort((a, b) => b.waktu - a.waktu);
+
+  tbody.innerHTML =
+    logs.length === 0
+      ? `<tr><td colspan="6" class="py-16 text-center text-gray-400 text-xs font-medium">Belum ada riwayat transaksi.</td></tr>`
+      : logs
+          .map((r) => {
+            let isTarget = r.catatan && String(r.catatan).includes("QTY/DAY");
+            let displayQty = r.qty;
+            let color = "text-gray-900";
+            let bgTipe = "bg-gray-100 text-gray-600";
+
+            if (isTarget) {
+              displayQty = `TARGET`;
+              color = "text-gray-500 text-xs";
+              bgTipe = "bg-gray-100 text-gray-600";
+            } else if (r.tipe === "IN") {
+              displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
+              color = r.qty > 0 ? "text-emerald-600" : "text-red-500";
+              bgTipe = "bg-emerald-50 text-emerald-600";
+            } else {
+              displayQty = r.qty > 0 ? `-${r.qty}` : `+${Math.abs(r.qty)}`;
+              color = r.qty > 0 ? "text-gray-900" : "text-emerald-600";
+              bgTipe = "bg-gray-900 text-white";
+            }
+
+            return `<tr class="hover:bg-gray-50/60 transition-colors">
+      <td class="py-4 pr-4 text-xs font-medium text-gray-400">${r.waktu.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+      <td class="py-4 px-4"><span class="px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${bgTipe}">${isTarget ? "SET" : r.tipe}</span></td>
+      <td class="py-4 px-4 font-extrabold text-base text-gray-900 tracking-tight">${r.part}</td>
+      <td class="py-4 px-4 text-right font-extrabold text-base ${color}">${displayQty}</td>
+      <td class="py-4 px-4 text-xs font-semibold text-gray-600">${r.petugas || "-"}</td>
+      <td class="py-4 pl-4 text-xs font-medium text-gray-400">${r.catatan || "-"}</td>
+    </tr>`;
+          })
+          .join("");
+}
+
+function renderAnalitikCharts() {
+  if (typeof Chart === "undefined") return;
+  Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+  Chart.defaults.color = "#9CA3AF";
+
+  let mapOut = {};
+  appData.keluar.forEach(
+    (k) =>
+      (mapOut[k.Part_Number] = (mapOut[k.Part_Number] || 0) + Number(k.qty)),
+  );
+  let top5 = Object.entries(mapOut)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
-  const fastLabels =
-    sortedFast.length > 0 ? sortedFast.map((i) => i[0]) : ["Belum Ada Data"];
-  const fastData = sortedFast.length > 0 ? sortedFast.map((i) => i[1]) : [0];
-
-  if (chartFastMovingInstance) chartFastMovingInstance.destroy();
-  chartFastMovingInstance = new Chart(ctxFast, {
-    type: "bar",
-    data: {
-      labels: fastLabels,
-      datasets: [
-        {
-          label: "Total Terkirim (PCS)",
-          data: fastData,
-          backgroundColor: "#111827",
-          borderRadius: 999,
-          borderSkipped: false,
-          barThickness: 28,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
+  if (chartFastMoving) chartFastMoving.destroy();
+  chartFastMoving = new Chart(
+    document.getElementById("fastMovingChart").getContext("2d"),
+    {
+      type: "bar",
+      data: {
+        labels: top5.length ? top5.map((x) => x[0]) : ["Kosong"],
+        datasets: [
+          {
+            data: top5.length ? top5.map((x) => x[1]) : [0],
+            backgroundColor: "#111827",
+            borderRadius: 999,
+            barThickness: 28,
+          },
+        ],
       },
-      scales: {
-        x: {
-          grid: { display: false, drawBorder: false },
-          border: { display: false },
-          ticks: {
-            font: { family: "Plus Jakarta Sans", weight: "700", size: 11 },
-            color: "#6B7280",
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: "#F3F4F6" },
+            border: { display: false },
           },
-        },
-        y: {
-          grid: { color: "#F3F4F6", drawBorder: false },
-          border: { display: false },
-          ticks: {
-            font: { family: "Plus Jakarta Sans", weight: "600", size: 11 },
-            color: "#9CA3AF",
-          },
+          x: { grid: { display: false }, border: { display: false } },
         },
       },
     },
-  });
+  );
 
-  // 2. Hitung Radar 10 Stok Terendah
-  const sortedLow = [...masterBarangList]
-    .map((b) => ({
-      part: b.Part_Number,
-      totalReady: (Number(b.stok) || 0) + (Number(b.assy_fsg) || 0),
-    }))
-    .sort((a, b) => a.totalReady - b.totalReady)
+  let lowStock = [...appData.barang]
+    .sort((a, b) => Number(a.stok) - Number(b.stok))
     .slice(0, 10);
 
-  const lowLabels =
-    sortedLow.length > 0 ? sortedLow.map((i) => i.part) : ["Belum Ada Barang"];
-  const lowData =
-    sortedLow.length > 0 ? sortedLow.map((i) => i.totalReady) : [0];
+  if (chartStock) chartStock.destroy();
+  chartStock = new Chart(
+    document.getElementById("stockStatusChart").getContext("2d"),
+    {
+      type: "bar",
+      data: {
+        labels: lowStock.length
+          ? lowStock.map((x) => x.Part_Number)
+          : ["Kosong"],
+        datasets: [
+          {
+            label: "Stok",
+            data: lowStock.length ? lowStock.map((x) => Number(x.stok)) : [0],
+            backgroundColor: "#10B981",
+            borderRadius: 999,
+            barThickness: 20,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: "#F3F4F6" },
+            border: { display: false },
+          },
+          x: { grid: { display: false }, border: { display: false } },
+        },
+      },
+    },
+  );
+}
 
-  if (chartLowestStockInstance) chartLowestStockInstance.destroy();
-  chartLowestStockInstance = new Chart(ctxLow, {
-    type: "bar",
-    data: {
-      labels: lowLabels,
-      datasets: [
-        {
-          label: "Stok Ready (Stok Awal + Assy)",
-          data: lowData,
-          backgroundColor: "#E11D48",
-          borderRadius: 999,
-          borderSkipped: false,
-          barThickness: 22,
-        },
-      ],
+// =========================================================================
+// FUNGSI EKSPOR EXCEL (.XLSX)
+// =========================================================================
+function exportToExcel(tipe) {
+  if (typeof XLSX === "undefined") {
+    return showToast(
+      "error",
+      "Belum Siap",
+      "Silakan tunggu sebentar lalu coba lagi.",
+    );
+  }
+
+  let dataToExport = [];
+  let filename = "";
+  const dateStr = new Date().toISOString().split("T")[0];
+
+  if (tipe === "PapanKontrol") {
+    const keyword =
+      document.getElementById("globalSearchInput")?.value.toLowerCase() || "";
+    let dataset = appData.seatAssyControl || [];
+    if (keyword) {
+      dataset = dataset.filter(
+        (d) =>
+          String(d.Part_Number).toLowerCase().includes(keyword) ||
+          String(d.No_Rel).toLowerCase().includes(keyword) ||
+          String(d.Customer).toLowerCase().includes(keyword),
+      );
+    }
+
+    dataset.sort((a, b) => {
+      if (a.Customer < b.Customer) return -1;
+      if (a.Customer > b.Customer) return 1;
+      if (a.No_Rel < b.No_Rel) return -1;
+      if (a.No_Rel > b.No_Rel) return 1;
+      return 0;
+    });
+
+    dataToExport = dataset.map((item) => ({
+      Customer: item.Customer,
+      "No Rel Rak": item.No_Rel,
+      "Part Number": item.Part_Number,
+      "Nama Barang": item.nama_barang,
+      "Stock Master (Pcs)": item.stock,
+      "Target Qty/Day (Pcs)": item.qty_day,
+      "Terkirim Qty/Out (Pcs)": item.qty_out,
+      "Sisa Delivery (Pcs)": item.sisa_del,
+      "Stok Assy / FSG (Pcs)": item.assy_fsg,
+      "Varians Status": item.variance,
+    }));
+    filename = "Laporan_Papan_Kontrol_" + dateStr + ".xlsx";
+  } else if (tipe === "Riwayat") {
+    const filterTipe = document.getElementById("filterRiwayat")?.value || "ALL";
+    const filterBulan =
+      document.getElementById("filterBulanRiwayat")?.value || "";
+
+    const isMatchMonth = (dateString) => {
+      if (!filterBulan) return true;
+      const d = new Date(dateString);
+      const ym =
+        d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      return ym === filterBulan;
+    };
+
+    let logs = [];
+    if (filterTipe === "ALL" || filterTipe === "IN") {
+      appData.masuk.forEach((m) => {
+        if (isMatchMonth(m.tanggal || m.created_at)) {
+          logs.push({
+            Waktu: new Date(m.tanggal || m.created_at),
+            Tipe: "MASUK (IN)",
+            Part_Number: m.Part_Number,
+            Qty: m.qty,
+            Petugas: m.petugas,
+            Catatan: m.catatan,
+          });
+        }
+      });
+    }
+    if (filterTipe === "ALL" || filterTipe === "OUT") {
+      appData.keluar.forEach((k) => {
+        if (isMatchMonth(k.tanggal || k.created_at)) {
+          logs.push({
+            Waktu: new Date(k.tanggal || k.created_at),
+            Tipe: "KELUAR (OUT)",
+            Part_Number: k.Part_Number,
+            Qty: k.qty,
+            Petugas: k.petugas,
+            Catatan: k.catatan,
+          });
+        }
+      });
+    }
+    logs.sort((a, b) => b.Waktu - a.Waktu);
+
+    dataToExport = logs.map((r) => ({
+      "Waktu Transaksi": r.Waktu.toLocaleString("id-ID"),
+      "Tipe Transaksi": r.Tipe,
+      "Part Number": r.Part_Number,
+      "Qty (Pcs)": r.Qty,
+      Petugas: r.Petugas,
+      "Keterangan / Tujuan": r.Catatan || "-",
+    }));
+
+    let monthLabel = filterBulan ? filterBulan : dateStr;
+    filename = "Laporan_Riwayat_Transaksi_" + monthLabel + ".xlsx";
+  }
+
+  if (dataToExport.length === 0) {
+    return showToast(
+      "warning",
+      "Data Kosong",
+      "Tidak ada data untuk diekspor.",
+    );
+  }
+
+  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+  XLSX.writeFile(workbook, filename);
+  showToast("success", "Diunduh", filename);
+}
+
+// =========================================================================
+// MODAL FORMS: BARANG, CUSTOMER, USER, AUTH
+// =========================================================================
+function openModalBarang() {
+  currentEditPart = null;
+  populateCustomerDropdown(document.getElementById("mbCustomer"), "-");
+  const partInput = document.getElementById("mbPartNumber");
+  partInput.readOnly = false;
+  document.getElementById("modalMasterBarangTitle").innerText = "Part Baru";
+  document.getElementById("formMasterBarang").reset();
+  document.getElementById("modalMasterBarang").classList.remove("hidden");
+}
+
+function closeModalBarang() {
+  document.getElementById("modalMasterBarang").classList.add("hidden");
+  document.getElementById("formMasterBarang").reset();
+  currentEditPart = null;
+}
+
+function editBarang(partNum) {
+  const barang = appData.barang.find(
+    (b) => String(b.Part_Number) === String(partNum),
+  );
+  if (!barang) return showToast("error", "Data tidak ditemukan");
+  currentEditPart = partNum;
+
+  document.getElementById("modalMasterBarangTitle").innerText = "Edit Part";
+  document.getElementById("mbPartNumber").value = barang.Part_Number;
+  document.getElementById("mbNamaBarang").value = barang.nama_barang || "";
+  document.getElementById("mbKategori").value = barang.kategori || "";
+  document.getElementById("mbSatuan").value = barang.satuan || "Pcs";
+  document.getElementById("mbStdPack").value = barang.standar_packing || 1;
+  document.getElementById("mbStok").value = barang.stok || 0;
+  document.getElementById("mbStokMin").value = barang.stok_minimum || 10;
+  document.getElementById("mbNoRel").value = barang.No_Rel || "";
+
+  const relatedOrders = appData.orders.filter(
+    (o) => String(o.Part_Number).trim() === String(partNum),
+  );
+  let custRaw = "-";
+  if (
+    relatedOrders.length > 0 &&
+    relatedOrders[0].id_customer &&
+    String(relatedOrders[0].id_customer) !== "undefined"
+  ) {
+    custRaw = relatedOrders[0].id_customer;
+  } else if (barang.id_customer) {
+    custRaw = barang.id_customer;
+  } else if (localStorage.getItem("cust_map_" + partNum)) {
+    custRaw = localStorage.getItem("cust_map_" + partNum);
+  }
+
+  populateCustomerDropdown(
+    document.getElementById("mbCustomer"),
+    resolveCustomerDisplay(custRaw),
+  );
+  document.getElementById("modalMasterBarang").classList.remove("hidden");
+}
+
+function handleSaveBarang(e) {
+  e.preventDefault();
+  if (isProcessing) return;
+  isProcessing = true;
+
+  const selectedCust = document.getElementById("mbCustomer")?.value || "-";
+  const payload = {
+    isEdit: currentEditPart !== null,
+    oldPartNumber: currentEditPart,
+    customer: selectedCust,
+    item: {
+      Part_Number: document.getElementById("mbPartNumber").value.trim(),
+      nama_barang: document.getElementById("mbNamaBarang").value.trim(),
+      kategori: document.getElementById("mbKategori").value.trim(),
+      satuan: document.getElementById("mbSatuan").value.trim(),
+      standar_packing: document.getElementById("mbStdPack").value,
+      stok: document.getElementById("mbStok").value,
+      stok_minimum: document.getElementById("mbStokMin").value,
+      No_Rel: document.getElementById("mbNoRel").value.trim(),
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-      },
-      scales: {
-        x: {
-          grid: { display: false, drawBorder: false },
-          border: { display: false },
-          ticks: {
-            font: { family: "Plus Jakarta Sans", weight: "700", size: 10 },
-            color: "#6B7280",
-          },
-        },
-        y: {
-          grid: { color: "#F3F4F6", drawBorder: false },
-          border: { display: false },
-          ticks: {
-            font: { family: "Plus Jakarta Sans", weight: "600", size: 11 },
-            color: "#9CA3AF",
-          },
-        },
-      },
+  };
+
+  swalUI.fire({
+    title: "Menyimpan...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
+  sendToBackend("apiSaveBarang", payload).then((res) => {
+    isProcessing = false;
+    Swal.close();
+    if (res.success) {
+      closeModalBarang();
+      refreshAllData();
+      showToast("success", res.message);
+    } else showToast("error", "Gagal", res.message);
+  });
+}
+
+function openModalCustomer() {
+  currentEditCustomer = null;
+  document.getElementById("modalMasterCustomerTitle").innerText =
+    "Customer Baru";
+  document.getElementById("formMasterCustomer").reset();
+  document.getElementById("modalMasterCustomer").classList.remove("hidden");
+}
+
+function closeModalCustomer() {
+  document.getElementById("modalMasterCustomer").classList.add("hidden");
+  document.getElementById("formMasterCustomer").reset();
+  currentEditCustomer = null;
+}
+
+function editCustomer(idCust) {
+  const cust = appData.customer.find(
+    (c) => String(c.id_customer) === String(idCust),
+  );
+  if (!cust) return showToast("error", "Data tidak ditemukan");
+  currentEditCustomer = idCust;
+
+  document.getElementById("modalMasterCustomerTitle").innerText =
+    "Edit Customer";
+  document.getElementById("mcId").value = cust.id_customer;
+  document.getElementById("mcNama").value = cust.nama_customer || "";
+  document.getElementById("mcKontak").value = cust.kontak || "";
+  document.getElementById("mcAlamat").value = cust.alamat || "";
+
+  document.getElementById("modalMasterCustomer").classList.remove("hidden");
+}
+
+function handleSaveCustomer(e) {
+  e.preventDefault();
+  if (isProcessing) return;
+  isProcessing = true;
+
+  const payload = {
+    isEdit: currentEditCustomer !== null,
+    oldIdCustomer: currentEditCustomer,
+    cust: {
+      id_customer: document.getElementById("mcId").value.trim(),
+      nama_customer: document.getElementById("mcNama").value.trim(),
+      kontak: document.getElementById("mcKontak").value.trim(),
+      alamat: document.getElementById("mcAlamat").value.trim(),
     },
+  };
+
+  swalUI.fire({
+    title: "Menyimpan...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
+  sendToBackend("apiSaveCustomer", payload).then((res) => {
+    isProcessing = false;
+    Swal.close();
+    if (res.success) {
+      closeModalCustomer();
+      refreshAllData();
+      showToast("success", res.message);
+    } else showToast("error", "Gagal", res.message);
+  });
+}
+
+function openModalUser() {
+  currentEditUser = null;
+  document.getElementById("modalMasterUserTitle").innerText = "Akun Baru";
+  document.getElementById("formMasterUser").reset();
+  document.getElementById("modalMasterUser").classList.remove("hidden");
+}
+
+function closeModalUser() {
+  document.getElementById("modalMasterUser").classList.add("hidden");
+  document.getElementById("formMasterUser").reset();
+  currentEditUser = null;
+}
+
+function editUser(username) {
+  const usr = appData.users.find(
+    (u) => String(u.username) === String(username),
+  );
+  if (!usr) return showToast("error", "User tidak ditemukan");
+  currentEditUser = username;
+
+  document.getElementById("modalMasterUserTitle").innerText = "Edit Akun";
+  document.getElementById("muUsername").value = usr.username;
+  document.getElementById("muPassword").value = usr.password || "";
+  document.getElementById("muRole").value = usr.role || "Warehouse";
+
+  document.getElementById("modalMasterUser").classList.remove("hidden");
+}
+
+function handleSaveUser(e) {
+  e.preventDefault();
+  if (isProcessing) return;
+  isProcessing = true;
+
+  const payload = {
+    isEdit: currentEditUser !== null,
+    oldUsername: currentEditUser,
+    userData: {
+      username: document.getElementById("muUsername").value.trim(),
+      password: document.getElementById("muPassword").value.trim(),
+      role: document.getElementById("muRole").value,
+    },
+  };
+
+  swalUI.fire({
+    title: "Menyimpan...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
+  sendToBackend("apiSaveUser", payload).then((res) => {
+    isProcessing = false;
+    Swal.close();
+    if (res.success) {
+      closeModalUser();
+      refreshAllData();
+      showToast("success", res.message);
+    } else showToast("error", "Gagal", res.message);
+  });
+}
+
+function openLoginModal() {
+  document.getElementById("modalLogin").classList.remove("hidden");
+}
+function closeLoginModal() {
+  document.getElementById("modalLogin").classList.add("hidden");
+}
+function logoutAction() {
+  swalUI
+    .fire({
+      title: "Keluar Workspace?",
+      showCancelButton: true,
+      confirmButtonText: "Keluar",
+      cancelButtonText: "Batal",
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        currentUser = null;
+        sessionStorage.removeItem("sim_inventory_user");
+        applyRbacUI();
+        switchTab("overview");
+        showToast("info", "Sesi Berakhir");
+      }
+    });
+}
+function handleLoginSubmit(e) {
+  e.preventDefault();
+  swalUI.fire({
+    title: "Otentikasi...",
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading(),
+  });
+  sendToBackend("apiLogin", {
+    username: document.getElementById("loginUsername").value.trim(),
+    password: document.getElementById("loginPassword").value.trim(),
+  }).then((res) => {
+    Swal.close();
+    if (res.success) {
+      currentUser = res.user;
+      sessionStorage.setItem("sim_inventory_user", JSON.stringify(currentUser));
+      applyRbacUI();
+      closeLoginModal();
+      switchTab("scanner");
+      showToast("success", `Selamat bekerja, ${currentUser.username}`);
+    } else showToast("error", "Akses Ditolak", res.message);
   });
 }
