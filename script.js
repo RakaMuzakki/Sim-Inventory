@@ -42,7 +42,7 @@ let chartFastMoving = null;
 let chartStock = null;
 
 // =========================================================================
-// GAYA VISUAL (CUSTOM TOAST NOTIFICATION & NEO-BRUTALISM MODAL)
+// GAYA VISUAL PROFESSIONAL (TOAST & SWEETALERT CLEAN)
 // =========================================================================
 const style = document.createElement("style");
 style.innerHTML = `
@@ -59,33 +59,33 @@ function showToast(type, title, message = "") {
     container = document.createElement("div");
     container.id = "toastContainer";
     container.className =
-      "fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
+      "fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
     document.body.appendChild(container);
   }
 
   const toast = document.createElement("div");
-  let bgColor = "bg-emerald-400";
+  let iconColor = "text-emerald-500";
   let icon = '<i class="fa-solid fa-circle-check text-xl"></i>';
 
   if (type === "error") {
-    bgColor = "bg-red-400";
-    icon = '<i class="fa-solid fa-triangle-exclamation text-xl"></i>';
+    iconColor = "text-red-500";
+    icon = '<i class="fa-solid fa-circle-xmark text-xl"></i>';
   } else if (type === "warning") {
-    bgColor = "bg-yellow-400";
-    icon = '<i class="fa-solid fa-circle-exclamation text-xl"></i>';
+    iconColor = "text-amber-500";
+    icon = '<i class="fa-solid fa-triangle-exclamation text-xl"></i>';
   } else if (type === "info") {
-    bgColor = "bg-blue-400";
+    iconColor = "text-brand-500";
     icon = '<i class="fa-solid fa-circle-info text-xl"></i>';
   }
 
-  toast.className = `flex items-start gap-3 ${bgColor} border-4 border-slate-800 shadow-[4px_4px_0px_rgba(0,0,0,1)] p-3 rounded pointer-events-auto animate-toast-in`;
+  toast.className = `flex items-start gap-4 bg-white border border-slate-200 shadow-lg p-4 rounded-xl pointer-events-auto animate-toast-in`;
   toast.innerHTML = `
-    <div class="text-slate-900 mt-0.5">${icon}</div>
+    <div class="${iconColor} mt-0.5">${icon}</div>
     <div class="flex-1">
-      <h4 class="font-black text-sm uppercase text-slate-900 leading-tight">${title}</h4>
-      ${message ? `<p class="text-[10px] font-bold text-slate-800 mt-0.5 leading-tight">${message}</p>` : ""}
+      <h4 class="font-bold text-sm text-slate-900 leading-tight">${title}</h4>
+      ${message ? `<p class="text-xs font-medium text-slate-500 mt-1 leading-snug">${message}</p>` : ""}
     </div>
-    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-slate-900 hover:text-white transition-colors">
+    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-slate-400 hover:text-slate-600 transition-colors">
       <i class="fa-solid fa-xmark text-lg"></i>
     </button>
   `;
@@ -100,16 +100,15 @@ function showToast(type, title, message = "") {
 
 const swalUI = Swal.mixin({
   customClass: {
-    popup:
-      "border-4 border-slate-800 rounded shadow-[8px_8px_0px_rgba(0,0,0,1)] bg-white",
-    title: "font-black uppercase tracking-tighter text-slate-900 text-xl",
-    htmlContainer: "font-bold text-xs text-slate-700",
+    popup: "rounded-xl shadow-xl bg-white border border-slate-200",
+    title: "font-black text-slate-900 text-lg tracking-tight",
+    htmlContainer: "text-sm text-slate-600 font-medium",
     confirmButton:
-      "px-4 py-2 border-4 border-slate-800 bg-emerald-400 font-black text-xs uppercase text-slate-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-emerald-500 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all mx-1",
+      "px-5 py-2.5 bg-slate-800 text-white rounded-lg font-bold text-sm hover:bg-slate-900 transition-colors mx-1 shadow-sm",
     cancelButton:
-      "px-4 py-2 border-4 border-slate-800 bg-slate-200 font-black text-xs uppercase text-slate-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:bg-slate-300 hover:translate-y-[2px] hover:shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all mx-1",
+      "px-5 py-2.5 bg-white text-slate-700 border border-slate-300 rounded-lg font-bold text-sm hover:bg-slate-50 transition-colors mx-1 shadow-sm",
     input:
-      "w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-sm font-bold focus:bg-yellow-100 mt-2 text-center",
+      "w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-lg font-bold text-slate-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 mt-3 text-center transition-all",
   },
   buttonsStyling: false,
 });
@@ -435,13 +434,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -457,36 +458,49 @@ async function sendToBackend(action, payload = {}) {
         return { success: true };
 
       case "apiSaveTransaksiMasuk":
-        const { data: bIn } = await _supabase
+        const { data: bInData, error: errIn } = await _supabase
           .from("Master_Barang")
           .select("stok")
-          .eq("Part_Number", payload.partNumber)
-          .single();
-        const newStokIn = (Number(bIn?.stok) || 0) + Number(payload.qty);
+          .eq("Part_Number", payload.partNumber);
+        if (errIn) throw new Error(errIn.message);
+
+        const currentStokIn =
+          bInData && bInData.length > 0 ? Number(bInData[0].stok) || 0 : 0;
+        const newStokIn = currentStokIn + Number(payload.qty);
+
         await _supabase
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
+      // ==================================================================
+      // PERBAIKAN BUG "Cannot coerce the result to a single JSON object"
+      // ==================================================================
       case "apiUpdateAssyFsg":
-        const { data: bAssy, error: errAssy } = await _supabase
+        // Hapus .single() dan cek array
+        const { data: bAssyData, error: errAssy } = await _supabase
           .from("Master_Barang")
           .select("assy_fsg")
-          .eq("Part_Number", payload.partNumber)
-          .single();
+          .eq("Part_Number", payload.partNumber);
+
         if (errAssy) throw new Error(errAssy.message);
 
-        const currentAssy = Number(bAssy?.assy_fsg) || 0;
+        const currentAssy =
+          bAssyData && bAssyData.length > 0
+            ? Number(bAssyData[0].assy_fsg) || 0
+            : 0;
         let finalAssy = currentAssy;
         let diff = 0;
 
@@ -573,13 +587,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
 
         if (payload.petugas) {
@@ -609,13 +625,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -658,13 +676,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -745,13 +765,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -985,7 +1007,6 @@ function switchTab(tabId) {
     setTimeout(() => document.getElementById("manualSmartInput")?.focus(), 100);
   }
 
-  // TUTUP SIDEBAR OTOMATIS
   closeSidebar();
 }
 
@@ -1211,7 +1232,7 @@ function buildSeatAssyControlDataset() {
 }
 
 // =========================================================================
-// FUNGSI POPUP INTERAKTIF (DASHBOARD) - DENGAN DELTA TRACKING
+// FUNGSI POPUP INTERAKTIF (DASHBOARD)
 // =========================================================================
 function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   if (isProcessing) return;
@@ -1228,14 +1249,14 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
     .fire({
       title: "ATUR CUSTOMER TUJUAN",
       html: `<div class="text-left space-y-3"><p class="text-xs">Part Number: <b>${partNumber}</b></p>
-      <div><label class="block text-[10px] font-black uppercase mb-1">Customer:</label><select id="swalSelectCust" class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold">${optionsHtml}</select></div>
-      <div><label class="block text-[10px] font-black uppercase mb-1">Mode:</label>
-        <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full bg-yellow-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold">
+      <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Customer:</label><select id="swalSelectCust" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500">${optionsHtml}</select></div>
+      <div><label class="block text-[10px] font-bold text-slate-600 mb-1">Mode:</label>
+        <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500">
           <option value="UPDATE">Ubah Customer Baris Ini</option><option value="ADD_NEW">+ Tambah Customer Baru (Beli Barang Sama)</option>
           ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Customer Ini</option>` : ""}
         </select>
       </div>
-      <div id="swalWrapQtyBaru" class="hidden"><label class="block text-[10px] font-black uppercase mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full bg-slate-100 border-2 border-slate-800 rounded px-3 py-2 text-xs font-bold" /></div>
+      <div id="swalWrapQtyBaru" class="hidden"><label class="block text-[10px] font-bold text-slate-600 mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-brand-500" /></div>
     </div>`,
       showCancelButton: true,
       confirmButtonText: "Simpan",
@@ -1289,8 +1310,8 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
     .fire({
       title: "UPDATE TOTAL ASSY",
       html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b></p>
-           <p class="text-[10px] font-bold text-slate-500 mb-2">Total saat ini: <b class="text-blue-600">${currentQty}</b> Pcs</p>
-           <p class="text-[10px] font-bold text-purple-600">Masukkan TOTAL AKHIR. Sistem akan otomatis menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
+           <p class="text-[11px] font-bold text-slate-500 mb-2">Total saat ini: <b class="text-blue-600">${currentQty}</b> Pcs</p>
+           <p class="text-[11px] font-bold text-purple-600">Masukkan TOTAL AKHIR. Sistem akan otomatis menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
       input: "number",
       inputValue: currentQty,
       inputAttributes: { min: 0 },
@@ -1344,7 +1365,7 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
     .fire({
       title: "SET TARGET (QTY/DAY)",
       html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
-           <p class="text-[10px] font-bold text-blue-600">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`,
+           <p class="text-[11px] font-bold text-blue-600">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`,
       input: "number",
       inputValue: currentQty > 0 ? currentQty : "",
       showCancelButton: true,
@@ -1385,8 +1406,8 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
     .fire({
       title: "INPUT PENGIRIMAN (QTY/OUT)",
       html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
-           <p class="text-[10px] font-bold text-slate-500 mb-2">Total terkirim saat ini: <b class="text-blue-600">${currentQtyOut}</b> Pcs</p>
-           <p class="text-[10px] font-bold text-red-500">Masukkan TOTAL AKHIR pengiriman. Sistem otomatis menghitung selisih dan mencatatnya ke Riwayat (OUT).</p>`,
+           <p class="text-[11px] font-bold text-slate-500 mb-2">Total terkirim saat ini: <b class="text-blue-600">${currentQtyOut}</b> Pcs</p>
+           <p class="text-[11px] font-bold text-red-500">Masukkan TOTAL AKHIR pengiriman. Sistem otomatis menghitung selisih dan mencatatnya ke Riwayat (OUT).</p>`,
       input: "number",
       inputValue: currentQtyOut,
       inputAttributes: { min: 0 },
@@ -1440,7 +1461,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 }
 
 // =========================================================================
-// PAPAN KONTROL DENGAN ROWSPAN CUST & SEMUA TOMBOL INTERAKTIF
+// PAPAN KONTROL PRO (GARIS TIPIS, HOVER LEMBUT, TEKS TEGAS)
 // =========================================================================
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
@@ -1459,7 +1480,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400 font-medium">Belum ada barang di database.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium">Belum ada barang di database.</td></tr>`;
     return;
   }
 
@@ -1495,30 +1516,31 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         ? "text-emerald-600"
         : row.variance < 0
           ? "text-red-600"
-          : "text-slate-700";
+          : "text-slate-500";
 
     const custClass = canEditCust
-      ? "cursor-pointer hover:bg-blue-100 hover:text-blue-800 underline decoration-dashed underline-offset-4"
+      ? "cursor-pointer hover:bg-slate-50 hover:text-brand-600 transition-colors"
       : "";
     const custAction = canEditCust
       ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
       : "";
+
     const qtyDayClass = isAdmin
-      ? "cursor-pointer hover:bg-yellow-300 hover:text-blue-800 underline decoration-dashed underline-offset-4 transition-colors block py-1"
+      ? "cursor-pointer hover:bg-slate-200 hover:text-brand-700 transition-colors rounded block py-1"
       : "";
     const qtyDayAction = isAdmin
       ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
       : "";
 
     const qtyOutClass = canEditCust
-      ? "cursor-pointer hover:bg-slate-200 hover:text-red-600 underline decoration-dashed underline-offset-4 transition-colors block py-1"
+      ? "cursor-pointer hover:bg-slate-200 hover:text-red-600 transition-colors rounded block py-1"
       : "";
     const qtyOutAction = canEditCust
       ? `onclick="promptUpdateQtyOut('${row.Part_Number}', '${row.Customer}', ${row.qty_out})"`
       : "";
 
     const assyClass = canEditAssy
-      ? "cursor-pointer hover:bg-purple-200 hover:text-purple-900 underline decoration-dashed underline-offset-4 transition-colors block py-1"
+      ? "cursor-pointer hover:bg-purple-100 hover:text-purple-900 transition-colors rounded block py-1"
       : "";
     const assyAction = canEditAssy
       ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
@@ -1535,19 +1557,22 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       }
     }
 
-    html += `<tr class="hover:bg-yellow-50 transition-colors">`;
+    html += `<tr>`;
     if (isFirstOfGroup) {
-      html += `<td rowspan="${rowspan}" class="py-2 px-1 border-2 border-slate-800 text-[10px] font-black text-slate-700 break-words align-middle ${custClass}" ${custAction} title="Klik untuk ubah/tambah Customer">${row.Customer}</td>`;
+      html += `<td rowspan="${rowspan}" class="py-2.5 px-3 text-[10px] font-bold text-slate-700 break-words align-middle ${custClass}" ${custAction} title="Klik untuk ubah/tambah Customer">${row.Customer}</td>`;
     }
     html += `
-      <td class="py-2 px-1 border-2 border-slate-800 font-black text-yellow-600 bg-slate-50">${row.No_Rel}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 text-left"><div class="font-black text-slate-900 text-sm tracking-tighter">${row.Part_Number}</div><div class="text-[10px] text-slate-500 truncate max-w-[120px] leading-none mt-0.5 uppercase">${row.nama_barang}</div></td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black text-blue-700 text-base bg-blue-50/50">${formatNum(row.stock)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black text-slate-800 bg-slate-100" title="${isAdmin ? "Klik untuk Ubah Target (QTY/DAY)" : ""}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-slate-700 bg-slate-50" title="${canEditCust ? "Klik untuk Ubah Total QTY/OUT" : ""}"><span class="${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black text-red-600">${formatNum(row.sisa_del)}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-bold text-purple-700 bg-purple-50/50" title="${canEditAssy ? "Klik untuk Ubah Total Assy" : ""}"><span class="${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
-      <td class="py-2 px-2 border-2 border-slate-800 font-black ${varColor}">${varFormat}</td>
+      <td class="py-2.5 px-2 font-bold text-amber-600 bg-amber-50/30 text-center">${row.No_Rel}</td>
+      <td class="py-2.5 px-3 text-left">
+        <div class="font-extrabold text-slate-900 text-[13px] tracking-tight">${row.Part_Number}</div>
+        <div class="text-[9px] text-slate-500 truncate max-w-[140px] uppercase font-semibold mt-0.5">${row.nama_barang}</div>
+      </td>
+      <td class="py-2.5 px-2 font-black text-blue-700 text-sm bg-blue-50/50 text-center">${formatNum(row.stock)}</td>
+      <td class="py-2.5 px-2 text-center font-bold text-slate-700 bg-slate-50/50" title="${isAdmin ? "Klik untuk Ubah Target (QTY/DAY)" : ""}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
+      <td class="py-2.5 px-2 text-center font-bold text-slate-700 bg-slate-50/50" title="${canEditCust ? "Klik untuk Ubah Total QTY/OUT" : ""}"><span class="${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
+      <td class="py-2.5 px-2 text-center font-black text-red-600">${formatNum(row.sisa_del)}</td>
+      <td class="py-2.5 px-2 text-center font-bold text-purple-700 bg-purple-50/30" title="${canEditAssy ? "Klik untuk Ubah Total Assy" : ""}"><span class="${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
+      <td class="py-2.5 px-2 text-center font-black ${varColor} bg-slate-50/30">${varFormat}</td>
     </tr>`;
   }
   tbody.innerHTML = html;
@@ -1642,25 +1667,28 @@ function updateBatchTrolleyUI() {
   const container = document.getElementById("batchTrolleyInlineList");
   if (!container) return;
   if (batchTrolley.length === 0) {
-    container.innerHTML = `<div class="py-12 text-center text-slate-400 font-bold text-xs border-2 border-dashed border-slate-300 rounded">Belum ada barang di Troli.</div>`;
+    container.innerHTML = `<div class="py-10 text-center text-slate-400 font-medium text-xs border border-dashed border-slate-300 rounded-lg bg-slate-50">Belum ada barang di Troli.</div>`;
     return;
   }
 
   container.innerHTML = batchTrolley
     .map(
       (b, idx) => `
-    <div class="flex items-center justify-between p-2.5 bg-yellow-50 border-2 border-slate-800 rounded shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+    <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-brand-300 transition-colors">
       <div class="text-left pr-2">
-        <div class="flex items-center gap-1.5"><span class="px-1.5 py-0.5 bg-slate-800 text-yellow-300 font-black text-[9px] rounded">${b.No_Rel}</span><span class="font-black text-xs text-slate-900">${b.Part_Number}</span></div>
-        <div class="text-[10px] font-bold text-slate-500 uppercase mt-0.5">${b.nama_barang}</div>
-        <div class="text-[10px] font-black text-blue-700 mt-0.5">Ditembak: ${b.trolleyCount}x Troli | Cust: <span class="text-slate-900">${b.Customer}</span></div>
-      </div>
-      <div class="flex items-center gap-2">
-        <div>
-          <label class="block text-[8px] font-black uppercase text-slate-500 text-center">Total Qty</label>
-          <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="w-20 bg-white border-2 border-slate-800 px-2 py-1 text-center font-black text-sm rounded focus:bg-yellow-100" />
+        <div class="flex items-center gap-2 mb-1">
+           <span class="px-1.5 py-0.5 bg-slate-100 text-slate-600 font-bold text-[10px] rounded">${b.No_Rel}</span>
+           <span class="font-bold text-sm text-slate-900">${b.Part_Number}</span>
         </div>
-        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-7 h-7 bg-red-400 hover:bg-red-500 border-2 border-slate-800 rounded font-black text-xs flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+        <div class="text-[10px] font-medium text-slate-500 uppercase">${b.nama_barang}</div>
+        <div class="text-[10px] font-semibold text-brand-600 mt-1"><i class="fa-solid fa-boxes-stacked mr-1"></i> ${b.trolleyCount}x Troli &nbsp;|&nbsp; <span class="text-slate-600">Cust: ${b.Customer}</span></div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-center">
+          <label class="block text-[9px] font-semibold uppercase text-slate-400 mb-0.5">Total Qty</label>
+          <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="w-16 bg-slate-50 border border-slate-200 px-2 py-1 text-center font-bold text-sm rounded-md focus:ring-2 focus:ring-brand-500 outline-none text-slate-800" />
+        </div>
+        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-8 h-8 bg-slate-100 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </div>
   `,
@@ -1749,7 +1777,7 @@ async function submitBatchTrolley(tipeAction) {
     refreshAllData();
   } catch (err) {
     Swal.close();
-    showToast("error", "Gagal", err.message);
+    showToast("error", "Gagal Memproses", err.message);
   }
   isProcessing = false;
 }
@@ -1926,8 +1954,8 @@ function submitSmartAction(tipeAction) {
       isProcessing = false;
       return showToast(
         "warning",
-        "Pilih Customer!",
-        "Pilih tujuan pengiriman terlebih dahulu.",
+        "Pilih Customer",
+        "Tentukan tujuan pengiriman.",
       );
     }
     swalUI.fire({
@@ -1947,7 +1975,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Berhasil Keluar!");
+        showToast("success", "Berhasil Keluar");
       } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "IN") {
@@ -1967,7 +1995,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Berhasil Masuk!");
+        showToast("success", "Berhasil Masuk");
       } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "ASSY_ADD") {
@@ -1987,7 +2015,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Assy Ditambahkan!");
+        showToast("success", "Assy Ditambahkan");
       } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "ASSY_SET") {
@@ -2007,14 +2035,14 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Total Assy Disetel!");
+        showToast("success", "Assy Disetel");
       } else showToast("error", "Gagal", res.message);
     });
   }
 }
 
 // =========================================================================
-// TABEL MASTER DATA (DENGAN SEARCH & BULK DELETE + FIX REFRESH)
+// TABEL MASTER DATA (DENGAN SEARCH & BULK DELETE)
 // =========================================================================
 
 // --- MASTER BARANG ---
@@ -2033,7 +2061,7 @@ function renderMasterBarangTable(keyword = "") {
   }
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">Tidak ada barang ditemukan.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-slate-400 font-medium">Tidak ada barang ditemukan.</td></tr>`;
     return;
   }
 
@@ -2043,17 +2071,17 @@ function renderMasterBarangTable(keyword = "") {
         ? "checked"
         : "";
       return `
-    <tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-2 border-2 border-slate-800 text-center"><input type="checkbox" class="chk-barang w-4 h-4 cursor-pointer accent-slate-800" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
-      <td class="py-2 px-3 border-2 border-slate-800 font-black">${b.Part_Number}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 text-left font-bold">${b.nama_barang}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 font-black text-blue-700">${b.stok}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 font-black text-yellow-600">${b.No_Rel || "-"}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 text-center">
-        <div class="flex items-center justify-center gap-1.5">
-           <button onclick="editBarang('${b.Part_Number}')" class="w-7 h-7 bg-amber-400 hover:bg-amber-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Edit Barang"><i class="fa-solid fa-pen"></i></button>
-           <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-7 h-7 bg-slate-800 hover:bg-slate-700 text-white border-2 border-slate-900 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Cetak Barcode"><i class="fa-solid fa-print"></i></button>
-           <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-7 h-7 bg-red-400 hover:bg-red-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Hapus Barang"><i class="fa-solid fa-trash-can"></i></button>
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-200 text-center"><input type="checkbox" class="chk-barang w-4 h-4 rounded text-brand-500 border-slate-300 focus:ring-brand-500 cursor-pointer" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
+      <td class="py-3 px-4 border-b border-slate-200 font-bold text-slate-900">${b.Part_Number}</td>
+      <td class="py-3 px-4 border-b border-slate-200 text-left font-medium text-slate-600 uppercase">${b.nama_barang}</td>
+      <td class="py-3 px-4 border-b border-slate-200 font-semibold text-brand-600">${b.stok}</td>
+      <td class="py-3 px-4 border-b border-slate-200 font-medium text-slate-500">${b.No_Rel || "-"}</td>
+      <td class="py-3 px-4 border-b border-slate-200 text-center">
+        <div class="flex items-center justify-center gap-2">
+           <button onclick="editBarang('${b.Part_Number}')" class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-md flex items-center justify-center transition-colors" title="Edit Barang"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md flex items-center justify-center transition-colors" title="Cetak Barcode"><i class="fa-solid fa-print"></i></button>
+           <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-md flex items-center justify-center transition-colors" title="Hapus Barang"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
     </tr>`;
@@ -2102,9 +2130,11 @@ function updateBulkDeleteUI() {
 
   if (selectedForDelete.length > 0) {
     btnBulk.classList.remove("hidden");
+    btnBulk.classList.add("flex");
     lblCount.innerText = selectedForDelete.length;
   } else {
     btnBulk.classList.add("hidden");
+    btnBulk.classList.remove("flex");
     lblCount.innerText = "0";
   }
 }
@@ -2181,21 +2211,21 @@ function renderCustomerTable(keyword = "") {
   }
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">Tidak ada customer.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-slate-400 font-medium">Tidak ada customer.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = dataset
     .map(
       (c) => `
-    <tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-3 border-2 border-slate-800 font-black">${c.id_customer}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 text-left font-black">${c.nama_customer}</td>
-      <td class="py-2 px-3 border-2 border-slate-800 text-left">${c.alamat || "-"}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 text-center">
-        <div class="flex items-center justify-center gap-1.5">
-           <button onclick="editCustomer('${c.id_customer}')" class="w-7 h-7 bg-amber-400 hover:bg-amber-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Edit Customer"><i class="fa-solid fa-pen"></i></button>
-           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-7 h-7 bg-red-400 hover:bg-red-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Hapus Customer"><i class="fa-solid fa-trash-can"></i></button>
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-200 font-bold text-slate-900">${c.id_customer}</td>
+      <td class="py-3 px-4 border-b border-slate-200 text-left font-medium text-slate-700">${c.nama_customer}</td>
+      <td class="py-3 px-4 border-b border-slate-200 text-left text-slate-500">${c.alamat || "-"}</td>
+      <td class="py-3 px-4 border-b border-slate-200 text-center">
+        <div class="flex items-center justify-center gap-2">
+           <button onclick="editCustomer('${c.id_customer}')" class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-md flex items-center justify-center transition-colors" title="Edit Customer"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-md flex items-center justify-center transition-colors" title="Hapus Customer"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
     </tr>`,
@@ -2221,24 +2251,30 @@ function renderUsersTable(keyword = "") {
   }
 
   if (usersList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-400 font-medium">Tidak ada user.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="py-10 text-center text-slate-400 font-medium">Tidak ada pengguna.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = usersList
-    .map(
-      (u) => `
-    <tr class="hover:bg-yellow-50 transition-colors">
-      <td class="py-2 px-3 border-2 border-slate-800 font-black">${u.username}</td>
-      <td class="py-2 px-3 border-2 border-slate-800">${u.role}</td>
-      <td class="py-2 px-2 border-2 border-slate-800 text-center">
-        <div class="flex items-center justify-center gap-1.5">
-           <button onclick="editUser('${u.username}')" class="w-7 h-7 bg-amber-400 hover:bg-amber-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Edit User"><i class="fa-solid fa-pen"></i></button>
-           <button onclick="deleteUser('${u.username}')" class="w-7 h-7 bg-red-400 hover:bg-red-500 text-slate-900 border-2 border-slate-800 rounded font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)]" title="Hapus User"><i class="fa-solid fa-trash-can"></i></button>
+    .map((u) => {
+      let roleBadge = `<span class="px-2.5 py-1 rounded bg-slate-100 text-slate-600 font-medium text-xs">${u.role}</span>`;
+      if (u.role === "Admin")
+        roleBadge = `<span class="px-2.5 py-1 rounded bg-brand-50 text-brand-700 font-medium text-xs">${u.role}</span>`;
+      if (u.role === "Produksi")
+        roleBadge = `<span class="px-2.5 py-1 rounded bg-purple-50 text-purple-700 font-medium text-xs">${u.role}</span>`;
+
+      return `
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-200 font-bold text-slate-900">${u.username}</td>
+      <td class="py-3 px-4 border-b border-slate-200">${roleBadge}</td>
+      <td class="py-3 px-4 border-b border-slate-200 text-center">
+        <div class="flex items-center justify-center gap-2">
+           <button onclick="editUser('${u.username}')" class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-md flex items-center justify-center transition-colors" title="Edit User"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="deleteUser('${u.username}')" class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-md flex items-center justify-center transition-colors" title="Hapus User"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
-    </tr>`,
-    )
+    </tr>`;
+    })
     .join("");
 }
 
@@ -2290,7 +2326,7 @@ function renderRiwayatTable() {
 
   tbody.innerHTML =
     logs.length === 0
-      ? `<tr><td colspan="6" class="py-6 text-slate-400 font-medium">Belum ada riwayat transaksi.</td></tr>`
+      ? `<tr><td colspan="6" class="py-10 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td></tr>`
       : logs
           .map((r) => {
             let isTarget = r.catatan && String(r.catatan).includes("QTY/DAY");
@@ -2308,7 +2344,14 @@ function renderRiwayatTable() {
               color = r.qty > 0 ? "text-red-500" : "text-emerald-600";
             }
 
-            return `<tr class="hover:bg-yellow-50"><td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-bold">${r.waktu.toLocaleString("id-ID")}</td><td class="py-2 px-2 border-2 border-slate-800 font-black">${isTarget ? "UPDATE" : r.tipe}</td><td class="py-2 px-3 border-2 border-slate-800 text-left font-black">${r.part}</td><td class="py-2 px-2 border-2 border-slate-800 font-black ${color}">${displayQty}</td><td class="py-2 px-2 border-2 border-slate-800 text-[10px] font-bold uppercase">${r.petugas || "-"}</td><td class="py-2 px-3 border-2 border-slate-800 text-left text-[10px] font-bold">${r.catatan || "-"}</td></tr>`;
+            return `<tr class="hover:bg-slate-50">
+      <td class="py-3 px-4 border-b border-slate-200 text-xs font-medium text-slate-500">${r.waktu.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+      <td class="py-3 px-4 border-b border-slate-200"><span class="px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase bg-slate-100 text-slate-600">${isTarget ? "UPDATE" : r.tipe}</span></td>
+      <td class="py-3 px-4 border-b border-slate-200 text-left font-bold text-slate-900">${r.part}</td>
+      <td class="py-3 px-4 border-b border-slate-200 text-center font-bold text-base ${color}">${displayQty}</td>
+      <td class="py-3 px-4 border-b border-slate-200 text-xs font-semibold uppercase text-slate-600">${r.petugas || "-"}</td>
+      <td class="py-3 px-4 border-b border-slate-200 text-left text-xs font-medium text-slate-500">${r.catatan || "-"}</td>
+    </tr>`;
           })
           .join("");
 }
@@ -2505,11 +2548,7 @@ function openModalBarang() {
   populateCustomerDropdown(document.getElementById("mbCustomer"), "-");
   const partInput = document.getElementById("mbPartNumber");
   partInput.readOnly = false;
-  partInput.classList.remove("bg-slate-200");
-
-  const titleEl = document.getElementById("modalMasterBarangTitle");
-  if (titleEl) titleEl.innerText = "Form Barang Baru";
-
+  document.getElementById("modalMasterBarangTitle").innerText = "Part Baru";
   document.getElementById("formMasterBarang").reset();
   document.getElementById("modalMasterBarang").classList.remove("hidden");
 }
@@ -2527,14 +2566,8 @@ function editBarang(partNum) {
   if (!barang) return showToast("error", "Data tidak ditemukan");
   currentEditPart = partNum;
 
-  const titleEl = document.getElementById("modalMasterBarangTitle");
-  if (titleEl) titleEl.innerText = "Edit Data Barang";
-
-  const partInput = document.getElementById("mbPartNumber");
-  partInput.value = barang.Part_Number;
-  partInput.readOnly = false;
-  partInput.classList.remove("bg-slate-200");
-
+  document.getElementById("modalMasterBarangTitle").innerText = "Edit Part";
+  document.getElementById("mbPartNumber").value = barang.Part_Number;
   document.getElementById("mbNamaBarang").value = barang.nama_barang || "";
   document.getElementById("mbKategori").value = barang.kategori || "";
   document.getElementById("mbSatuan").value = barang.satuan || "Pcs";
@@ -2606,13 +2639,8 @@ function handleSaveBarang(e) {
 
 function openModalCustomer() {
   currentEditCustomer = null;
-  const idInput = document.getElementById("mcId");
-  idInput.readOnly = false;
-  idInput.classList.remove("bg-slate-200");
-
-  const titleEl = document.getElementById("modalMasterCustomerTitle");
-  if (titleEl) titleEl.innerText = "Form Customer Baru";
-
+  document.getElementById("modalMasterCustomerTitle").innerText =
+    "Customer Baru";
   document.getElementById("formMasterCustomer").reset();
   document.getElementById("modalMasterCustomer").classList.remove("hidden");
 }
@@ -2630,14 +2658,9 @@ function editCustomer(idCust) {
   if (!cust) return showToast("error", "Data tidak ditemukan");
   currentEditCustomer = idCust;
 
-  const titleEl = document.getElementById("modalMasterCustomerTitle");
-  if (titleEl) titleEl.innerText = "Edit Data Customer";
-
-  const idInput = document.getElementById("mcId");
-  idInput.value = cust.id_customer;
-  idInput.readOnly = false;
-  idInput.classList.remove("bg-slate-200");
-
+  document.getElementById("modalMasterCustomerTitle").innerText =
+    "Edit Customer";
+  document.getElementById("mcId").value = cust.id_customer;
   document.getElementById("mcNama").value = cust.nama_customer || "";
   document.getElementById("mcKontak").value = cust.kontak || "";
   document.getElementById("mcAlamat").value = cust.alamat || "";
@@ -2679,13 +2702,7 @@ function handleSaveCustomer(e) {
 
 function openModalUser() {
   currentEditUser = null;
-  const usernameInput = document.getElementById("muUsername");
-  usernameInput.readOnly = false;
-  usernameInput.classList.remove("bg-slate-200");
-
-  const titleEl = document.getElementById("modalMasterUserTitle");
-  if (titleEl) titleEl.innerText = "Form Pengguna Baru";
-
+  document.getElementById("modalMasterUserTitle").innerText = "Akun Baru";
   document.getElementById("formMasterUser").reset();
   document.getElementById("modalMasterUser").classList.remove("hidden");
 }
@@ -2703,14 +2720,8 @@ function editUser(username) {
   if (!usr) return showToast("error", "User tidak ditemukan");
   currentEditUser = username;
 
-  const titleEl = document.getElementById("modalMasterUserTitle");
-  if (titleEl) titleEl.innerText = "Edit Data Pengguna";
-
-  const usernameInput = document.getElementById("muUsername");
-  usernameInput.value = usr.username;
-  usernameInput.readOnly = false;
-  usernameInput.classList.remove("bg-slate-200");
-
+  document.getElementById("modalMasterUserTitle").innerText = "Edit Akun";
+  document.getElementById("muUsername").value = usr.username;
   document.getElementById("muPassword").value = usr.password || "";
   document.getElementById("muRole").value = usr.role || "Warehouse";
 
@@ -2757,9 +2768,10 @@ function closeLoginModal() {
 function logoutAction() {
   swalUI
     .fire({
-      title: "Keluar Sistem?",
+      title: "Keluar Workspace?",
       showCancelButton: true,
       confirmButtonText: "Keluar",
+      cancelButtonText: "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
@@ -2767,14 +2779,14 @@ function logoutAction() {
         sessionStorage.removeItem("sim_inventory_user");
         applyRbacUI();
         switchTab("overview");
-        showToast("info", "Anda Berhasil Keluar");
+        showToast("info", "Sesi Berakhir");
       }
     });
 }
 function handleLoginSubmit(e) {
   e.preventDefault();
   swalUI.fire({
-    title: "Menghubungkan...",
+    title: "Otentikasi...",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   });
@@ -2789,7 +2801,7 @@ function handleLoginSubmit(e) {
       applyRbacUI();
       closeLoginModal();
       switchTab("scanner");
-      showToast("success", `Halo, ${currentUser.username}!`);
-    } else showToast("error", "Login Gagal", res.message);
+      showToast("success", `Selamat bekerja, ${currentUser.username}`);
+    } else showToast("error", "Akses Ditolak", res.message);
   });
 }
