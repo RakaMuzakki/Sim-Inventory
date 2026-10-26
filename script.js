@@ -42,14 +42,14 @@ let chartFastMoving = null;
 let chartStock = null;
 
 // =========================================================================
-// GAYA VISUAL NORDIC FLAT (TOAST & SWEETALERT PILL THEME)
+// GAYA VISUAL (TOAST & SWEETALERT SAAS THEME)
 // =========================================================================
 const style = document.createElement("style");
 style.innerHTML = `
   @keyframes toastSlideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   @keyframes toastSlideUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
-  .animate-toast-in { animation: toastSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-  .animate-toast-out { animation: toastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-toast-in { animation: toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-toast-out { animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 `;
 document.head.appendChild(style);
 
@@ -59,62 +59,63 @@ function showToast(type, title, message = "") {
     container = document.createElement("div");
     container.id = "toastContainer";
     container.className =
-      "fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2.5 pointer-events-none w-[90%] max-w-sm";
+      "fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
     document.body.appendChild(container);
   }
 
   const toast = document.createElement("div");
+  let bgColor = "bg-white";
   let iconColor = "text-emerald-500";
-  let icon = '<i class="fa-solid fa-circle-check text-lg"></i>';
+  let icon = '<i class="fa-solid fa-circle-check text-2xl"></i>';
 
   if (type === "error") {
     iconColor = "text-red-500";
-    icon = '<i class="fa-solid fa-circle-exclamation text-lg"></i>';
+    icon = '<i class="fa-solid fa-circle-xmark text-2xl"></i>';
   } else if (type === "warning") {
     iconColor = "text-amber-500";
-    icon = '<i class="fa-solid fa-triangle-exclamation text-lg"></i>';
+    icon = '<i class="fa-solid fa-triangle-exclamation text-2xl"></i>';
   } else if (type === "info") {
-    iconColor = "text-gray-900";
-    icon = '<i class="fa-solid fa-circle-info text-lg"></i>';
+    iconColor = "text-blue-500";
+    icon = '<i class="fa-solid fa-circle-info text-2xl"></i>';
   }
 
-  toast.className = `flex items-center gap-3.5 bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.08)] px-5 py-3.5 rounded-full pointer-events-auto animate-toast-in`;
+  toast.className = `flex items-start gap-4 ${bgColor} border border-slate-100 shadow-xl shadow-slate-200/50 p-4 rounded-2xl pointer-events-auto animate-toast-in`;
   toast.innerHTML = `
-    <div class="${iconColor} flex-shrink-0">${icon}</div>
-    <div class="flex-1 min-w-0">
-      <h4 class="font-bold text-xs text-gray-900 truncate">${title}</h4>
-      ${message ? `<p class="text-[11px] font-medium text-gray-400 truncate">${message}</p>` : ""}
+    <div class="${iconColor} mt-0.5">${icon}</div>
+    <div class="flex-1">
+      <h4 class="font-bold text-sm text-slate-800 leading-tight">${title}</h4>
+      ${message ? `<p class="text-xs font-medium text-slate-500 mt-1 leading-snug">${message}</p>` : ""}
     </div>
-    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 250)" class="text-gray-300 hover:text-gray-600 transition-colors">
-      <i class="fa-solid fa-xmark text-xs"></i>
+    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-slate-400 hover:text-slate-600 transition-colors">
+      <i class="fa-solid fa-xmark text-lg"></i>
     </button>
   `;
   container.appendChild(toast);
   setTimeout(() => {
     if (toast.parentElement) {
       toast.classList.replace("animate-toast-in", "animate-toast-out");
-      setTimeout(() => toast.remove(), 250);
+      setTimeout(() => toast.remove(), 300);
     }
   }, 3000);
 }
 
 const swalUI = Swal.mixin({
   customClass: {
-    popup: "rounded-3xl shadow-2xl bg-white border border-gray-100 p-6",
-    title: "font-extrabold text-gray-900 text-lg tracking-tight",
-    htmlContainer: "text-xs text-gray-500 font-medium",
+    popup: "rounded-2xl shadow-2xl bg-white border border-slate-100",
+    title: "font-bold text-slate-900 text-xl",
+    htmlContainer: "text-sm text-slate-600",
     confirmButton:
-      "px-6 py-2.5 bg-gray-900 text-white rounded-full font-semibold text-xs hover:bg-black transition-all mx-1.5",
+      "px-5 py-2.5 bg-brand-600 text-white rounded-lg font-semibold hover:bg-brand-700 transition-colors mx-1.5 shadow-sm focus:ring-2 focus:ring-brand-500 focus:ring-offset-1",
     cancelButton:
-      "px-6 py-2.5 bg-gray-100 text-gray-600 rounded-full font-semibold text-xs hover:bg-gray-200 transition-all mx-1.5",
+      "px-5 py-2.5 bg-white text-slate-700 border border-slate-300 rounded-lg font-semibold hover:bg-slate-50 transition-colors mx-1.5 shadow-sm",
     input:
-      "w-full bg-gray-100/80 focus:bg-white border border-transparent focus:border-gray-300 rounded-2xl px-4 py-3 text-xl font-extrabold text-gray-900 outline-none mt-3 text-center transition-all",
+      "w-full border border-slate-300 rounded-lg px-4 py-3 text-lg font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none mt-3 text-center",
   },
   buttonsStyling: false,
 });
 
 // =========================================================================
-// PENERJEMAH BARCODE CERDAS (YIMM / PDF417 / KANBAN)
+// PENERJEMAH BARCODE CERDAS
 // =========================================================================
 function parseYimmBarcode(rawCode) {
   let result = {
@@ -428,13 +429,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -460,15 +463,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -566,13 +571,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
 
         if (payload.petugas) {
@@ -602,13 +609,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -651,13 +660,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -738,13 +749,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -910,7 +923,7 @@ async function sendToBackend(action, payload = {}) {
 }
 
 // =========================================================================
-// UI & NAVIGASI NORDIC
+// UI & NAVIGASI
 // =========================================================================
 function startLiveClock() {
   setInterval(() => {
@@ -945,13 +958,13 @@ function switchTab(tabId) {
   if (activeTab) activeTab.classList.remove("hidden");
 
   document.querySelectorAll(".nav-item").forEach((btn) => {
-    btn.classList.remove("bg-gray-900", "text-white", "font-semibold");
-    btn.classList.add("text-gray-500", "font-medium");
+    btn.classList.remove("bg-brand-50", "text-brand-600");
+    btn.classList.add("text-slate-600");
   });
   const activeNav = document.getElementById(`btn-tab-${tabId}`);
   if (activeNav) {
-    activeNav.classList.add("bg-gray-900", "text-white", "font-semibold");
-    activeNav.classList.remove("text-gray-500", "font-medium");
+    activeNav.classList.add("bg-brand-50", "text-brand-600");
+    activeNav.classList.remove("text-slate-600");
   }
 
   if (tabId === "overview") renderSeatAssyControlBoard();
@@ -977,7 +990,6 @@ function switchTab(tabId) {
     updateBatchTrolleyUI();
     setTimeout(() => document.getElementById("manualSmartInput")?.focus(), 100);
   }
-  closeSidebar();
 }
 
 function applyRbacUI() {
@@ -1217,16 +1229,16 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
 
   swalUI
     .fire({
-      title: "Pengaturan Customer",
-      html: `<div class="text-left space-y-3 mt-2"><p class="text-xs text-gray-500">Part: <b class="text-gray-900">${partNumber}</b></p>
-      <div><label class="block text-[11px] font-semibold text-gray-400 mb-1">Pilih Customer:</label><select id="swalSelectCust" class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none">${optionsHtml}</select></div>
-      <div><label class="block text-[11px] font-semibold text-gray-400 mb-1">Tindakan:</label>
-        <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none">
+      title: "Ubah Customer",
+      html: `<div class="text-left space-y-3"><p class="text-sm">Part: <b class="text-brand-600">${partNumber}</b></p>
+      <div><label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Customer Tujuan:</label><select id="swalSelectCust" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">${optionsHtml}</select></div>
+      <div><label class="block text-xs font-semibold text-slate-600 mb-1">Aksi:</label>
+        <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
           <option value="UPDATE">Ubah Customer Baris Ini</option><option value="ADD_NEW">+ Tambah Customer Baru (Part Sama)</option>
           ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Customer Ini</option>` : ""}
         </select>
       </div>
-      <div id="swalWrapQtyBaru" class="hidden"><label class="block text-[11px] font-semibold text-gray-400 mb-1">Target Harian Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full bg-gray-100 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-gray-800 outline-none" /></div>
+      <div id="swalWrapQtyBaru" class="hidden"><label class="block text-xs font-semibold text-slate-600 mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" /></div>
     </div>`,
       showCancelButton: true,
       confirmButtonText: "Simpan",
@@ -1279,14 +1291,14 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
   swalUI
     .fire({
       title: "Update Stok Assy",
-      html: `<p class="text-xs text-gray-400 mb-3">${partNumber}</p>
-           <div class="inline-block bg-purple-50 text-purple-700 px-4 py-1.5 rounded-full text-xs font-bold mb-3">Stok Saat Ini: ${currentQty} Pcs</div>
-           <p class="text-[11px] text-gray-400">Ketik <b class="text-gray-800">Total Akhir</b>. Selisih angka otomatis dicatat ke Riwayat.</p>`,
+      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-slate-900">${partNumber}</b></p>
+           <div class="bg-blue-50 text-blue-700 p-3 rounded-lg text-sm mb-3">Total saat ini: <b>${currentQty} Pcs</b></div>
+           <p class="text-xs font-medium text-slate-500">Masukkan <b class="text-slate-800">Total Akhir</b>. Sistem akan menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
       input: "number",
       inputValue: currentQty,
       inputAttributes: { min: 0 },
       showCancelButton: true,
-      confirmButtonText: "Simpan",
+      confirmButtonText: "Simpan Total",
       cancelButtonText: "Batal",
     })
     .then((res) => {
@@ -1295,7 +1307,11 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
         if (newTotal < 0)
           return showToast("error", "Error", "Total tidak boleh minus");
         if (newTotal === currentQty)
-          return showToast("info", "Tidak berubah", "Angka masih sama");
+          return showToast(
+            "info",
+            "Tidak ada perubahan",
+            "Angka sama dengan sebelumnya",
+          );
 
         isProcessing = true;
         swalUI.fire({
@@ -1313,7 +1329,7 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
           isProcessing = false;
           Swal.close();
           if (response.success) {
-            showToast("success", "Assy Diperbarui");
+            showToast("success", "Berhasil Diupdate!");
             refreshAllData();
           } else {
             showToast("error", "Gagal", response.message);
@@ -1329,14 +1345,13 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
 
   swalUI
     .fire({
-      title: "Target Harian",
-      html: `<p class="text-xs text-gray-400 mb-2">${partNumber} &bull; <span class="text-gray-700 font-semibold">${customerName}</span></p>
-           <p class="text-[11px] text-gray-400">Perubahan target akan tercatat di log riwayat.</p>`,
+      title: "Set Target Qty/Day",
+      html: `<p class="text-sm mb-3">Part: <b class="text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
+           <p class="text-xs text-slate-500">Perubahan target akan dicatat di Riwayat.</p>`,
       input: "number",
       inputValue: currentQty > 0 ? currentQty : "",
       showCancelButton: true,
       confirmButtonText: "Simpan",
-      cancelButtonText: "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
@@ -1371,15 +1386,15 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 
   swalUI
     .fire({
-      title: "Update Terkirim (Out)",
-      html: `<p class="text-xs text-gray-400 mb-3">${partNumber} &bull; <span class="text-gray-700 font-semibold">${customerName}</span></p>
-           <div class="inline-block bg-gray-100 text-gray-800 px-4 py-1.5 rounded-full text-xs font-bold mb-3">Terkirim Saat Ini: ${currentQtyOut} Pcs</div>
-           <p class="text-[11px] text-gray-400">Ketik <b class="text-gray-800">Total Akhir</b> pengiriman. Selisihnya otomatis masuk ke Riwayat.</p>`,
+      title: "Update Qty Out",
+      html: `<p class="text-sm mb-3">Part: <b class="text-slate-900">${partNumber}</b><br><span class="text-xs text-slate-500">Tujuan: ${customerName}</span></p>
+           <div class="bg-blue-50 text-blue-700 p-3 rounded-lg text-sm mb-3">Terkirim saat ini: <b>${currentQtyOut} Pcs</b></div>
+           <p class="text-xs font-medium text-slate-500">Masukkan <b class="text-slate-800">Total Akhir</b>. Sistem akan menghitung selisih dan mencatatnya ke Riwayat.</p>`,
       input: "number",
       inputValue: currentQtyOut,
       inputAttributes: { min: 0 },
       showCancelButton: true,
-      confirmButtonText: "Simpan",
+      confirmButtonText: "Kirim Barang",
       cancelButtonText: "Batal",
     })
     .then((res) => {
@@ -1388,12 +1403,16 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
         if (newTotal < 0)
           return showToast("error", "Error", "Total tidak boleh minus");
         if (newTotal === currentQtyOut)
-          return showToast("info", "Tidak berubah", "Angka masih sama");
+          return showToast(
+            "info",
+            "Tidak ada perubahan",
+            "Angka sama dengan sebelumnya",
+          );
 
         const diff = newTotal - currentQtyOut;
         isProcessing = true;
         swalUI.fire({
-          title: "Mencatat...",
+          title: "Mencatat Riwayat...",
           allowOutsideClick: false,
           didOpen: () => Swal.showLoading(),
         });
@@ -1413,7 +1432,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
           isProcessing = false;
           Swal.close();
           if (response.success) {
-            showToast("success", "Pengiriman Diperbarui");
+            showToast("success", "Berhasil Diupdate!");
             refreshAllData();
           } else {
             showToast("error", "Gagal", response.message);
@@ -1424,7 +1443,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 }
 
 // =========================================================================
-// PAPAN KONTROL NORDIC FLAT (BORDERLESS VERTICAL, HIRARKI ANGKA)
+// PAPAN KONTROL DENGAN ROWSPAN CUST & SEMUA TOMBOL INTERAKTIF
 // =========================================================================
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
@@ -1443,7 +1462,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="py-16 text-center text-gray-400 text-xs font-medium">Tidak ada data untuk ditampilkan.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-slate-400 font-medium">Belum ada barang di database.</td></tr>`;
     return;
   }
 
@@ -1473,39 +1492,39 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         ? "+" + row.variance
         : row.variance < 0
           ? row.variance
-          : "0";
+          : "-";
 
-    // Pill Badges Lembut
+    // SaaS Clean Colors for variance
     let varBadge =
       row.variance > 0
-        ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600">${varFormat}</span>`
+        ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800">${varFormat}</span>`
         : row.variance < 0
-          ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600">${varFormat}</span>`
-          : `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-400">-</span>`;
+          ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800">${varFormat}</span>`
+          : `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600">-</span>`;
 
     const custClass = canEditCust
-      ? "cursor-pointer hover:text-gray-900 transition-colors"
+      ? "cursor-pointer hover:text-brand-600 hover:underline transition-colors"
       : "";
     const custAction = canEditCust
       ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
       : "";
 
     const qtyDayClass = isAdmin
-      ? "cursor-pointer hover:bg-gray-100 px-3 py-1 rounded-full transition-all inline-block"
+      ? "cursor-pointer hover:bg-slate-100 hover:text-brand-600 transition-colors rounded"
       : "";
     const qtyDayAction = isAdmin
       ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
       : "";
 
     const qtyOutClass = canEditCust
-      ? "cursor-pointer hover:bg-gray-100 px-3 py-1 rounded-full transition-all inline-block"
+      ? "cursor-pointer hover:bg-slate-100 hover:text-red-600 transition-colors rounded"
       : "";
     const qtyOutAction = canEditCust
       ? `onclick="promptUpdateQtyOut('${row.Part_Number}', '${row.Customer}', ${row.qty_out})"`
       : "";
 
     const assyClass = canEditAssy
-      ? "cursor-pointer hover:bg-purple-100/60 bg-purple-50/50 px-3.5 py-1 rounded-full transition-all inline-block"
+      ? "cursor-pointer hover:bg-purple-50 hover:text-purple-700 transition-colors rounded"
       : "";
     const assyAction = canEditAssy
       ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"`
@@ -1522,22 +1541,23 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       }
     }
 
-    html += `<tr class="hover:bg-gray-50/60 transition-colors group">`;
+    // Menggunakan border-b border-slate-100 untuk SaaS table lines
+    html += `<tr class="hover:bg-slate-50 transition-colors group">`;
     if (isFirstOfGroup) {
-      html += `<td rowspan="${rowspan}" class="py-4 pr-4 align-top text-xs font-bold text-gray-400 uppercase tracking-wider ${custClass}" ${custAction} title="Atur Customer">${row.Customer}</td>`;
+      html += `<td rowspan="${rowspan}" class="py-3 px-4 border-b border-r border-slate-200 text-xs font-semibold text-slate-600 align-top ${custClass}" ${custAction} title="Klik untuk ubah Customer">${row.Customer}</td>`;
     }
     html += `
-      <td class="py-4 px-4 align-middle"><span class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-semibold text-xs">${row.No_Rel}</span></td>
-      <td class="py-4 px-4 align-middle">
-        <div class="text-base font-extrabold text-gray-900 tracking-tight">${row.Part_Number}</div>
-        <div class="text-xs font-medium text-gray-400 mt-0.5 uppercase">${row.nama_barang}</div>
+      <td class="py-3 px-4 border-b border-slate-100 font-semibold text-slate-500 whitespace-nowrap">${row.No_Rel}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left">
+        <div class="font-bold text-slate-900">${row.Part_Number}</div>
+        <div class="text-[10px] text-slate-500 truncate max-w-[150px] mt-0.5 uppercase">${row.nama_barang}</div>
       </td>
-      <td class="py-4 px-4 align-middle text-center"><span class="text-lg font-extrabold text-gray-900">${formatNum(row.stock)}</span></td>
-      <td class="py-4 px-4 align-middle text-center"><span class="text-sm font-semibold text-gray-600 ${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
-      <td class="py-4 px-4 align-middle text-center"><span class="text-sm font-semibold text-gray-600 ${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
-      <td class="py-4 px-4 align-middle text-center"><span class="text-sm font-bold ${row.sisa_del > 0 ? "text-red-500" : "text-gray-300"}">${formatNum(row.sisa_del)}</span></td>
-      <td class="py-4 px-4 align-middle text-center"><span class="text-base font-extrabold text-purple-600 ${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
-      <td class="py-4 pl-4 align-middle text-right">${varBadge}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center"><span class="inline-block px-2 py-1 bg-blue-50 text-blue-700 rounded font-semibold min-w-[32px]">${formatNum(row.stock)}</span></td>
+      <td class="py-3 px-2 border-b border-slate-100 text-center"><div class="px-2 py-1 ${qtyDayClass} font-semibold text-slate-700" ${qtyDayAction}>${formatNum(row.qty_day)}</div></td>
+      <td class="py-3 px-2 border-b border-slate-100 text-center"><div class="px-2 py-1 ${qtyOutClass} font-semibold text-slate-700" ${qtyOutAction}>${formatNum(row.qty_out)}</div></td>
+      <td class="py-3 px-2 border-b border-slate-100 text-center font-bold text-red-500">${formatNum(row.sisa_del)}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center"><div class="px-2 py-1 ${assyClass} font-bold text-purple-600" ${assyAction}>${formatNum(row.assy_fsg)}</div></td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center">${varBadge}</td>
     </tr>`;
   }
   tbody.innerHTML = html;
@@ -1571,7 +1591,7 @@ function handleScannerGun(event) {
     );
 
     if (matchingRows.length === 0) {
-      showToast("error", "Tidak Dikenali", `Part ${code} tidak terdaftar.`);
+      showToast("error", "Tidak Dikenali", `Part ${code} tidak ada.`);
       inputField.value = "";
       return;
     }
@@ -1632,25 +1652,28 @@ function updateBatchTrolleyUI() {
   const container = document.getElementById("batchTrolleyInlineList");
   if (!container) return;
   if (batchTrolley.length === 0) {
-    container.innerHTML = `<div class="py-14 text-center text-gray-400 text-xs font-medium bg-gray-50/70 rounded-2xl">Belum ada item yang di-scan.</div>`;
+    container.innerHTML = `<div class="py-10 text-center text-slate-400 text-sm border border-dashed border-slate-200 rounded-xl bg-slate-50">Belum ada barang di daftar batch.</div>`;
     return;
   }
 
   container.innerHTML = batchTrolley
     .map(
       (b, idx) => `
-    <div class="flex items-center justify-between p-4 bg-gray-50/80 hover:bg-gray-100/70 rounded-2xl transition-colors">
-      <div class="text-left pr-3">
-        <div class="flex items-center gap-2 mb-0.5">
-           <span class="px-2 py-0.5 bg-white text-gray-600 font-bold text-[10px] rounded-full shadow-2xs">${b.No_Rel}</span>
-           <span class="font-extrabold text-sm text-gray-900">${b.Part_Number}</span>
+    <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-brand-300 transition-colors">
+      <div class="text-left pr-2">
+        <div class="flex items-center gap-2 mb-1">
+           <span class="px-1.5 py-0.5 bg-slate-100 text-slate-600 font-bold text-[10px] rounded">${b.No_Rel}</span>
+           <span class="font-bold text-sm text-slate-900">${b.Part_Number}</span>
         </div>
-        <div class="text-[11px] font-medium text-gray-400 uppercase">${b.nama_barang}</div>
-        <div class="text-[11px] font-semibold text-gray-600 mt-1">${b.trolleyCount}x Troli &bull; <span class="text-gray-400">${b.Customer}</span></div>
+        <div class="text-[10px] font-medium text-slate-500 uppercase">${b.nama_barang}</div>
+        <div class="text-[10px] font-semibold text-brand-600 mt-1"><i class="fa-solid fa-boxes-stacked mr-1"></i> ${b.trolleyCount}x Troli &nbsp;|&nbsp; <span class="text-slate-600">Cust: ${b.Customer}</span></div>
       </div>
-      <div class="flex items-center gap-2.5">
-        <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="w-16 bg-white border border-gray-200/80 px-2 py-1.5 text-center font-extrabold text-sm rounded-full outline-none focus:border-gray-900 text-gray-900" />
-        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-8 h-8 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark text-xs"></i></button>
+      <div class="flex items-center gap-3">
+        <div class="text-center">
+          <label class="block text-[9px] font-semibold uppercase text-slate-400 mb-0.5">Total Qty</label>
+          <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="w-16 bg-slate-50 border border-slate-200 px-2 py-1 text-center font-bold text-sm rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-slate-800" />
+        </div>
+        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-8 h-8 bg-slate-100 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </div>
   `,
@@ -1663,8 +1686,8 @@ async function submitBatchTrolley(tipeAction) {
   if (batchTrolley.length === 0)
     return showToast(
       "warning",
-      "Daftar Kosong",
-      "Scan barang terlebih dahulu.",
+      "Daftar Kosong!",
+      "Silakan scan barang terlebih dahulu.",
     );
   if (isProcessing) return;
 
@@ -1675,7 +1698,7 @@ async function submitBatchTrolley(tipeAction) {
     return showToast(
       "error",
       "Qty Tidak Valid",
-      `Cek jumlah untuk ${invalidQty.Part_Number}`,
+      `Cek jumlah Qty untuk ${invalidQty.Part_Number}`,
     );
 
   const overrideCust =
@@ -1687,15 +1710,15 @@ async function submitBatchTrolley(tipeAction) {
       if (!targetCust || targetCust === "-")
         return showToast(
           "warning",
-          "Pilih Customer",
-          "Tentukan tujuan pengiriman di atas.",
+          "Pilih Customer!",
+          "Pilih Tujuan pada dropdown di atas!",
         );
     }
   }
 
   isProcessing = true;
   swalUI.fire({
-    title: "Memproses...",
+    title: "Memproses Batch...",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   });
@@ -1731,11 +1754,15 @@ async function submitBatchTrolley(tipeAction) {
     batchTrolley = [];
     updateBatchTrolleyUI();
     Swal.close();
-    showToast("success", "Selesai", "Seluruh batch berhasil dicatat.");
+    showToast(
+      "success",
+      "Batch Tersimpan!",
+      "Semua transaksi berhasil dicatat.",
+    );
     refreshAllData();
   } catch (err) {
     Swal.close();
-    showToast("error", "Gagal", err.message);
+    showToast("error", "Gagal Memproses", err.message);
   }
   isProcessing = false;
 }
@@ -1782,7 +1809,7 @@ function stopSmartScanner() {
 function populateCustomerDropdown(selectEl, selectedVal = "-") {
   if (!selectEl) return;
   const isBatch = selectEl.id === "batchSelectCustomer";
-  let html = `<option value="-">${isBatch ? "-- Sesuai Default Part --" : "-- Pilih Customer --"}</option>`;
+  let html = `<option value="-">${isBatch ? "-- Sesuai Default Barang --" : "-- Pilih Customer --"}</option>`;
   (appData.customer || []).forEach((c) => {
     const val = c.nama_customer || c.id_customer;
     const label = c.nama_customer
@@ -1831,7 +1858,7 @@ function processSmartScanCamera(scannedCode) {
   );
 
   if (matchingRows.length === 0) {
-    showToast("error", "Tidak Dikenali", `Part tidak terdaftar.`);
+    showToast("error", "Tidak Dikenali", `Part tidak terdaftar di sistem.`);
     isCameraPaused = true;
     setTimeout(() => {
       isCameraPaused = false;
@@ -1912,8 +1939,8 @@ function submitSmartAction(tipeAction) {
       isProcessing = false;
       return showToast(
         "warning",
-        "Pilih Customer",
-        "Tentukan tujuan pengiriman.",
+        "Pilih Customer!",
+        "Pilih tujuan pengiriman terlebih dahulu.",
       );
     }
     swalUI.fire({
@@ -1933,7 +1960,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Berhasil Keluar");
+        showToast("success", "Berhasil Keluar!");
       } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "IN") {
@@ -1953,7 +1980,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Berhasil Masuk");
+        showToast("success", "Berhasil Masuk!");
       } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "ASSY_ADD") {
@@ -1973,7 +2000,7 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Assy Ditambahkan");
+        showToast("success", "Assy Ditambahkan!");
       } else showToast("error", "Gagal", res.message);
     });
   } else if (tipeAction === "ASSY_SET") {
@@ -1993,14 +2020,14 @@ function submitSmartAction(tipeAction) {
       if (res.success) {
         closeSmartAction();
         refreshAllData();
-        showToast("success", "Assy Disetel");
+        showToast("success", "Total Assy Disetel!");
       } else showToast("error", "Gagal", res.message);
     });
   }
 }
 
 // =========================================================================
-// TABEL MASTER DATA NORDIC FLAT (HIRARKI TEKS & TOMBOL PIL)
+// TABEL MASTER DATA (DENGAN SEARCH & BULK DELETE)
 // =========================================================================
 
 // --- MASTER BARANG ---
@@ -2019,7 +2046,7 @@ function renderMasterBarangTable(keyword = "") {
   }
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="py-16 text-center text-gray-400 text-xs font-medium">Tidak ada part ditemukan.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-slate-400 font-medium">Tidak ada barang ditemukan.</td></tr>`;
     return;
   }
 
@@ -2029,19 +2056,17 @@ function renderMasterBarangTable(keyword = "") {
         ? "checked"
         : "";
       return `
-    <tr class="hover:bg-gray-50/60 transition-colors">
-      <td class="py-4 pr-4 text-center align-middle"><input type="checkbox" class="chk-barang w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer accent-gray-900" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
-      <td class="py-4 px-4 align-middle">
-        <div class="text-base font-extrabold text-gray-900 tracking-tight">${b.Part_Number}</div>
-        <div class="text-xs font-medium text-gray-400 mt-0.5 uppercase">${b.nama_barang}</div>
-      </td>
-      <td class="py-4 px-4 align-middle"><span class="text-lg font-extrabold text-gray-900">${b.stok}</span> <span class="text-xs text-gray-400 font-medium">${b.satuan || "Pcs"}</span></td>
-      <td class="py-4 px-4 align-middle"><span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 font-semibold text-xs">${b.No_Rel || "-"}</span></td>
-      <td class="py-4 pl-4 align-middle text-right">
-        <div class="flex items-center justify-end gap-1.5">
-           <button onclick="editBarang('${b.Part_Number}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors" title="Edit"><i class="fa-solid fa-pen text-[11px]"></i></button>
-           <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors" title="Print"><i class="fa-solid fa-print text-[11px]"></i></button>
-           <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors" title="Hapus"><i class="fa-regular fa-trash-can text-[11px]"></i></button>
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-100 text-center"><input type="checkbox" class="chk-barang w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
+      <td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-900">${b.Part_Number}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left font-medium text-slate-600 uppercase">${b.nama_barang}</td>
+      <td class="py-3 px-4 border-b border-slate-100 font-semibold text-brand-600">${b.stok}</td>
+      <td class="py-3 px-4 border-b border-slate-100 font-medium text-slate-500">${b.No_Rel || "-"}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center">
+        <div class="flex items-center justify-center gap-2">
+           <button onclick="editBarang('${b.Part_Number}')" class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center transition-colors" title="Edit Barang"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg flex items-center justify-center transition-colors" title="Cetak Barcode"><i class="fa-solid fa-print"></i></button>
+           <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition-colors" title="Hapus Barang"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
     </tr>`;
@@ -2104,10 +2129,10 @@ function bulkDeleteBarang() {
 
   swalUI
     .fire({
-      title: "Hapus Item Terpilih?",
-      html: `Menghapus permanen <b class="text-red-600">${selectedForDelete.length}</b> part dari sistem.`,
+      title: "Hapus Massal?",
+      html: `Anda yakin ingin menghapus permanen <b class="text-red-600 text-lg">${selectedForDelete.length}</b> barang terpilih?`,
       showCancelButton: true,
-      confirmButtonText: "Ya, Hapus",
+      confirmButtonText: "Ya, Hapus Semua!",
       cancelButtonText: "Batal",
     })
     .then((result) => {
@@ -2124,7 +2149,7 @@ function bulkDeleteBarang() {
           isProcessing = false;
           Swal.close();
           if (res.success) {
-            showToast("success", "Terhapus");
+            showToast("success", "Berhasil Dihapus!");
             selectedForDelete = [];
             document.getElementById("searchMasterBarang").value = "";
             refreshAllData();
@@ -2132,42 +2157,6 @@ function bulkDeleteBarang() {
             showToast("error", "Gagal", res.message);
           }
         });
-      }
-    });
-}
-
-function deleteBarang(partNum, namaBarang) {
-  swalUI
-    .fire({
-      title: "Hapus Part?",
-      html: `Hapus permanen <b class="text-gray-900">${partNum}</b> (${namaBarang})?`,
-      showCancelButton: true,
-      confirmButtonText: "Hapus",
-      cancelButtonText: "Batal",
-    })
-    .then((result) => {
-      if (result.isConfirmed) {
-        isProcessing = true;
-        swalUI.fire({
-          title: "Menghapus...",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-        });
-        sendToBackend("apiDeleteBarang", { partNumber: partNum }).then(
-          (res) => {
-            isProcessing = false;
-            Swal.close();
-            if (res.success) {
-              showToast("success", "Terhapus");
-              selectedForDelete = selectedForDelete.filter(
-                (p) => p !== String(partNum),
-              );
-              refreshAllData();
-            } else {
-              showToast("error", "Gagal", res.message);
-            }
-          },
-        );
       }
     });
 }
@@ -2207,59 +2196,26 @@ function renderCustomerTable(keyword = "") {
   }
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-16 text-center text-gray-400 text-xs font-medium">Tidak ada customer.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-slate-400 font-medium">Tidak ada customer.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = dataset
     .map(
       (c) => `
-    <tr class="hover:bg-gray-50/60 transition-colors">
-      <td class="py-4 pr-4 font-extrabold text-gray-900">${c.id_customer}</td>
-      <td class="py-4 px-4 font-semibold text-gray-700">${c.nama_customer}</td>
-      <td class="py-4 px-4 text-xs text-gray-400 font-medium">${c.alamat || "-"}</td>
-      <td class="py-4 pl-4 text-right">
-        <div class="flex items-center justify-end gap-1.5">
-           <button onclick="editCustomer('${c.id_customer}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"><i class="fa-solid fa-pen text-[11px]"></i></button>
-           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors"><i class="fa-regular fa-trash-can text-[11px]"></i></button>
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-900">${c.id_customer}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left font-medium text-slate-700">${c.nama_customer}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left text-slate-500">${c.alamat || "-"}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center">
+        <div class="flex items-center justify-center gap-2">
+           <button onclick="editCustomer('${c.id_customer}')" class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center transition-colors" title="Edit Customer"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition-colors" title="Hapus Customer"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
     </tr>`,
     )
     .join("");
-}
-
-function deleteCustomer(idCust, namaCust) {
-  swalUI
-    .fire({
-      title: "Hapus Customer?",
-      html: `Hapus <b class="text-gray-900">${namaCust}</b> (${idCust})?`,
-      showCancelButton: true,
-      confirmButtonText: "Hapus",
-      cancelButtonText: "Batal",
-    })
-    .then((result) => {
-      if (result.isConfirmed) {
-        isProcessing = true;
-        swalUI.fire({
-          title: "Menghapus...",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-        });
-        sendToBackend("apiDeleteCustomer", { id_customer: idCust }).then(
-          (res) => {
-            isProcessing = false;
-            Swal.close();
-            if (res.success) {
-              showToast("success", "Customer Dihapus");
-              refreshAllData();
-            } else {
-              showToast("error", "Gagal", res.message);
-            }
-          },
-        );
-      }
-    });
 }
 
 // --- KELOLA PENGGUNA ---
@@ -2280,68 +2236,31 @@ function renderUsersTable(keyword = "") {
   }
 
   if (usersList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" class="py-16 text-center text-gray-400 text-xs font-medium">Tidak ada pengguna.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="py-10 text-center text-slate-400 font-medium">Tidak ada user.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = usersList
     .map((u) => {
-      let roleBadge = `<span class="px-3 py-1 rounded-full bg-gray-100 text-gray-600 font-semibold text-xs">${u.role}</span>`;
+      let roleBadge = `<span class="px-2.5 py-1 rounded bg-slate-100 text-slate-600 font-medium text-xs">${u.role}</span>`;
       if (u.role === "Admin")
-        roleBadge = `<span class="px-3 py-1 rounded-full bg-gray-900 text-white font-semibold text-xs">${u.role}</span>`;
+        roleBadge = `<span class="px-2.5 py-1 rounded bg-brand-50 text-brand-700 font-medium text-xs">${u.role}</span>`;
       if (u.role === "Produksi")
-        roleBadge = `<span class="px-3 py-1 rounded-full bg-purple-50 text-purple-600 font-semibold text-xs">${u.role}</span>`;
+        roleBadge = `<span class="px-2.5 py-1 rounded bg-purple-50 text-purple-700 font-medium text-xs">${u.role}</span>`;
 
       return `
-    <tr class="hover:bg-gray-50/60 transition-colors">
-      <td class="py-4 pr-4 font-extrabold text-gray-900">${u.username}</td>
-      <td class="py-4 px-4">${roleBadge}</td>
-      <td class="py-4 pl-4 text-right">
-        <div class="flex items-center justify-end gap-1.5">
-           <button onclick="editUser('${u.username}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"><i class="fa-solid fa-pen text-[11px]"></i></button>
-           <button onclick="deleteUser('${u.username}')" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors"><i class="fa-regular fa-trash-can text-[11px]"></i></button>
+    <tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-100 font-bold text-slate-900">${u.username}</td>
+      <td class="py-3 px-4 border-b border-slate-100">${roleBadge}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-center">
+        <div class="flex items-center justify-center gap-2">
+           <button onclick="editUser('${u.username}')" class="w-8 h-8 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center transition-colors" title="Edit User"><i class="fa-solid fa-pen"></i></button>
+           <button onclick="deleteUser('${u.username}')" class="w-8 h-8 bg-red-50 hover:bg-red-100 text-red-500 rounded-lg flex items-center justify-center transition-colors" title="Hapus User"><i class="fa-solid fa-trash-can"></i></button>
         </div>
       </td>
     </tr>`;
     })
     .join("");
-}
-
-function deleteUser(usernameTarget) {
-  if (currentUser && currentUser.username === usernameTarget)
-    return showToast(
-      "warning",
-      "Ditolak",
-      "Tidak bisa menghapus akun yang sedang aktif.",
-    );
-  swalUI
-    .fire({
-      title: "Hapus Akun?",
-      html: `Hapus pengguna <b class="text-gray-900">${usernameTarget}</b>?`,
-      showCancelButton: true,
-      confirmButtonText: "Hapus",
-      cancelButtonText: "Batal",
-    })
-    .then((result) => {
-      if (result.isConfirmed) {
-        isProcessing = true;
-        swalUI.fire({
-          title: "Menghapus...",
-          allowOutsideClick: false,
-          didOpen: () => Swal.showLoading(),
-        });
-        sendToBackend("apiDeleteUser", { usernameTarget }).then((res) => {
-          isProcessing = false;
-          Swal.close();
-          if (res.success) {
-            showToast("success", "Akun Dihapus");
-            refreshAllData();
-          } else {
-            showToast("error", "Gagal", res.message);
-          }
-        });
-      }
-    });
 }
 
 // --- RIWAYAT TRANSAKSI ---
@@ -2393,35 +2312,36 @@ function renderRiwayatTable() {
 
   tbody.innerHTML =
     logs.length === 0
-      ? `<tr><td colspan="6" class="py-16 text-center text-gray-400 text-xs font-medium">Belum ada riwayat transaksi.</td></tr>`
+      ? `<tr><td colspan="6" class="py-10 text-center text-slate-400 font-medium">Belum ada riwayat transaksi.</td></tr>`
       : logs
           .map((r) => {
             let isTarget = r.catatan && String(r.catatan).includes("QTY/DAY");
             let displayQty = r.qty;
-            let color = "text-gray-900";
-            let bgTipe = "bg-gray-100 text-gray-600";
+            let color = "text-slate-600";
+            let bgTipe = "bg-slate-100 text-slate-600";
 
             if (isTarget) {
               displayQty = `TARGET`;
-              color = "text-gray-500 text-xs";
-              bgTipe = "bg-gray-100 text-gray-600";
+              color = "text-brand-600";
+              bgTipe = "bg-brand-50 text-brand-600";
             } else if (r.tipe === "IN") {
               displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
               color = r.qty > 0 ? "text-emerald-600" : "text-red-500";
-              bgTipe = "bg-emerald-50 text-emerald-600";
+              bgTipe =
+                "bg-emerald-50 text-emerald-600 border border-emerald-100";
             } else {
               displayQty = r.qty > 0 ? `-${r.qty}` : `+${Math.abs(r.qty)}`;
-              color = r.qty > 0 ? "text-gray-900" : "text-emerald-600";
-              bgTipe = "bg-gray-900 text-white";
+              color = r.qty > 0 ? "text-red-500" : "text-emerald-600";
+              bgTipe = "bg-amber-50 text-amber-600 border border-amber-100";
             }
 
-            return `<tr class="hover:bg-gray-50/60 transition-colors">
-      <td class="py-4 pr-4 text-xs font-medium text-gray-400">${r.waktu.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
-      <td class="py-4 px-4"><span class="px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${bgTipe}">${isTarget ? "SET" : r.tipe}</span></td>
-      <td class="py-4 px-4 font-extrabold text-base text-gray-900 tracking-tight">${r.part}</td>
-      <td class="py-4 px-4 text-right font-extrabold text-base ${color}">${displayQty}</td>
-      <td class="py-4 px-4 text-xs font-semibold text-gray-600">${r.petugas || "-"}</td>
-      <td class="py-4 pl-4 text-xs font-medium text-gray-400">${r.catatan || "-"}</td>
+            return `<tr class="hover:bg-slate-50 transition-colors">
+      <td class="py-3 px-4 border-b border-slate-100 text-xs font-medium text-slate-500">${r.waktu.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
+      <td class="py-3 px-4 border-b border-slate-100"><span class="px-2.5 py-1 rounded text-[10px] font-bold tracking-wider uppercase ${bgTipe}">${isTarget ? "UPDATE" : r.tipe}</span></td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left font-bold text-slate-900">${r.part}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-right font-bold text-base ${color}">${displayQty}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-xs font-semibold uppercase text-slate-600">${r.petugas || "-"}</td>
+      <td class="py-3 px-4 border-b border-slate-100 text-left text-xs font-medium text-slate-500">${r.catatan || "-"}</td>
     </tr>`;
           })
           .join("");
@@ -2429,8 +2349,8 @@ function renderRiwayatTable() {
 
 function renderAnalitikCharts() {
   if (typeof Chart === "undefined") return;
-  Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
-  Chart.defaults.color = "#9CA3AF";
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = "#64748b";
 
   let mapOut = {};
   appData.keluar.forEach(
@@ -2447,13 +2367,12 @@ function renderAnalitikCharts() {
     {
       type: "bar",
       data: {
-        labels: top5.length ? top5.map((x) => x[0]) : ["Kosong"],
+        labels: top5.length ? top5.map((x) => x[0]) : ["Belum ada data"],
         datasets: [
           {
             data: top5.length ? top5.map((x) => x[1]) : [0],
-            backgroundColor: "#111827",
-            borderRadius: 999,
-            barThickness: 28,
+            backgroundColor: "#3b82f6",
+            borderRadius: 6,
           },
         ],
       },
@@ -2462,12 +2381,8 @@ function renderAnalitikCharts() {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          y: {
-            beginAtZero: true,
-            grid: { color: "#F3F4F6" },
-            border: { display: false },
-          },
-          x: { grid: { display: false }, border: { display: false } },
+          y: { beginAtZero: true, grid: { color: "#f1f5f9" } },
+          x: { grid: { display: false } },
         },
       },
     },
@@ -2485,28 +2400,22 @@ function renderAnalitikCharts() {
       data: {
         labels: lowStock.length
           ? lowStock.map((x) => x.Part_Number)
-          : ["Kosong"],
+          : ["Belum ada data"],
         datasets: [
           {
             label: "Stok",
             data: lowStock.length ? lowStock.map((x) => Number(x.stok)) : [0],
-            backgroundColor: "#10B981",
-            borderRadius: 999,
-            barThickness: 20,
+            backgroundColor: "#10b981",
+            borderRadius: 6,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
         scales: {
-          y: {
-            beginAtZero: true,
-            grid: { color: "#F3F4F6" },
-            border: { display: false },
-          },
-          x: { grid: { display: false }, border: { display: false } },
+          y: { beginAtZero: true, grid: { color: "#f1f5f9" } },
+          x: { grid: { display: false } },
         },
       },
     },
@@ -2514,13 +2423,13 @@ function renderAnalitikCharts() {
 }
 
 // =========================================================================
-// FUNGSI EKSPOR EXCEL (.XLSX)
+// FUNGSI EKSPOR EXCEL (.XLSX) MENGGUNAKAN SHEETJS
 // =========================================================================
 function exportToExcel(tipe) {
   if (typeof XLSX === "undefined") {
     return showToast(
       "error",
-      "Belum Siap",
+      "Library Excel Belum Siap",
       "Silakan tunggu sebentar lalu coba lagi.",
     );
   }
@@ -2624,7 +2533,7 @@ function exportToExcel(tipe) {
     return showToast(
       "warning",
       "Data Kosong",
-      "Tidak ada data untuk diekspor.",
+      "Tidak ada data yang bisa diekspor ke Excel saat ini.",
     );
   }
 
@@ -2633,18 +2542,22 @@ function exportToExcel(tipe) {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
   XLSX.writeFile(workbook, filename);
-  showToast("success", "Diunduh", filename);
+  showToast("success", "Ekspor Berhasil!", `File ${filename} sedang diunduh.`);
 }
 
 // =========================================================================
-// MODAL FORMS: BARANG, CUSTOMER, USER, AUTH
+// MODAL FORMS: BARANG
 // =========================================================================
 function openModalBarang() {
   currentEditPart = null;
   populateCustomerDropdown(document.getElementById("mbCustomer"), "-");
   const partInput = document.getElementById("mbPartNumber");
   partInput.readOnly = false;
-  document.getElementById("modalMasterBarangTitle").innerText = "Part Baru";
+  partInput.classList.remove("bg-slate-100", "cursor-not-allowed");
+
+  const titleEl = document.getElementById("modalMasterBarangTitle");
+  if (titleEl) titleEl.innerText = "Form Barang Baru";
+
   document.getElementById("formMasterBarang").reset();
   document.getElementById("modalMasterBarang").classList.remove("hidden");
 }
@@ -2662,8 +2575,14 @@ function editBarang(partNum) {
   if (!barang) return showToast("error", "Data tidak ditemukan");
   currentEditPart = partNum;
 
-  document.getElementById("modalMasterBarangTitle").innerText = "Edit Part";
-  document.getElementById("mbPartNumber").value = barang.Part_Number;
+  const titleEl = document.getElementById("modalMasterBarangTitle");
+  if (titleEl) titleEl.innerText = "Edit Data Barang";
+
+  const partInput = document.getElementById("mbPartNumber");
+  partInput.value = barang.Part_Number;
+  partInput.readOnly = false;
+  partInput.classList.remove("bg-slate-100", "cursor-not-allowed");
+
   document.getElementById("mbNamaBarang").value = barang.nama_barang || "";
   document.getElementById("mbKategori").value = barang.kategori || "";
   document.getElementById("mbSatuan").value = barang.satuan || "Pcs";
@@ -2729,14 +2648,22 @@ function handleSaveBarang(e) {
       closeModalBarang();
       refreshAllData();
       showToast("success", res.message);
-    } else showToast("error", "Gagal", res.message);
+    } else showToast("error", "Gagal Menyimpan", res.message);
   });
 }
 
+// =========================================================================
+// MODAL FORMS: CUSTOMER
+// =========================================================================
 function openModalCustomer() {
   currentEditCustomer = null;
-  document.getElementById("modalMasterCustomerTitle").innerText =
-    "Customer Baru";
+  const idInput = document.getElementById("mcId");
+  idInput.readOnly = false;
+  idInput.classList.remove("bg-slate-100", "cursor-not-allowed");
+
+  const titleEl = document.getElementById("modalMasterCustomerTitle");
+  if (titleEl) titleEl.innerText = "Form Customer Baru";
+
   document.getElementById("formMasterCustomer").reset();
   document.getElementById("modalMasterCustomer").classList.remove("hidden");
 }
@@ -2754,9 +2681,14 @@ function editCustomer(idCust) {
   if (!cust) return showToast("error", "Data tidak ditemukan");
   currentEditCustomer = idCust;
 
-  document.getElementById("modalMasterCustomerTitle").innerText =
-    "Edit Customer";
-  document.getElementById("mcId").value = cust.id_customer;
+  const titleEl = document.getElementById("modalMasterCustomerTitle");
+  if (titleEl) titleEl.innerText = "Edit Data Customer";
+
+  const idInput = document.getElementById("mcId");
+  idInput.value = cust.id_customer;
+  idInput.readOnly = false;
+  idInput.classList.remove("bg-slate-100", "cursor-not-allowed");
+
   document.getElementById("mcNama").value = cust.nama_customer || "";
   document.getElementById("mcKontak").value = cust.kontak || "";
   document.getElementById("mcAlamat").value = cust.alamat || "";
@@ -2792,13 +2724,22 @@ function handleSaveCustomer(e) {
       closeModalCustomer();
       refreshAllData();
       showToast("success", res.message);
-    } else showToast("error", "Gagal", res.message);
+    } else showToast("error", "Gagal Menyimpan", res.message);
   });
 }
 
+// =========================================================================
+// MODAL FORMS: PENGGUNA (USERS)
+// =========================================================================
 function openModalUser() {
   currentEditUser = null;
-  document.getElementById("modalMasterUserTitle").innerText = "Akun Baru";
+  const usernameInput = document.getElementById("muUsername");
+  usernameInput.readOnly = false;
+  usernameInput.classList.remove("bg-slate-100", "cursor-not-allowed");
+
+  const titleEl = document.getElementById("modalMasterUserTitle");
+  if (titleEl) titleEl.innerText = "Form Pengguna Baru";
+
   document.getElementById("formMasterUser").reset();
   document.getElementById("modalMasterUser").classList.remove("hidden");
 }
@@ -2816,8 +2757,14 @@ function editUser(username) {
   if (!usr) return showToast("error", "User tidak ditemukan");
   currentEditUser = username;
 
-  document.getElementById("modalMasterUserTitle").innerText = "Edit Akun";
-  document.getElementById("muUsername").value = usr.username;
+  const titleEl = document.getElementById("modalMasterUserTitle");
+  if (titleEl) titleEl.innerText = "Edit Data Pengguna";
+
+  const usernameInput = document.getElementById("muUsername");
+  usernameInput.value = usr.username;
+  usernameInput.readOnly = false;
+  usernameInput.classList.remove("bg-slate-100", "cursor-not-allowed");
+
   document.getElementById("muPassword").value = usr.password || "";
   document.getElementById("muRole").value = usr.role || "Warehouse";
 
@@ -2851,10 +2798,13 @@ function handleSaveUser(e) {
       closeModalUser();
       refreshAllData();
       showToast("success", res.message);
-    } else showToast("error", "Gagal", res.message);
+    } else showToast("error", "Gagal Menyimpan", res.message);
   });
 }
 
+// =========================================================================
+// AUTH
+// =========================================================================
 function openLoginModal() {
   document.getElementById("modalLogin").classList.remove("hidden");
 }
@@ -2864,10 +2814,9 @@ function closeLoginModal() {
 function logoutAction() {
   swalUI
     .fire({
-      title: "Keluar Workspace?",
+      title: "Keluar Sistem?",
       showCancelButton: true,
       confirmButtonText: "Keluar",
-      cancelButtonText: "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
@@ -2875,14 +2824,14 @@ function logoutAction() {
         sessionStorage.removeItem("sim_inventory_user");
         applyRbacUI();
         switchTab("overview");
-        showToast("info", "Sesi Berakhir");
+        showToast("info", "Anda Berhasil Keluar");
       }
     });
 }
 function handleLoginSubmit(e) {
   e.preventDefault();
   swalUI.fire({
-    title: "Otentikasi...",
+    title: "Menghubungkan...",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   });
@@ -2897,7 +2846,7 @@ function handleLoginSubmit(e) {
       applyRbacUI();
       closeLoginModal();
       switchTab("scanner");
-      showToast("success", `Selamat bekerja, ${currentUser.username}`);
-    } else showToast("error", "Akses Ditolak", res.message);
+      showToast("success", `Halo, ${currentUser.username}!`);
+    } else showToast("error", "Login Gagal", res.message);
   });
 }
