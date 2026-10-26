@@ -2,318 +2,1195 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SIM-INVENTORY — Nordic Workspace</title>
+
+    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+
+    <!-- FontAwesome 6.5.2 -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
     />
+
+    <!-- Core Libraries via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', "sans-serif"],
+            },
+            colors: {
+              nordic: {
+                bg: "#F9FAFB",
+                card: "#FFFFFF",
+                text: "#111827",
+                border: "#F3F4F6",
+              },
+            },
+          },
+        },
+      };
+    </script>
+
     <style>
       body {
         font-family: "Plus Jakarta Sans", sans-serif;
-        background: #f9fafb;
+        background-color: #f9fafb;
         color: #111827;
+        overflow-x: hidden;
       }
-      .card {
-        background: #fff;
-        border: 1px solid #f3f4f6;
+      /* Custom Scrollbar Minimalis */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f9fafb;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+      }
+      .nordic-card {
+        background-color: #ffffff;
         border-radius: 24px;
-        box-shadow: 0 1px 3px rgba(17, 24, 39, 0.04);
+        border: 1px solid #f3f4f6;
+        box-shadow: 0 4px 20px -4px rgba(17, 24, 39, 0.03);
       }
-      .nav-btn {
-        border-radius: 9999px;
-        padding: 0.6rem 1rem;
-        font-weight: 600;
-        font-size: 0.875rem;
-        color: #6b7280;
-        width: 100%;
-        text-align: left;
-        transition: 0.15s;
+      /* SweetAlert2 Nordic Custom Overrides */
+      .swal2-popup.nordic-swal-popup {
+        border-radius: 24px !important;
+        padding: 1.75rem !important;
+        border: 1px solid #f3f4f6 !important;
+        box-shadow: 0 20px 40px -15px rgba(17, 24, 39, 0.12) !important;
+        font-family: "Plus Jakarta Sans", sans-serif !important;
       }
-      .nav-btn:hover {
-        background: #f3f4f6;
+      .nordic-swal-input {
+        border-radius: 9999px !important;
+        text-align: center !important;
+        font-size: 1.5rem !important;
+        font-weight: 800 !important;
+        color: #111827 !important;
+        border: 2px solid #e5e7eb !important;
+        height: 3.5rem !important;
+        box-shadow: none !important;
       }
-      .nav-btn.active {
-        background: #111827;
-        color: #fff;
-      }
-      .pill {
-        border-radius: 9999px;
-        padding: 0.5rem 1.1rem;
-        font-weight: 700;
-        font-size: 0.8rem;
-      }
-      .btn {
-        border-radius: 9999px;
-        padding: 0.55rem 1.2rem;
-        font-weight: 700;
-        font-size: 0.8rem;
-        background: #111827;
-        color: #fff;
-      }
-      .btn.light {
-        background: #f3f4f6;
-        color: #111827;
-      }
-      .inp {
-        border-radius: 9999px;
-        border: 1px solid #e5e7eb;
-        padding: 0.55rem 1rem;
-        font-size: 0.85rem;
-        outline: none;
-        background: #fff;
-      }
-      th {
-        font-size: 0.7rem;
-        color: #9ca3af;
-        text-align: left;
-        padding: 0.75rem 1rem;
-        font-weight: 700;
-        text-transform: uppercase;
-      }
-      td {
-        padding: 1rem;
-      }
-      .edit {
-        cursor: pointer;
-      }
-      .edit:hover {
-        background: #f9fafb;
-      }
-      .sheet {
-        transform: translateY(100%);
-        transition: 0.25s;
-      }
-      .sheet.open {
-        transform: translateY(0);
+      .nordic-swal-input:focus {
+        border-color: #111827 !important;
       }
     </style>
   </head>
-  <body class="min-h-screen flex flex-col md:flex-row">
-    <aside
-      class="md:w-64 md:h-screen md:sticky top-0 p-4 flex md:flex-col gap-1 overflow-x-auto bg-white border-r border-gray-100"
+  <body
+    class="min-h-screen flex flex-col lg:flex-row antialiased selection:bg-gray-900 selection:text-white"
+  >
+    <!-- CUSTOM PILL TOAST NOTIFICATION -->
+    <div
+      id="toastContainer"
+      class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] pointer-events-none flex flex-col items-center gap-2 transition-all duration-300"
+    ></div>
+
+    <!-- HIDDEN CANVAS FOR BARCODE PRINTING -->
+    <canvas id="hiddenBarcodeCanvas" class="hidden"></canvas>
+
+    <!-- MOBILE HEADER -->
+    <header
+      class="lg:hidden flex items-center justify-between bg-white border-b border-gray-100 px-5 py-4 sticky top-0 z-40"
     >
-      <div class="hidden md:block px-3 py-4">
-        <div class="text-lg font-extrabold">SIM-INVENTORY</div>
-        <div class="text-xs text-gray-400">Nordic Workspace</div>
-      </div>
-      <button class="nav-btn" data-tab="board">
-        <i class="fa-solid fa-table-columns mr-2"></i>Papan Kontrol
-      </button>
-      <button class="nav-btn" data-tab="analytics">
-        <i class="fa-solid fa-chart-simple mr-2"></i>Analitik Visual
-      </button>
-      <button
-        class="nav-btn"
-        data-tab="scanner"
-        data-roles="Admin,Warehouse,Produksi"
-      >
-        <i class="fa-solid fa-barcode mr-2"></i>Smart Scanner
-      </button>
-      <button
-        class="nav-btn"
-        data-tab="history"
-        data-roles="Admin,Warehouse,Produksi"
-      >
-        <i class="fa-solid fa-clock-rotate-left mr-2"></i>Riwayat
-      </button>
-      <button class="nav-btn" data-tab="master" data-roles="Admin">
-        <i class="fa-solid fa-database mr-2"></i>Master Data
-      </button>
-      <div class="md:mt-auto p-2">
-        <div id="userInfo" class="text-xs text-gray-400 mb-2">Tamu</div>
-        <button id="btnAuth" class="btn w-full">Masuk</button>
-      </div>
-    </aside>
-    <main class="flex-1 p-4 md:p-8 min-w-0">
-      <section id="tab-board" class="tab">
-        <div class="flex flex-wrap items-center gap-3 mb-4">
-          <h1 class="text-2xl font-extrabold mr-auto">
-            Papan Kontrol Seat Assy
+      <div class="flex items-center gap-3">
+        <div
+          class="w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center font-extrabold text-sm"
+        >
+          SI
+        </div>
+        <div>
+          <h1 class="font-extrabold text-sm tracking-tight text-gray-900">
+            SIM-INVENTORY
           </h1>
-          <input
-            id="searchBoard"
-            class="inp"
-            placeholder="Cari part / customer..."
-            oninput="renderBoard()"
-          /><button class="btn" onclick="exportBoard()">
-            <i class="fa-solid fa-file-excel mr-1"></i>Ekspor
-          </button>
+          <p
+            class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider"
+          >
+            Nordic Workspace
+          </p>
         </div>
-        <div class="card overflow-x-auto">
-          <table class="w-full min-w-[900px]">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Part / Nama</th>
-                <th>Stok Awal</th>
-                <th>Target/Hari</th>
-                <th>Terkirim</th>
-                <th>Sisa Del</th>
-                <th>Assy in Store FSG</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="boardBody" class="divide-y divide-gray-100"></tbody>
-          </table>
-        </div>
-      </section>
-      <section id="tab-analytics" class="tab hidden">
-        <h1 class="text-2xl font-extrabold mb-4">Analitik Visual</h1>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="card p-6">
-            <div class="font-bold mb-3">Top 5 Fast-Moving</div>
-            <canvas id="chartFast"></canvas>
-          </div>
-          <div class="card p-6">
-            <div class="font-bold mb-3">Radar Stok Terendah</div>
-            <canvas id="chartLow"></canvas>
-          </div>
-        </div>
-      </section>
-      <section id="tab-scanner" class="tab hidden">
-        <h1 class="text-2xl font-extrabold mb-4">Smart Scanner</h1>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="card p-6">
-            <div class="font-bold mb-3">Kamera HP</div>
-            <video
-              id="video"
-              class="w-full rounded-3xl bg-gray-100 aspect-video object-cover"
-            ></video>
-            <div class="flex gap-2 mt-3">
-              <button class="btn" onclick="startCamera()">Mulai</button
-              ><button class="btn light" onclick="stopCamera()">Stop</button>
+      </div>
+      <button
+        onclick="toggleSidebarMobile()"
+        class="w-10 h-10 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition"
+      >
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </header>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside
+      id="mainSidebar"
+      class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-gray-100 flex flex-col justify-between transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-300 ease-in-out"
+    >
+      <!-- Top Brand & Menu -->
+      <div class="p-6 overflow-y-auto">
+        <div class="flex items-center justify-between mb-8">
+          <div class="flex items-center gap-3.5">
+            <div
+              class="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center font-extrabold text-base shadow-sm"
+            >
+              <i class="fa-solid fa-layer-group text-sm"></i>
+            </div>
+            <div>
+              <h1
+                class="font-extrabold text-base tracking-tight text-gray-900 leading-none"
+              >
+                SIM-INVENTORY
+              </h1>
+              <span
+                class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest"
+                >Seat Assy ERP</span
+              >
             </div>
           </div>
-          <div class="card p-6">
-            <div class="font-bold mb-3">Gun Scanner (Troli)</div>
-            <input
-              id="gunInput"
-              class="inp w-full"
-              placeholder="Tembak barcode lalu Enter..."
-              autocomplete="off"
-            />
-            <div
-              id="trolleyList"
-              class="divide-y divide-gray-100 mt-3 text-sm"
-            ></div>
-            <div class="flex flex-wrap gap-2 mt-3">
-              <button class="btn gunIn" onclick="execBatch('IN')">
-                Semua Masuk</button
-              ><button class="btn gunOut" onclick="execBatch('OUT')">
-                Semua Keluar</button
-              ><button class="btn light gunAssy" onclick="execBatch('ASSY')">
-                Tambah Semua ke Assy</button
-              ><button
-                class="btn light"
-                onclick="
-                  batchTrolley = [];
-                  renderTrolley();
-                "
+          <button
+            onclick="toggleSidebarMobile()"
+            class="lg:hidden w-8 h-8 rounded-full bg-gray-50 text-gray-500 flex items-center justify-center"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Operational Status Pill -->
+        <div
+          class="mb-6 px-4 py-3 rounded-3xl bg-gray-50 border border-gray-100 flex items-center justify-between"
+        >
+          <div class="flex items-center gap-2.5">
+            <span class="relative flex h-2.5 w-2.5">
+              <span
+                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
+              ></span>
+              <span
+                class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"
+              ></span>
+            </span>
+            <div>
+              <p
+                class="text-[10px] font-bold uppercase tracking-wider text-gray-400"
               >
-                Kosongkan
+                Hari Operasional
+              </p>
+              <p
+                id="operationalDateBadge"
+                class="text-xs font-extrabold text-gray-900"
+              >
+                Memuat...
+              </p>
+            </div>
+          </div>
+          <span
+            class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white border border-gray-200 text-gray-600"
+            >08:00</span
+          >
+        </div>
+
+        <!-- Navigation Links -->
+        <div class="space-y-1.5">
+          <p
+            class="px-4 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 mb-2"
+          >
+            Monitoring & Analitik
+          </p>
+
+          <button
+            id="nav-dashboard"
+            onclick="switchTab('dashboard')"
+            class="nav-pill w-full flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all bg-gray-900 text-white"
+          >
+            <i class="fa-solid fa-table-columns w-4 text-center"></i>
+            <span>Papan Kontrol Assy</span>
+          </button>
+
+          <button
+            id="nav-analytics"
+            onclick="switchTab('analytics')"
+            class="nav-pill w-full flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+          >
+            <i class="fa-solid fa-chart-simple w-4 text-center"></i>
+            <span>Analitik Visual</span>
+          </button>
+
+          <div id="sectionOperasional" class="pt-4 space-y-1.5 hidden">
+            <p
+              class="px-4 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 mb-2"
+            >
+              Operasional Lapangan
+            </p>
+
+            <button
+              id="nav-scanner"
+              onclick="switchTab('scanner')"
+              class="nav-pill w-full flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+            >
+              <i class="fa-solid fa-barcode w-4 text-center"></i>
+              <span>Smart Scanner</span>
+            </button>
+
+            <button
+              id="nav-history"
+              onclick="switchTab('history')"
+              class="nav-pill w-full flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+            >
+              <i class="fa-solid fa-clock-rotate-left w-4 text-center"></i>
+              <span>Riwayat Transaksi</span>
+            </button>
+          </div>
+
+          <div id="sectionMasterData" class="pt-4 space-y-1.5 hidden">
+            <p
+              class="px-4 text-[10px] font-extrabold uppercase tracking-widest text-gray-400 mb-2"
+            >
+              Master Database
+            </p>
+
+            <button
+              id="nav-master-barang"
+              onclick="switchTab('master-barang')"
+              class="nav-pill w-full flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+            >
+              <i class="fa-solid fa-boxes-stacked w-4 text-center"></i>
+              <span>Master Barang</span>
+            </button>
+
+            <button
+              id="nav-master-customer"
+              onclick="switchTab('master-customer')"
+              class="nav-pill w-full flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+            >
+              <i class="fa-solid fa-building-user w-4 text-center"></i>
+              <span>Master Customer</span>
+            </button>
+
+            <button
+              id="nav-users"
+              onclick="switchTab('users')"
+              class="nav-pill w-full flex items-center gap-3.5 px-4 py-3 rounded-full text-xs font-bold transition-all text-gray-600 hover:bg-gray-100"
+            >
+              <i class="fa-solid fa-user-shield w-4 text-center"></i>
+              <span>Kelola Pengguna</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Auth Profile Card -->
+      <div class="p-6 border-t border-gray-100 bg-gray-50/50">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <div
+              id="userAvatarBadge"
+              class="w-9 h-9 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-extrabold text-xs"
+            >
+              G
+            </div>
+            <div>
+              <p
+                id="sidebarUserName"
+                class="text-xs font-extrabold text-gray-900 leading-tight"
+              >
+                Mode Tamu
+              </p>
+              <span
+                id="sidebarUserRole"
+                class="inline-block text-[10px] font-bold uppercase tracking-wider text-gray-400"
+                >Read-Only</span
+              >
+            </div>
+          </div>
+        </div>
+        <button
+          id="btnSidebarAuth"
+          onclick="openLoginModal()"
+          class="w-full py-2.5 px-4 rounded-full bg-gray-900 text-white text-xs font-bold hover:bg-gray-800 transition flex items-center justify-center gap-2"
+        >
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span>Masuk Akun</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT WORKSPACE -->
+    <main class="flex-1 p-4 md:p-8 max-w-[1600px] w-full mx-auto space-y-6">
+      <!-- TOP STATUS & ACTION BAR -->
+      <div
+        class="flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
+        <div>
+          <h2
+            id="pageHeaderTitle"
+            class="text-2xl font-extrabold tracking-tight text-gray-900"
+          >
+            Papan Kontrol Seat Assy
+          </h2>
+          <p
+            id="pageHeaderSubtitle"
+            class="text-xs font-medium text-gray-400 mt-0.5"
+          >
+            Live Andon Monitoring & Kalkulasi Otomatis Multi-Customer
+            (Auto-refresh 3 dtk)
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+          <div
+            class="px-4 py-2 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-600 flex items-center gap-2"
+          >
+            <i class="fa-regular fa-clock text-gray-400"></i>
+            <span id="liveClockDisplay">--:--:--</span>
+          </div>
+          <button
+            onclick="manualRefreshData()"
+            class="px-4 py-2 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
+          >
+            <i id="refreshSpinnerIcon" class="fa-solid fa-arrows-rotate"></i>
+            <span>Sinkronisasi</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- =================================================================== -->
+      <!-- TAB 1: PAPAN KONTROL SEAT ASSY (DASHBOARD)                          -->
+      <!-- =================================================================== -->
+      <section id="tab-dashboard" class="tab-pane space-y-6">
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="nordic-card p-5">
+            <span
+              class="text-[11px] font-bold uppercase tracking-wider text-gray-400"
+              >Total Part Aktif</span
+            >
+            <div class="mt-2 flex items-baseline justify-between">
+              <h3
+                id="kpiTotalParts"
+                class="text-2xl md:text-3xl font-extrabold text-gray-900"
+              >
+                0
+              </h3>
+              <span
+                class="text-xs font-bold text-gray-400 px-2.5 py-1 rounded-full bg-gray-50"
+                >SKU</span
+              >
+            </div>
+          </div>
+          <div class="nordic-card p-5">
+            <span
+              class="text-[11px] font-bold uppercase tracking-wider text-gray-400"
+              >Total Target / Hari</span
+            >
+            <div class="mt-2 flex items-baseline justify-between">
+              <h3
+                id="kpiTotalTarget"
+                class="text-2xl md:text-3xl font-extrabold text-gray-900"
+              >
+                0
+              </h3>
+              <span
+                class="text-xs font-bold text-blue-600 px-2.5 py-1 rounded-full bg-blue-50"
+                >QTY/DAY</span
+              >
+            </div>
+          </div>
+          <div class="nordic-card p-5">
+            <span
+              class="text-[11px] font-bold uppercase tracking-wider text-gray-400"
+              >Total Terkirim Hari Ini</span
+            >
+            <div class="mt-2 flex items-baseline justify-between">
+              <h3
+                id="kpiTotalOut"
+                class="text-2xl md:text-3xl font-extrabold text-gray-900"
+              >
+                0
+              </h3>
+              <span
+                class="text-xs font-bold text-emerald-600 px-2.5 py-1 rounded-full bg-emerald-50"
+                >QTY/OUT</span
+              >
+            </div>
+          </div>
+          <div class="nordic-card p-5">
+            <span
+              class="text-[11px] font-bold uppercase tracking-wider text-gray-400"
+              >Assy In Store FSG</span
+            >
+            <div class="mt-2 flex items-baseline justify-between">
+              <h3
+                id="kpiTotalAssy"
+                class="text-2xl md:text-3xl font-extrabold text-gray-900"
+              >
+                0
+              </h3>
+              <span
+                class="text-xs font-bold text-indigo-600 px-2.5 py-1 rounded-full bg-indigo-50"
+                >ASSY FSG</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="nordic-card p-5">
+          <div
+            class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3"
+          >
+            <div
+              class="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3"
+            >
+              <div class="relative flex-1">
+                <i
+                  class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"
+                ></i>
+                <input
+                  type="text"
+                  id="searchDashboardInput"
+                  oninput="renderDashboardTable()"
+                  placeholder="Cari Part Number, Nama Barang, No Rel, atau Customer..."
+                  class="w-full pl-10 pr-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-900 focus:outline-none focus:border-gray-900 transition"
+                />
+              </div>
+              <select
+                id="filterCustomerDashboard"
+                onchange="renderDashboardTable()"
+                class="px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-xs font-bold text-gray-700 focus:outline-none focus:border-gray-900 transition"
+              >
+                <option value="ALL">Semua Customer</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button
+                onclick="exportDashboardToExcel()"
+                class="px-5 py-2.5 rounded-full bg-gray-900 text-white text-xs font-bold hover:bg-gray-800 transition flex items-center gap-2"
+              >
+                <i class="fa-solid fa-file-excel"></i>
+                <span>Ekspor Papan Kontrol (.xlsx)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Legend Petunjuk Klik Interaktif -->
+          <div
+            class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-400 font-medium"
+          >
+            <div class="flex flex-wrap items-center gap-4">
+              <span
+                ><i class="fa-solid fa-circle-info mr-1 text-gray-400"></i>Klik
+                angka berbingkai pil untuk update cepat sesuai hak akses:</span
+              >
+              <span
+                class="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 font-bold"
+                >Admin: Semua Kolom</span
+              >
+              <span
+                class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold"
+                >Warehouse: CUST & QTY/OUT</span
+              >
+              <span
+                class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold"
+                >Produksi: ASSY IN STORE FSG</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Borderless Grid Table -->
+        <div class="nordic-card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr
+                  class="border-b border-gray-100 bg-gray-50/70 text-[11px] font-extrabold uppercase tracking-wider text-gray-400"
+                >
+                  <th class="py-4 px-4">CUST</th>
+                  <th class="py-4 px-4">NO REL</th>
+                  <th class="py-4 px-4">PART NUMBER & DESKRIPSI</th>
+                  <th class="py-4 px-4 text-right">STOK AWAL</th>
+                  <th class="py-4 px-4 text-center">QTY/DAY</th>
+                  <th class="py-4 px-4 text-center">QTY/OUT</th>
+                  <th class="py-4 px-4 text-center">SISA DEL</th>
+                  <th class="py-4 px-4 text-center">ASSY IN STORE FSG</th>
+                  <th class="py-4 px-4 text-right">VARIANCE [+/-]</th>
+                </tr>
+              </thead>
+              <tbody
+                id="dashboardTableBody"
+                class="divide-y divide-gray-100 text-sm"
+              >
+                <!-- Diisi via script.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 2: ANALITIK VISUAL (CHART.JS)                                   -->
+      <!-- =================================================================== -->
+      <section id="tab-analytics" class="tab-pane hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Chart 1: Top 5 Fast Moving -->
+          <div class="nordic-card p-6">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="text-base font-extrabold text-gray-900">
+                  Top 5 Fast-Moving Seat Assy
+                </h3>
+                <p class="text-xs font-medium text-gray-400">
+                  Akumulasi kuantitas pengiriman tertinggi dari Transaksi Keluar
+                </p>
+              </div>
+              <span
+                class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-extrabold"
+                >Fast Moving</span
+              >
+            </div>
+            <div class="h-80 relative">
+              <canvas id="chartFastMoving"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: Radar Stok Terendah -->
+          <div class="nordic-card p-6">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="text-base font-extrabold text-gray-900">
+                  Radar 10 Stok Terendah (Total Ready)
+                </h3>
+                <p class="text-xs font-medium text-gray-400">
+                  Prioritas produksi berdasarkan Stok Awal + Assy FSG paling
+                  sedikit
+                </p>
+              </div>
+              <span
+                class="px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-extrabold"
+                >Low Stock Alert</span
+              >
+            </div>
+            <div class="h-80 relative">
+              <canvas id="chartLowestStock"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 3: SMART SCANNER (KAMERA ZXING & GUN SCANNER BATCH TROLLEY)     -->
+      <!-- =================================================================== -->
+      <section id="tab-scanner" class="tab-pane hidden space-y-6">
+        <!-- Mode Switcher Pills -->
+        <div
+          class="nordic-card p-4 flex flex-wrap items-center justify-between gap-4"
+        >
+          <div class="flex items-center gap-2">
+            <button
+              id="btnModeGun"
+              onclick="switchScannerMode('GUN')"
+              class="px-5 py-2.5 rounded-full text-xs font-extrabold transition bg-gray-900 text-white flex items-center gap-2"
+            >
+              <i class="fa-solid fa-gun"></i>
+              <span>Mode Gun Scanner (Keranjang Troli / Batch)</span>
+            </button>
+            <button
+              id="btnModeCamera"
+              onclick="switchScannerMode('CAMERA')"
+              class="px-5 py-2.5 rounded-full text-xs font-extrabold transition bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center gap-2"
+            >
+              <i class="fa-solid fa-camera"></i>
+              <span>Mode Kamera HP (2D PDF417 / QR / 1D)</span>
+            </button>
+          </div>
+          <div class="text-xs font-semibold text-gray-400">
+            Mendukung Barcode Standar YIMM/EDI
+            <code
+              class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full font-bold"
+              >[)&gt;...P...V...Q...</code
+            >
+            & Kanban Internal
+            <code
+              class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full font-bold"
+              >PART-QTY|...</code
+            >
+          </div>
+        </div>
+
+        <!-- SUB-MODE A: GUN SCANNER & KERANJANG TROLI -->
+        <div id="scannerGunContainer" class="space-y-6">
+          <div class="nordic-card p-6 space-y-4">
+            <div
+              class="flex flex-col md:flex-row md:items-center justify-between gap-4"
+            >
+              <div>
+                <h3 class="text-base font-extrabold text-gray-900">
+                  Input Tembak Barcode (Handheld Gun Scanner)
+                </h3>
+                <p class="text-xs font-medium text-gray-400">
+                  Arahkan kursor ke kolom di bawah lalu tembak label
+                  Kanban/Troli. Tekan Enter untuk memasukkan ke keranjang.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-gray-500"
+                  >Tujuan Customer (Jika Keluar):</span
+                >
+                <select
+                  id="batchCustomerSelect"
+                  class="px-4 py-2 rounded-full bg-gray-50 border border-gray-200 text-xs font-bold text-gray-800 focus:outline-none focus:border-gray-900"
+                >
+                  <option value="-">Pilih Otomatis / Default Part</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+              <div class="relative flex-1">
+                <i
+                  class="fa-solid fa-barcode absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
+                ></i>
+                <input
+                  type="text"
+                  id="gunScannerInput"
+                  placeholder="Tembak barcode di sini (Contoh: [)>069KY0EPBEJF4730300080V...Q000050... atau BWPF4730100080-020|20261016)..."
+                  class="w-full pl-12 pr-5 py-3.5 rounded-full bg-gray-50 border-2 border-gray-200 text-sm font-extrabold text-gray-900 focus:outline-none focus:border-gray-900 transition"
+                />
+              </div>
+              <button
+                onclick="handleGunScannerSubmit()"
+                class="px-6 py-3.5 rounded-full bg-gray-900 text-white text-xs font-extrabold hover:bg-gray-800 transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-cart-plus"></i>
+                <span>Masukkan Troli</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tabel Keranjang Troli (batchTrolley) -->
+          <div class="nordic-card overflow-hidden">
+            <div
+              class="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div class="flex items-center gap-3">
+                <span
+                  class="w-9 h-9 rounded-full bg-gray-900 text-white flex items-center justify-center text-xs font-extrabold"
+                  id="trolleyBadgeCount"
+                  >0</span
+                >
+                <div>
+                  <h4 class="text-sm font-extrabold text-gray-900">
+                    Keranjang Troli Batch Scan
+                  </h4>
+                  <p class="text-xs font-medium text-gray-400">
+                    Daftar item yang siap dieksekusi secara massal
+                  </p>
+                </div>
+              </div>
+
+              <!-- Tombol Eksekusi Massal Sesuai RBAC -->
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  onclick="clearBatchTrolley()"
+                  class="px-4 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200 transition"
+                >
+                  Kosongkan
+                </button>
+                <button
+                  id="btnBatchIn"
+                  onclick="executeBatchTrolley('IN')"
+                  class="px-5 py-2.5 rounded-full bg-emerald-600 text-white text-xs font-extrabold hover:bg-emerald-700 transition flex items-center gap-2"
+                >
+                  <i class="fa-solid fa-arrow-down-long"></i>
+                  <span>Semua Masuk (Stok Utama)</span>
+                </button>
+                <button
+                  id="btnBatchOut"
+                  onclick="executeBatchTrolley('OUT')"
+                  class="px-5 py-2.5 rounded-full bg-rose-600 text-white text-xs font-extrabold hover:bg-rose-700 transition flex items-center gap-2"
+                >
+                  <i class="fa-solid fa-truck-fast"></i>
+                  <span>Semua Keluar (Delivery)</span>
+                </button>
+                <button
+                  id="btnBatchAssy"
+                  onclick="executeBatchTrolley('ASSY')"
+                  class="px-5 py-2.5 rounded-full bg-indigo-600 text-white text-xs font-extrabold hover:bg-indigo-700 transition flex items-center gap-2"
+                >
+                  <i class="fa-solid fa-Boxes-packing"></i>
+                  <span>Tambah Semua ke Assy FSG</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr
+                    class="border-b border-gray-100 bg-gray-50/70 text-[11px] font-extrabold uppercase tracking-wider text-gray-400"
+                  >
+                    <th class="py-4 px-4">PART NUMBER & NAMA BARANG</th>
+                    <th class="py-4 px-4 text-center">NO REL</th>
+                    <th class="py-4 px-4 text-center">JML SCAN TROLI</th>
+                    <th class="py-4 px-4 text-center">TOTAL QTY EKSEKUSI</th>
+                    <th class="py-4 px-4 text-right">AKSI</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="batchTrolleyTableBody"
+                  class="divide-y divide-gray-100 text-sm"
+                >
+                  <!-- Diisi via script.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUB-MODE B: KAMERA HP ZXING -->
+        <div id="scannerCameraContainer" class="hidden space-y-6">
+          <div class="nordic-card p-6 max-w-2xl mx-auto space-y-5">
+            <div
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            >
+              <div>
+                <h3 class="text-base font-extrabold text-gray-900">
+                  Pemindai Kamera Multi-Format (ZXing)
+                </h3>
+                <p class="text-xs font-medium text-gray-400">
+                  Otomatis mengenali PDF417 (2D), QR Code, dan Code 128
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <select
+                  id="cameraVideoSelect"
+                  onchange="restartCameraScanner()"
+                  class="px-4 py-2 rounded-full bg-gray-100 text-xs font-bold text-gray-700 focus:outline-none"
+                ></select>
+                <button
+                  onclick="stopCameraScanner()"
+                  class="px-4 py-2 rounded-full bg-rose-50 text-rose-600 text-xs font-bold hover:bg-rose-100 transition"
+                >
+                  Matikan
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="relative rounded-3xl overflow-hidden bg-gray-900 aspect-video flex items-center justify-center border border-gray-200"
+            >
+              <video
+                id="zxingVideoPreview"
+                class="w-full h-full object-cover"
+              ></video>
+              <div
+                class="absolute inset-0 pointer-events-none border-[3px] border-white/30 rounded-3xl flex items-center justify-center"
+              >
+                <div
+                  class="w-64 h-40 border-2 border-emerald-400 rounded-2xl shadow-[0_0_30px_rgba(16,185,129,0.4)]"
+                ></div>
+              </div>
+            </div>
+
+            <div class="text-center">
+              <button
+                onclick="startCameraScanner()"
+                class="px-6 py-2.5 rounded-full bg-gray-900 text-white text-xs font-extrabold hover:bg-gray-800 transition"
+              >
+                <i class="fa-solid fa-play mr-1.5"></i> Mulai Kamera
               </button>
             </div>
           </div>
         </div>
       </section>
-      <section id="tab-history" class="tab hidden">
-        <div class="flex flex-wrap items-center gap-3 mb-4">
-          <h1 class="text-2xl font-extrabold mr-auto">Riwayat Transaksi</h1>
-          <input
-            type="month"
-            id="filterBulanRiwayat"
-            class="inp"
-            onchange="renderHistory()"
-          />
-          <select id="filterTipe" class="inp" onchange="renderHistory()">
-            <option value="ALL">Semua</option>
-            <option value="IN">Masuk</option>
-            <option value="OUT">Keluar</option>
-          </select>
-          <button class="btn" onclick="exportHistory()">
-            <i class="fa-solid fa-file-excel mr-1"></i>Ekspor
-          </button>
+
+      <!-- =================================================================== -->
+      <!-- TAB 4: RIWAYAT TRANSAKSI & FILTER BULANAN                           -->
+      <!-- =================================================================== -->
+      <section id="tab-history" class="tab-pane hidden space-y-6">
+        <div class="nordic-card p-5">
+          <div
+            class="flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+          >
+            <div class="flex flex-wrap items-center gap-3 flex-1">
+              <!-- Input Bulan -->
+              <div
+                class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-4 py-2"
+              >
+                <i class="fa-regular fa-calendar text-gray-400 text-xs"></i>
+                <input
+                  type="month"
+                  id="filterBulanRiwayat"
+                  onchange="renderHistoryTable()"
+                  class="bg-transparent text-xs font-extrabold text-gray-900 focus:outline-none"
+                />
+              </div>
+
+              <!-- Dropdown Tipe -->
+              <select
+                id="filterTipeRiwayat"
+                onchange="renderHistoryTable()"
+                class="px-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-xs font-extrabold text-gray-700 focus:outline-none"
+              >
+                <option value="ALL">Semua Tipe (IN & OUT)</option>
+                <option value="IN">Transaksi Masuk / Assy / Target (IN)</option>
+                <option value="OUT">Transaksi Keluar / Delivery (OUT)</option>
+              </select>
+
+              <!-- Pencarian Riwayat -->
+              <div class="relative flex-1 min-w-[220px]">
+                <i
+                  class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"
+                ></i>
+                <input
+                  type="text"
+                  id="searchHistoryInput"
+                  oninput="renderHistoryTable()"
+                  placeholder="Cari Part Number, Petugas, atau Catatan..."
+                  class="w-full pl-10 pr-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-900 focus:outline-none focus:border-gray-900"
+                />
+              </div>
+            </div>
+
+            <button
+              onclick="exportHistoryToExcel()"
+              class="px-5 py-2.5 rounded-full bg-gray-900 text-white text-xs font-bold hover:bg-gray-800 transition flex items-center justify-center gap-2"
+            >
+              <i class="fa-solid fa-file-excel"></i>
+              <span>Ekspor Riwayat (.xlsx)</span>
+            </button>
+          </div>
         </div>
-        <div class="card overflow-x-auto">
-          <table class="w-full min-w-[700px]">
-            <thead>
-              <tr>
-                <th>Tanggal</th>
-                <th>Part</th>
-                <th>Jumlah</th>
-                <th>Petugas</th>
-                <th>Catatan</th>
-              </tr>
-            </thead>
-            <tbody id="histBody" class="divide-y divide-gray-100"></tbody>
-          </table>
+
+        <div class="nordic-card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr
+                  class="border-b border-gray-100 bg-gray-50/70 text-[11px] font-extrabold uppercase tracking-wider text-gray-400"
+                >
+                  <th class="py-4 px-4">WAKTU TRANSAKSI</th>
+                  <th class="py-4 px-4">TIPE</th>
+                  <th class="py-4 px-4">PART NUMBER & BARANG</th>
+                  <th class="py-4 px-4 text-center">JUMLAH</th>
+                  <th class="py-4 px-4">PETUGAS</th>
+                  <th class="py-4 px-4">CATATAN / TUJUAN</th>
+                </tr>
+              </thead>
+              <tbody
+                id="historyTableBody"
+                class="divide-y divide-gray-100 text-sm"
+              >
+                <!-- Diisi via script.js -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
-      <section id="tab-master" class="tab hidden">
-        <div class="flex flex-wrap items-center gap-2 mb-4">
-          <h1 class="text-2xl font-extrabold mr-auto">Master Data</h1>
+
+      <!-- =================================================================== -->
+      <!-- TAB 5: MASTER BARANG (SUPER UNLOCKED & ANTI-REFRESH BULK DELETE)    -->
+      <!-- =================================================================== -->
+      <section id="tab-master-barang" class="tab-pane hidden space-y-6">
+        <div
+          class="nordic-card p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+        >
+          <div class="relative flex-1">
+            <i
+              class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs"
+            ></i>
+            <input
+              type="text"
+              id="searchMasterBarangInput"
+              oninput="renderMasterBarangTable()"
+              placeholder="Cari Master Barang (Part Number, Nama, No Rel, Kategori)..."
+              class="w-full pl-10 pr-4 py-2.5 rounded-full bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-900 focus:outline-none focus:border-gray-900"
+            />
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              id="btnBulkDeleteBarang"
+              onclick="confirmBulkDeleteBarang()"
+              class="hidden px-5 py-2.5 rounded-full bg-rose-600 text-white text-xs font-extrabold hover:bg-rose-700 transition flex items-center gap-2"
+            >
+              <i class="fa-solid fa-trash-can"></i>
+              <span id="bulkDeleteText">Hapus (0)</span>
+            </button>
+            <button
+              onclick="openModalMasterBarang()"
+              class="px-5 py-2.5 rounded-full bg-gray-900 text-white text-xs font-extrabold hover:bg-gray-800 transition flex items-center gap-2"
+            >
+              <i class="fa-solid fa-plus"></i>
+              <span>Tambah Barang Baru</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="nordic-card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr
+                  class="border-b border-gray-100 bg-gray-50/70 text-[11px] font-extrabold uppercase tracking-wider text-gray-400"
+                >
+                  <th class="py-4 px-4 w-12 text-center">
+                    <input
+                      type="checkbox"
+                      id="checkboxSelectAllBarang"
+                      onchange="toggleSelectAllBarang(this)"
+                      class="w-4 h-4 rounded accent-gray-900 cursor-pointer"
+                    />
+                  </th>
+                  <th class="py-4 px-4">PART NUMBER & NAMA BARANG</th>
+                  <th class="py-4 px-4">NO REL</th>
+                  <th class="py-4 px-4">CUSTOMER DEFAULT</th>
+                  <th class="py-4 px-4 text-center">STD PACK</th>
+                  <th class="py-4 px-4 text-right">STOK AWAL</th>
+                  <th class="py-4 px-4 text-right">ASSY FSG</th>
+                  <th class="py-4 px-4 text-right">AKSI</th>
+                </tr>
+              </thead>
+              <tbody
+                id="masterBarangTableBody"
+                class="divide-y divide-gray-100 text-sm"
+              >
+                <!-- Diisi via script.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 6: MASTER CUSTOMER (CASCADING PRIMARY KEY UPDATE)               -->
+      <!-- =================================================================== -->
+      <section id="tab-master-customer" class="tab-pane hidden space-y-6">
+        <div
+          class="nordic-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div>
+            <h3 class="text-sm font-extrabold text-gray-900">
+              Daftar Pelanggan Manufaktur (Customer)
+            </h3>
+            <p class="text-xs font-medium text-gray-400">
+              Mendukung pengubahan ID Customer secara langsung (Cascading Update
+              otomatis)
+            </p>
+          </div>
           <button
-            class="pill bg-gray-900 text-white"
-            onclick="setMaster('barang')"
+            onclick="openModalMasterCustomer()"
+            class="px-5 py-2.5 rounded-full bg-gray-900 text-white text-xs font-extrabold hover:bg-gray-800 transition flex items-center gap-2"
           >
-            Barang</button
-          ><button class="pill bg-gray-100" onclick="setMaster('cust')">
-            Customer</button
-          ><button class="pill bg-gray-100" onclick="setMaster('user')">
-            Pengguna
+            <i class="fa-solid fa-plus"></i>
+            <span>Tambah Customer</span>
           </button>
         </div>
-        <div class="flex gap-2 mb-3">
-          <button class="btn" onclick="addMaster()">
-            <i class="fa-solid fa-plus mr-1"></i>Tambah</button
-          ><button
-            id="btnBulk"
-            class="btn light hidden"
-            onclick="bulkDelete()"
-          ></button>
+
+        <div class="nordic-card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr
+                  class="border-b border-gray-100 bg-gray-50/70 text-[11px] font-extrabold uppercase tracking-wider text-gray-400"
+                >
+                  <th class="py-4 px-4">ID CUSTOMER</th>
+                  <th class="py-4 px-4">NAMA PERUSAHAAN / CUSTOMER</th>
+                  <th class="py-4 px-4">KONTAK PIC</th>
+                  <th class="py-4 px-4">ALAMAT PENGIRIMAN</th>
+                  <th class="py-4 px-4 text-right">AKSI</th>
+                </tr>
+              </thead>
+              <tbody
+                id="masterCustomerTableBody"
+                class="divide-y divide-gray-100 text-sm"
+              >
+                <!-- Diisi via script.js -->
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="card overflow-x-auto">
-          <table class="w-full min-w-[700px]">
-            <thead id="masterHead"></thead>
-            <tbody id="masterBody" class="divide-y divide-gray-100"></tbody>
-          </table>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 7: KELOLA PENGGUNA / RBAC USERS                                 -->
+      <!-- =================================================================== -->
+      <section id="tab-users" class="tab-pane hidden space-y-6">
+        <div
+          class="nordic-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div>
+            <h3 class="text-sm font-extrabold text-gray-900">
+              Manajemen Akun & Hak Akses (RBAC)
+            </h3>
+            <p class="text-xs font-medium text-gray-400">
+              Atur pembagian akses Admin, Warehouse, dan Produksi
+            </p>
+          </div>
+          <button
+            onclick="openModalUser()"
+            class="px-5 py-2.5 rounded-full bg-gray-900 text-white text-xs font-extrabold hover:bg-gray-800 transition flex items-center gap-2"
+          >
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Tambah Pengguna</span>
+          </button>
+        </div>
+
+        <div class="nordic-card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr
+                  class="border-b border-gray-100 bg-gray-50/70 text-[11px] font-extrabold uppercase tracking-wider text-gray-400"
+                >
+                  <th class="py-4 px-4">USERNAME</th>
+                  <th class="py-4 px-4">ROLE / DIVISI</th>
+                  <th class="py-4 px-4">HAK AKSES UTAMA</th>
+                  <th class="py-4 px-4 text-right">AKSI</th>
+                </tr>
+              </thead>
+              <tbody
+                id="usersTableBody"
+                class="divide-y divide-gray-100 text-sm"
+              >
+                <!-- Diisi via script.js -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </main>
+
+    <!-- ===================================================================== -->
+    <!-- MODAL BOTTOM-SHEET: SMART CAMERA ACTION (`modalSmartAction`)          -->
+    <!-- ===================================================================== -->
     <div
       id="modalSmartAction"
-      class="fixed inset-0 z-50 hidden bg-black/30 flex items-end justify-center"
+      class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
     >
-      <div id="sheet" class="sheet bg-white w-full max-w-md rounded-t-3xl p-6">
-        <div id="saPart" class="text-lg font-extrabold"></div>
-        <div id="saName" class="text-xs text-gray-400 uppercase mb-3"></div>
-        <input
-          id="saQty"
-          type="number"
-          class="inp w-full text-center text-3xl font-extrabold"
-          min="1"
-        />
-        <div class="flex flex-wrap gap-2 mt-4">
-          <button class="btn saIn" onclick="smartAct('IN')">Masuk</button
-          ><button class="btn saOut" onclick="smartAct('OUT')">Keluar</button
-          ><button class="btn light saAssy" onclick="smartAct('ASSY')">
-            Tambah Assy</button
-          ><button class="btn light" onclick="closeSmart()">Batal</button>
+      <div
+        class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 border border-gray-100 shadow-2xl space-y-5 transform transition-all"
+      >
+        <div class="flex items-center justify-between">
+          <span
+            class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-extrabold uppercase tracking-wider"
+            >Barcode Terdeteksi</span
+          >
+          <button
+            onclick="closeSmartActionModal()"
+            class="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div>
+          <p
+            id="smartModalPartNumber"
+            class="text-xl font-extrabold text-gray-900"
+          >
+            -
+          </p>
+          <p
+            id="smartModalNamaBarang"
+            class="text-xs font-bold text-gray-400 uppercase mt-0.5"
+          >
+            -
+          </p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <span
+              id="smartModalNoRel"
+              class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold"
+              >No Rel: -</span
+            >
+            <span
+              id="smartModalCurrentStock"
+              class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-bold"
+              >Stok: 0</span
+            >
+            <span
+              id="smartModalCurrentAssy"
+              class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold"
+              >Assy FSG: 0</span
+            >
+          </div>
+        </div>
+
+        <div class="space-y-3 pt-2 border-t border-gray-100">
+          <div>
+            <label
+              class="block text-[11px] font-extrabold uppercase tracking-wider text-gray-400 mb-1.5"
+              >Kuantitas (Otomatis dari Barcode)</label
+            >
+            <input
+              type="number"
+              id="smartModalQtyInput"
+              class="w-full py-3 px-4 rounded-full bg-gray-50 border-2 border-gray-200 text-center text-2xl font-extrabold text-gray-900 focus:outline-none focus:border-gray-900"
+            />
+          </div>
+
+          <div id="smartModalCustomerWrap">
+            <label
+              class="block text-[11px] font-extrabold uppercase tracking-wider text-gray-400 mb-1.5"
+              >Customer Tujuan (Jika Keluar)</label
+            >
+            <select
+              id="smartModalCustomerSelect"
+              class="w-full py-2.5 px-4 rounded-full bg-gray-50 border border-gray-200 text-xs font-bold text-gray-800 focus:outline-none"
+            ></select>
+          </div>
+        </div>
+
+        <!-- Tombol Eksekusi Sesuai Role -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
+          <button
+            id="btnSmartModalIn"
+            onclick="submitSmartCameraAction('IN')"
+            class="py-3 px-4 rounded-full bg-emerald-600 text-white text-xs font-extrabold hover:bg-emerald-700 transition flex items-center justify-center gap-2"
+          >
+            <i class="fa-solid fa-arrow-down"></i>
+            <span>Stok Masuk</span>
+          </button>
+          <button
+            id="btnSmartModalOut"
+            onclick="submitSmartCameraAction('OUT')"
+            class="py-3 px-4 rounded-full bg-rose-600 text-white text-xs font-extrabold hover:bg-rose-700 transition flex items-center justify-center gap-2"
+          >
+            <i class="fa-solid fa-truck-fast"></i>
+            <span>Kirim Keluar</span>
+          </button>
+          <button
+            id="btnSmartModalAssy"
+            onclick="submitSmartCameraAction('ASSY')"
+            class="py-3 px-4 rounded-full bg-indigo-600 text-white text-xs font-extrabold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+          >
+            <i class="fa-solid fa-boxes-packing"></i>
+            <span>Tambah Assy</span>
+          </button>
         </div>
       </div>
     </div>
+
+    <!-- Connect Main Application Logic -->
     <script src="script.js"></script>
   </body>
 </html>
