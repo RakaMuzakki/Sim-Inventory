@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>SIM-INVENTORY | Professional</title>
+    <title>SIM-INVENTORY | Material Design</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -14,17 +14,24 @@
         theme: {
           extend: {
             colors: {
-              brand: { 50: "#f0f9ff", 500: "#0ea5e9", 600: "#0284c7" },
+              google: {
+                blue: "#1a73e8",
+                blueHover: "#1765cc",
+                red: "#ea4335",
+                green: "#34a853",
+                yellow: "#fbbc04",
+                gray: "#f1f3f4",
+              },
             },
             fontFamily: {
-              sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+              sans: ["Roboto", "system-ui", "-apple-system", "sans-serif"],
             },
           },
         },
       };
     </script>
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
 
@@ -39,15 +46,16 @@
     <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <style>
       body {
-        background-color: #f8fafc;
+        background-color: #f8f9fa;
+        color: #202124;
+        font-family: "Roboto", sans-serif;
       }
       .animate-slide-up {
-        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
       }
       @keyframes slideUp {
         from {
@@ -58,28 +66,74 @@
         }
       }
       ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        width: 8px;
+        height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #f1f5f9;
+        background: #f1f3f4;
       }
       ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+        background: #dadce0;
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
+        background: #bdc1c6;
       }
 
-      .pro-table th,
-      .pro-table td {
-        border-color: #cbd5e1 !important;
-        border-width: 1px !important;
-        border-style: solid !important;
+      /* Material UI Table Styles */
+      .mat-table th {
+        border-bottom: 2px solid #dadce0;
+        background-color: #ffffff;
+        color: #5f6368;
+        font-weight: 500;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 12px 16px;
       }
-      .header-main {
-        border-bottom: 2px solid #0f172a;
+      .mat-table td {
+        border-bottom: 1px solid #dadce0;
+        padding: 12px 16px;
+        font-size: 0.875rem;
+      }
+      .mat-card {
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow:
+          0 1px 2px 0 rgba(60, 64, 67, 0.3),
+          0 1px 3px 1px rgba(60, 64, 67, 0.15);
+        border: none;
+      }
+      .mat-button {
+        background-color: #1a73e8;
+        color: white;
+        border-radius: 4px;
+        padding: 8px 16px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3);
+        transition:
+          background-color 0.2s,
+          box-shadow 0.2s;
+        letter-spacing: 0.25px;
+      }
+      .mat-button:hover {
+        background-color: #1765cc;
+        box-shadow:
+          0 1px 3px 1px rgba(60, 64, 67, 0.15),
+          0 2px 6px 2px rgba(60, 64, 67, 0.15);
+      }
+      .mat-input {
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        padding: 10px 14px;
+        font-size: 0.875rem;
+        transition: border-color 0.2s;
+      }
+      .mat-input:focus {
+        border-color: #1a73e8;
+        outline: none;
+        box-shadow: inset 0 0 0 1px #1a73e8;
       }
 
       /* FIX: CSS khusus untuk input angka SweetAlert */
@@ -90,166 +144,151 @@
       }
       input[type="number"] {
         -moz-appearance: textfield;
-      }
-
-      .swal2-input {
-        box-shadow: none !important;
-      }
-      .swal2-input:focus {
-        border-color: #0284c7 !important;
-        box-shadow: 0 0 0 1px #0284c7 !important;
+        appearance: textfield;
       }
     </style>
   </head>
 
   <body
-    class="antialiased min-h-screen flex flex-col relative overflow-x-hidden text-slate-800"
+    class="antialiased min-h-screen flex flex-col relative overflow-x-hidden"
   >
     <div
       id="sidebarBackdrop"
       onclick="closeSidebar()"
-      class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300"
+      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300"
     ></div>
 
+    <!-- SIDEBAR MATERIAL -->
     <aside
       id="mainSidebar"
-      class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col justify-between p-6 transform -translate-x-full transition-transform duration-300 ease-in-out shadow-lg"
+      class="fixed inset-y-0 left-0 z-50 w-72 bg-white flex flex-col justify-between transform -translate-x-full transition-transform duration-300 ease-in-out shadow-[4px_0_8px_rgba(0,0,0,0.1)] rounded-r-2xl sm:rounded-none"
     >
       <div>
-        <div class="flex items-center justify-between mb-8">
+        <div
+          class="flex items-center justify-between p-6 border-b border-gray-100"
+        >
           <div class="flex items-center gap-3">
-            <div
-              class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-white text-lg shadow-sm"
-            >
+            <div class="text-google-blue text-2xl">
               <i class="fa-solid fa-boxes-stacked"></i>
             </div>
             <div>
-              <h1
-                class="font-black text-sm tracking-tight leading-tight text-slate-900"
-              >
-                SIM-INVENTORY
+              <h1 class="font-bold text-lg text-gray-800 leading-tight">
+                Inventory
               </h1>
-              <p
-                class="text-[10px] text-slate-500 font-bold uppercase tracking-widest"
-              >
-                Enterprise
-              </p>
+              <p class="text-xs text-gray-500 font-medium">Workspace</p>
             </div>
           </div>
           <button
             onclick="closeSidebar()"
-            class="w-8 h-8 rounded hover:bg-slate-100 text-slate-500 flex items-center justify-center transition-colors"
+            class="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500 flex items-center justify-center transition-colors lg:hidden"
           >
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
-        <div class="space-y-6">
+        <div class="p-4 space-y-4">
           <div>
             <p
-              class="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2"
+              class="px-4 text-xs font-medium text-gray-500 mb-1 tracking-wide"
             >
-              Operasional
+              OPERASIONAL
             </p>
-            <nav class="space-y-1">
+            <nav class="space-y-0.5">
               <button
                 onclick="switchTab('overview')"
                 id="btn-tab-overview"
-                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all bg-slate-800 text-white"
+                class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all bg-blue-50 text-google-blue"
               >
-                <i class="fa-solid fa-table w-4 text-center"></i
+                <i class="fa-solid fa-table w-5 text-center"></i
                 ><span>Papan Kontrol</span>
               </button>
               <button
                 onclick="switchTab('scanner')"
                 id="btn-tab-scanner"
-                class="role-auth hidden nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-all text-slate-600 hover:bg-slate-50"
+                class="role-auth hidden nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
               >
-                <i class="fa-solid fa-barcode w-4 text-center"></i
+                <i class="fa-solid fa-barcode w-5 text-center"></i
                 ><span>Smart Scanner</span>
               </button>
               <button
                 onclick="switchTab('riwayat')"
                 id="btn-tab-riwayat"
-                class="role-auth hidden nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-all text-slate-600 hover:bg-slate-50"
+                class="role-auth hidden nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
               >
-                <i class="fa-solid fa-clock-rotate-left w-4 text-center"></i
+                <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i
                 ><span>Riwayat Transaksi</span>
               </button>
             </nav>
           </div>
           <div class="role-admin hidden">
             <p
-              class="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2"
+              class="px-4 text-xs font-medium text-gray-500 mb-1 tracking-wide border-t border-gray-100 pt-4"
             >
-              Master Data
+              MASTER DATA
             </p>
-            <nav class="space-y-1">
+            <nav class="space-y-0.5">
               <button
                 onclick="switchTab('barang')"
                 id="btn-tab-barang"
-                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-all text-slate-600 hover:bg-slate-50"
+                class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
               >
-                <i class="fa-solid fa-cubes w-4 text-center"></i
+                <i class="fa-solid fa-cubes w-5 text-center"></i
                 ><span>Master Barang</span>
               </button>
               <button
                 onclick="switchTab('customer')"
                 id="btn-tab-customer"
-                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-all text-slate-600 hover:bg-slate-50"
+                class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
               >
-                <i class="fa-solid fa-building w-4 text-center"></i
+                <i class="fa-solid fa-building w-5 text-center"></i
                 ><span>Master Customer</span>
               </button>
               <button
                 onclick="switchTab('users')"
                 id="btn-tab-users"
-                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-all text-slate-600 hover:bg-slate-50"
+                class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
               >
-                <i class="fa-solid fa-users-gear w-4 text-center"></i
+                <i class="fa-solid fa-users-gear w-5 text-center"></i
                 ><span>Kelola Pengguna</span>
               </button>
             </nav>
           </div>
         </div>
       </div>
-      <div class="pt-4 border-t border-slate-100">
+      <div class="p-4 border-t border-gray-100">
         <div
           id="userProfileCard"
-          class="hidden items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200"
+          class="hidden items-center justify-between px-4 py-3 rounded-xl bg-gray-50 border border-gray-200"
         >
           <div class="flex items-center gap-3">
             <div
-              class="w-8 h-8 rounded-md bg-brand-500 text-white flex items-center justify-center font-bold text-sm shadow-sm"
+              class="w-8 h-8 rounded-full bg-google-blue text-white flex items-center justify-center font-bold text-sm shadow-sm"
             >
               <span id="avatarLetter">U</span>
             </div>
             <div>
               <p
                 id="userNameDisplay"
-                class="text-xs font-bold text-slate-900 leading-tight"
+                class="text-sm font-medium text-gray-800 leading-tight"
               >
                 User
               </p>
               <span
                 id="userRoleBadge"
-                class="text-[10px] font-medium text-slate-500"
+                class="text-[11px] font-medium text-gray-500 block"
                 >Role</span
               >
             </div>
           </div>
           <button
             onclick="logoutAction()"
-            class="text-slate-400 hover:text-red-500 transition-colors"
+            class="text-gray-400 hover:text-red-500 transition-colors"
             title="Keluar"
           >
-            <i class="fa-solid fa-power-off"></i>
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
           </button>
         </div>
         <div id="guestLoginPrompt" class="text-center">
-          <button
-            onclick="openLoginModal()"
-            class="w-full py-2.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm transition-colors shadow-sm"
-          >
+          <button onclick="openLoginModal()" class="mat-button w-full">
             Masuk Sistem
           </button>
         </div>
@@ -257,155 +296,119 @@
     </aside>
 
     <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
+      <!-- HEADER MATERIAL -->
       <header
-        class="bg-white border-b border-slate-200 py-4 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-sm"
+        class="bg-white py-3 px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]"
       >
         <div class="flex items-center gap-4">
           <button
             onclick="toggleSidebar()"
-            class="w-9 h-9 rounded-md bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors"
+            class="w-10 h-10 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center transition-colors"
           >
-            <i class="fa-solid fa-bars text-sm"></i>
+            <i class="fa-solid fa-bars text-lg"></i>
           </button>
           <div>
             <h2
               id="greetingTitle"
-              class="text-base font-black text-slate-900 leading-tight tracking-tight"
+              class="text-xl font-normal text-gray-800 tracking-tight"
             >
-              Overview
+              Dashboard
             </h2>
-            <p
-              class="text-[10px] text-slate-500 font-bold tracking-widest flex items-center uppercase"
-            >
-              <span
-                class="w-1.5 h-1.5 inline-block rounded-full bg-emerald-500 animate-pulse mr-1.5"
-              ></span
-              >LIVE SYNC &bull; RESET 08:00
-            </p>
           </div>
         </div>
         <div class="flex items-center gap-3">
           <div
-            class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-50 border border-slate-200 font-medium text-xs text-slate-600"
+            class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-google-blue font-medium text-xs"
           >
             <i class="fa-regular fa-clock"></i
             ><span id="liveClock">--:--:--</span>
           </div>
           <button
             onclick="refreshAllData()"
-            class="w-9 h-9 rounded-md bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center transition-colors shadow-sm"
-            title="Refresh Data"
+            class="w-10 h-10 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center transition-colors"
+            title="Sinkronisasi"
           >
-            <i class="fa-solid fa-rotate-right text-xs" id="syncSpinner"></i>
+            <i class="fa-solid fa-rotate-right" id="syncSpinner"></i>
           </button>
         </div>
       </header>
 
-      <div class="p-4 sm:p-8 space-y-6 flex-1 max-w-[1600px] mx-auto w-full">
-        <!-- TAB PAPAN KONTROL -->
+      <div class="p-4 sm:p-6 space-y-6 flex-1 max-w-[1600px] mx-auto w-full">
+        <!-- TAB PAPAN KONTROL (MATERIAL) -->
         <section id="tab-overview" class="tab-pane block">
-          <div
-            class="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm"
-          >
+          <div class="mat-card">
             <div
-              class="header-main flex flex-col sm:flex-row sm:items-end justify-between pb-4 mb-6 gap-4"
+              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div>
-                <h3
-                  class="text-2xl font-black uppercase text-slate-900 tracking-tight"
-                >
-                  Papan Kontrol Seat Assy
+                <h3 class="text-xl font-normal text-gray-800">
+                  Kontrol Perakitan (Seat Assy)
                 </h3>
-                <p
-                  class="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1"
-                >
-                  Monitoring Live Stok & Delivery (Rollover Otomatis Jam 08:00)
+                <p class="text-sm text-gray-500 mt-1">
+                  Live Andon &bull; Rollover otomatis tiap jam 08:00 pagi
                 </p>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-3">
                 <div
-                  class="px-4 py-2 border-2 border-slate-800 bg-yellow-300 text-slate-900 font-black text-xs shadow-[2px_2px_0px_#1e293b]"
+                  class="px-4 py-2 bg-blue-50 text-google-blue rounded-md font-medium text-sm"
                 >
-                  Total Baris: <span id="cntTotalSeatAssy">0</span>
+                  Total Baris:
+                  <span id="cntTotalSeatAssy" class="font-bold">0</span>
                 </div>
+                <button
+                  onclick="exportToExcel('PapanKontrol')"
+                  class="px-4 py-2 rounded-md border border-gray-300 text-google-blue font-medium text-sm hover:bg-blue-50 transition-colors flex items-center gap-2"
+                >
+                  <i class="fa-solid fa-download"></i> Ekspor
+                </button>
               </div>
             </div>
 
-            <div class="mb-5 relative w-full sm:w-1/3">
-              <i
-                class="fa-solid fa-magnifying-glass absolute left-4 top-3 text-slate-400"
-              ></i>
-              <input
-                type="text"
-                id="globalSearchInput"
-                oninput="handleGlobalSearch(this.value)"
-                placeholder="CARI CUSTOMER ATAU PART NUMBER..."
-                class="w-full bg-slate-50 border-2 border-slate-300 rounded-lg pl-10 pr-4 py-2 font-bold text-xs uppercase focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors"
-              />
+            <div class="p-5 sm:p-6 border-b border-gray-100 bg-gray-50/50">
+              <div class="relative w-full sm:w-1/3">
+                <i
+                  class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"
+                ></i>
+                <input
+                  type="text"
+                  id="globalSearchInput"
+                  oninput="handleGlobalSearch(this.value)"
+                  placeholder="Cari Part Number atau Customer..."
+                  class="mat-input w-full pl-10 bg-white"
+                />
+              </div>
             </div>
 
-            <div
-              class="overflow-x-auto rounded border border-slate-300 shadow-sm"
-            >
-              <table
-                class="w-full text-xs border-collapse pro-table bg-white text-center"
-              >
+            <!-- TABEL MATERIAL CLEAN -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left mat-table border-collapse">
                 <thead>
-                  <tr class="bg-slate-100 font-bold uppercase text-slate-700">
-                    <th
-                      rowspan="2"
-                      class="py-3 px-2 w-28 text-[10px] align-middle"
-                    >
-                      CUST
-                    </th>
-                    <th
-                      rowspan="2"
-                      class="py-3 px-2 w-16 text-amber-600 align-middle"
-                    >
-                      NO RELL
-                    </th>
-                    <th rowspan="2" class="py-3 px-3 text-left align-middle">
-                      PART NUMBER
-                    </th>
-                    <th
-                      rowspan="2"
-                      class="py-3 px-2 text-sm bg-blue-50 text-blue-800 align-middle"
-                    >
-                      STOCK
-                    </th>
+                  <tr>
+                    <th rowspan="2">Customer</th>
+                    <th rowspan="2" class="text-center">Rak</th>
+                    <th rowspan="2">Part Number</th>
+                    <th rowspan="2" class="text-center">Stock</th>
                     <th
                       colspan="3"
-                      class="py-1 px-2 text-sm tracking-widest bg-emerald-50 text-emerald-800 border-b border-slate-300"
+                      class="text-center border-l border-r border-gray-200"
                     >
-                      DELIVERY
+                      Delivery
                     </th>
-                    <th
-                      rowspan="2"
-                      class="py-3 px-2 leading-tight bg-purple-50 text-purple-800 align-middle"
-                    >
-                      ASSY IN<br />STORE FSG
-                    </th>
-                    <th
-                      rowspan="2"
-                      class="py-3 px-2 text-sm bg-yellow-50 text-yellow-800 align-middle"
-                    >
-                      [ +/- ]
-                    </th>
+                    <th rowspan="2" class="text-center">Assy In<br />FSG</th>
+                    <th rowspan="2" class="text-right">Status</th>
                   </tr>
-                  <tr
-                    class="bg-slate-50 font-bold uppercase text-[9px] text-slate-600"
-                  >
-                    <th class="py-2 px-1 w-20">QTY/DAY</th>
-                    <th class="py-2 px-1 w-20">QTY/OUT</th>
-                    <th class="py-2 px-1 w-20">SISA DEL</th>
+                  <tr class="bg-gray-50">
+                    <th class="text-center border-l border-gray-200">Target</th>
+                    <th class="text-center">Terkirim</th>
+                    <th class="text-center border-r border-gray-200">Sisa</th>
                   </tr>
                 </thead>
-                <tbody
-                  id="tblSeatAssyControlBody"
-                  class="font-bold text-sm text-slate-800"
-                >
+                <tbody id="tblSeatAssyControlBody">
                   <tr>
-                    <td colspan="9" class="py-10 text-slate-400 font-medium">
+                    <td
+                      colspan="9"
+                      class="py-12 text-center text-gray-500 font-medium text-sm"
+                    >
                       Memuat data...
                     </td>
                   </tr>
@@ -418,72 +421,62 @@
         <!-- TAB SCANNER -->
         <section id="tab-scanner" class="tab-pane hidden space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            <div
-              class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between"
-            >
+            <!-- Panel Kamera & Input -->
+            <div class="mat-card p-6 flex flex-col justify-between">
               <div>
-                <h3 class="text-lg font-black uppercase text-slate-900 mb-1">
-                  Smart Scanner
+                <h3 class="text-lg font-medium text-gray-800 mb-1">
+                  Pindai Barcode
                 </h3>
-                <p
-                  class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-6"
-                >
-                  Gunakan Kamera HP atau Gun Scanner.
+                <p class="text-sm text-gray-500 mb-6">
+                  Gunakan kamera perangkat atau Gun Scanner.
                 </p>
                 <div
                   id="smartReaderWrapper"
-                  class="bg-slate-900 rounded-lg p-2 mb-6 hidden relative"
+                  class="bg-black rounded-lg overflow-hidden mb-6 hidden relative shadow-inner"
                 >
                   <video
                     id="smartReaderVideo"
-                    class="w-full aspect-square object-cover rounded bg-black opacity-90"
+                    class="w-full aspect-square object-cover opacity-90"
                   ></video>
                   <p
-                    class="text-[10px] text-white/80 font-bold uppercase tracking-widest mt-2 absolute bottom-3 w-full text-center"
+                    class="text-xs text-white/90 font-medium mt-2 absolute bottom-4 w-full text-center"
                   >
-                    Fokuskan Barcode di area ini
+                    Fokuskan Barcode YIMM/PDF417 di tengah
                   </p>
                 </div>
                 <div class="space-y-3">
                   <button
                     id="btnStartScan"
                     onclick="startSmartScanner()"
-                    class="w-full py-3.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+                    class="mat-button w-full flex items-center justify-center gap-2 py-2.5"
                   >
-                    <i class="fa-solid fa-camera"></i> Aktifkan Kamera HP
+                    <i class="fa-solid fa-camera"></i> Aktifkan Kamera
                   </button>
                   <button
                     id="btnStopScan"
                     onclick="stopSmartScanner()"
-                    class="hidden w-full py-3.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+                    class="hidden w-full py-2.5 rounded text-gray-600 bg-gray-100 hover:bg-gray-200 font-medium text-sm transition-colors flex items-center justify-center gap-2"
                   >
-                    <i class="fa-solid fa-stop"></i> Matikan Kamera
+                    <i class="fa-solid fa-stop"></i> Hentikan Kamera
                   </button>
                 </div>
               </div>
-              <div class="mt-8 pt-6 border-t border-slate-100">
-                <p
-                  class="text-sm font-black uppercase tracking-tight text-slate-800 mb-1"
-                >
-                  <i class="fa-solid fa-barcode text-slate-400 mr-1"></i> Mode
-                  Gun Scanner (Batch)
+              <div class="mt-8 pt-6 border-t border-gray-200">
+                <p class="text-sm font-medium text-gray-800 mb-2">
+                  <i class="fa-solid fa-barcode text-gray-400 mr-2"></i> Mode
+                  Gun Scanner (Batch Troli)
                 </p>
-                <p
-                  class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-3"
-                >
-                  Scan berurutan untuk memasukkan ke Troli.
-                </p>
-                <div class="flex gap-2">
+                <div class="flex gap-3">
                   <input
                     type="text"
                     id="manualSmartInput"
                     onkeypress="handleScannerGun(event)"
-                    placeholder="Klik disini & Scan..."
-                    class="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-4 py-2 font-bold text-sm uppercase focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                    placeholder="Scan disini..."
+                    class="mat-input flex-1"
                   />
                   <button
                     onclick="triggerManualGunButton()"
-                    class="px-5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-bold uppercase text-xs tracking-wider transition-colors"
+                    class="mat-button bg-gray-800 hover:bg-gray-900 shadow-none"
                   >
                     Tambah
                   </button>
@@ -491,72 +484,63 @@
               </div>
             </div>
 
-            <div
-              class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between"
-            >
+            <!-- Panel Batch Troli -->
+            <div class="mat-card p-6 flex flex-col justify-between">
               <div>
                 <div
-                  class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4"
+                  class="flex items-center justify-between border-b border-gray-200 pb-4 mb-4"
                 >
                   <div>
                     <h3
-                      class="text-lg font-black uppercase text-slate-900 tracking-tight"
+                      class="text-lg font-medium text-gray-800 tracking-tight"
                     >
-                      <i class="fa-solid fa-dolly text-slate-400 mr-1"></i>
-                      Daftar Troli
+                      <i class="fa-solid fa-dolly text-gray-400 mr-2"></i>
+                      Keranjang Troli
                     </h3>
-                    <p
-                      class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5"
-                    >
-                      Verifikasi jumlah qty
-                    </p>
                   </div>
                   <button
                     onclick="clearBatchTrolley()"
-                    class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-xs font-bold uppercase tracking-wider transition-colors"
+                    class="px-3 py-1.5 hover:bg-red-50 text-red-500 rounded text-sm font-medium transition-colors"
                   >
-                    Reset
+                    Kosongkan
                   </button>
                 </div>
-                <div
-                  id="batchCustWrapper"
-                  class="mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200"
-                >
+                <div id="batchCustWrapper" class="mb-5">
                   <label
-                    class="block text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1.5"
-                    >Tujuan Pengiriman Massal:</label
+                    class="block text-xs font-medium text-gray-500 mb-1.5 uppercase"
+                    >Tujuan Pengiriman Massal</label
                   >
                   <select
                     id="batchSelectCustomer"
-                    class="w-full bg-white border border-slate-300 rounded-md px-3 py-2 font-bold text-xs uppercase outline-none focus:border-brand-500"
+                    class="mat-input w-full bg-gray-50"
                   >
-                    <option value="-">-- Sesuai Default --</option>
+                    <option value="-">-- Sesuai Default Barang --</option>
                   </select>
                 </div>
                 <div
                   id="batchTrolleyInlineList"
-                  class="space-y-2 max-h-64 overflow-y-auto pr-1"
+                  class="space-y-3 max-h-[300px] overflow-y-auto pr-2"
                 >
                   <div
-                    class="py-12 text-center text-slate-400 font-bold text-xs uppercase tracking-widest border border-dashed border-slate-300 rounded-lg"
+                    class="py-12 text-center text-gray-400 text-sm font-medium bg-gray-50 rounded-lg border border-dashed border-gray-300"
                   >
                     Belum ada barang di Troli.
                   </div>
                 </div>
               </div>
-              <div class="pt-5 mt-5 border-t border-slate-100">
+              <div class="pt-5 mt-5 border-t border-gray-200">
                 <div id="batchBtnGroupWH" class="grid grid-cols-2 gap-3">
                   <button
                     onclick="submitBatchTrolley('IN')"
-                    class="py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest transition-colors"
+                    class="mat-button bg-google-green hover:bg-green-600 flex items-center justify-center gap-2"
                   >
-                    <i class="fa-solid fa-box-open mr-1"></i> Masuk (IN)
+                    <i class="fa-solid fa-box-open"></i> MASUK (IN)
                   </button>
                   <button
                     onclick="submitBatchTrolley('OUT')"
-                    class="py-3 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-widest transition-colors"
+                    class="mat-button bg-google-yellow hover:bg-yellow-500 text-gray-900 flex items-center justify-center gap-2"
                   >
-                    <i class="fa-solid fa-truck-fast mr-1"></i> Keluar (OUT)
+                    <i class="fa-solid fa-truck-fast"></i> KELUAR (OUT)
                   </button>
                 </div>
                 <div
@@ -565,9 +549,9 @@
                 >
                   <button
                     onclick="submitBatchTrolley('ASSY_ADD')"
-                    class="py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-widest transition-colors"
+                    class="mat-button flex items-center justify-center gap-2"
                   >
-                    <i class="fa-solid fa-plus mr-1"></i> Tambah Assy
+                    <i class="fa-solid fa-plus"></i> Tambah Semua ke ASSY
                   </button>
                 </div>
               </div>
@@ -576,70 +560,62 @@
         </section>
 
         <!-- TAB RIWAYAT TRANSAKSI -->
-        <section id="tab-riwayat" class="tab-pane hidden space-y-6">
-          <div
-            class="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm"
-          >
+        <section id="tab-riwayat" class="tab-pane hidden">
+          <div class="mat-card">
             <div
-              class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-slate-100 pb-5 mb-5"
+              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4"
             >
               <div>
-                <h3
-                  class="text-xl font-black uppercase text-slate-900 tracking-tight"
-                >
+                <h3 class="text-xl font-normal text-gray-800">
                   Riwayat Transaksi
                 </h3>
-                <p
-                  class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1"
-                >
-                  Aktivitas Barang Masuk, Keluar, dan Target
+                <p class="text-sm text-gray-500 mt-1">
+                  Lacak keluar-masuk dan perubahan sistem
                 </p>
               </div>
-              <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <div class="flex items-center gap-3 flex-wrap">
                 <input
                   type="month"
                   id="filterBulanRiwayat"
                   onchange="renderRiwayatTable()"
-                  class="bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs font-bold uppercase outline-none focus:border-brand-500 text-slate-700 cursor-pointer"
+                  class="mat-input py-2 text-sm text-gray-600 cursor-pointer"
                   title="Pilih Bulan"
                 />
                 <select
                   id="filterRiwayat"
                   onchange="renderRiwayatTable()"
-                  class="bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs font-bold uppercase outline-none focus:border-brand-500 text-slate-700 cursor-pointer"
+                  class="mat-input py-2 text-sm text-gray-600 cursor-pointer"
                 >
                   <option value="ALL">Semua Aktivitas</option>
-                  <option value="IN">Masuk (IN)</option>
-                  <option value="OUT">Keluar (OUT)</option>
+                  <option value="IN">Masuk Saja (IN)</option>
+                  <option value="OUT">Keluar Saja (OUT)</option>
                 </select>
                 <button
                   onclick="exportToExcel('Riwayat')"
-                  class="px-4 py-2 rounded-md bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100 font-bold text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5"
+                  class="px-4 py-2 rounded border border-gray-300 text-google-blue font-medium text-sm hover:bg-blue-50 transition-colors flex items-center gap-2"
                 >
                   <i class="fa-solid fa-file-excel"></i> Ekspor
                 </button>
               </div>
             </div>
-            <div class="overflow-x-auto rounded border border-slate-200">
-              <table class="w-full text-xs border-collapse text-left">
-                <thead
-                  class="bg-slate-50 font-black uppercase text-[10px] text-slate-600 tracking-wider"
-                >
-                  <tr class="border-b border-slate-200">
-                    <th class="py-3 px-4 w-36">Waktu</th>
-                    <th class="py-3 px-4 w-24">Tipe</th>
-                    <th class="py-3 px-4">Part Number</th>
-                    <th class="py-3 px-4 text-center w-24">Jumlah</th>
-                    <th class="py-3 px-4 w-32">Petugas</th>
-                    <th class="py-3 px-4">Catatan</th>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left mat-table border-collapse">
+                <thead>
+                  <tr>
+                    <th class="w-40">Waktu</th>
+                    <th class="w-24">Tipe</th>
+                    <th>Part Number</th>
+                    <th class="text-right w-28">Jumlah</th>
+                    <th class="w-32">Petugas</th>
+                    <th>Keterangan</th>
                   </tr>
                 </thead>
-                <tbody
-                  id="tblRiwayatBody"
-                  class="divide-y divide-slate-100 font-bold text-slate-800 bg-white"
-                >
+                <tbody id="tblRiwayatBody">
                   <tr>
-                    <td colspan="6" class="py-10 text-center text-slate-400">
+                    <td
+                      colspan="6"
+                      class="py-12 text-center text-gray-500 text-sm"
+                    >
                       Memuat data...
                     </td>
                   </tr>
@@ -650,82 +626,71 @@
         </section>
 
         <!-- TAB MASTER BARANG -->
-        <section id="tab-barang" class="tab-pane hidden space-y-6">
-          <div
-            class="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm"
-          >
+        <section id="tab-barang" class="tab-pane hidden">
+          <div class="mat-card">
             <div
-              class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-slate-100 pb-5 mb-5"
+              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4"
             >
               <div>
-                <h3
-                  class="text-xl font-black uppercase text-slate-900 tracking-tight"
-                >
+                <h3 class="text-xl font-normal text-gray-800">
                   Master Data Barang
                 </h3>
-                <p
-                  class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1"
-                >
-                  Database komponen utama
-                </p>
               </div>
-              <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-3 flex-wrap">
                 <div class="relative">
                   <i
-                    class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"
+                    class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"
                   ></i>
                   <input
                     type="text"
                     id="searchMasterBarang"
                     oninput="renderMasterBarangTable(this.value)"
-                    placeholder="CARI PART..."
-                    class="w-full sm:w-64 bg-slate-50 border border-slate-300 rounded-md pl-9 pr-3 py-2 text-xs font-bold uppercase outline-none focus:border-brand-500"
+                    placeholder="Cari part..."
+                    class="mat-input pl-9 py-2 w-full sm:w-64"
                   />
                 </div>
                 <button
                   id="btnBulkDeleteBarang"
                   onclick="bulkDeleteBarang()"
-                  class="hidden px-4 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-md font-bold text-xs uppercase tracking-wider transition-colors items-center gap-1.5"
+                  class="hidden px-4 py-2 text-google-red border border-gray-200 hover:bg-red-50 rounded font-medium text-sm transition-colors items-center gap-2"
                 >
-                  <i class="fa-solid fa-trash-can"></i> Hapus (<span
+                  <i class="fa-regular fa-trash-can"></i> (<span
                     id="lblCountDelete"
                     >0</span
                   >)
                 </button>
                 <button
                   onclick="openModalBarang()"
-                  class="role-admin hidden px-4 py-2 rounded-md bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider transition-colors"
+                  class="role-admin hidden mat-button flex items-center gap-2 py-2"
                 >
-                  <i class="fa-solid fa-plus mr-1"></i> Part Baru
+                  <i class="fa-solid fa-plus"></i> Part Baru
                 </button>
               </div>
             </div>
-            <div class="overflow-x-auto rounded border border-slate-200">
-              <table class="w-full text-xs border-collapse text-left">
-                <thead
-                  class="bg-slate-50 font-black uppercase text-[10px] text-slate-600 tracking-wider"
-                >
-                  <tr class="border-b border-slate-200">
-                    <th class="py-3 px-4 w-12 text-center">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left mat-table border-collapse">
+                <thead>
+                  <tr>
+                    <th class="w-12 text-center">
                       <input
                         type="checkbox"
                         id="chkAllBarang"
                         onchange="toggleAllBarang(this)"
-                        class="w-4 h-4 rounded text-brand-500 border-slate-300 focus:ring-brand-500 cursor-pointer"
+                        class="w-4 h-4 rounded text-google-blue cursor-pointer accent-google-blue"
                       />
                     </th>
-                    <th class="py-3 px-4">Part Number</th>
-                    <th class="py-3 px-4">Stok Utama</th>
-                    <th class="py-3 px-4">Rak</th>
-                    <th class="py-3 px-4 text-center w-32">Aksi</th>
+                    <th>Part Number</th>
+                    <th>Stok Utama</th>
+                    <th>Rak</th>
+                    <th class="text-right w-32">Aksi</th>
                   </tr>
                 </thead>
-                <tbody
-                  id="tblMasterBarangBody"
-                  class="divide-y divide-slate-100 font-bold text-slate-800 bg-white"
-                >
+                <tbody id="tblMasterBarangBody">
                   <tr>
-                    <td colspan="5" class="py-10 text-center text-slate-400">
+                    <td
+                      colspan="5"
+                      class="py-12 text-center text-gray-500 text-sm"
+                    >
                       Memuat data...
                     </td>
                   </tr>
@@ -736,64 +701,53 @@
         </section>
 
         <!-- TAB MASTER CUSTOMER -->
-        <section id="tab-customer" class="tab-pane hidden space-y-6">
-          <div
-            class="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm"
-          >
+        <section id="tab-customer" class="tab-pane hidden">
+          <div class="mat-card">
             <div
-              class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-slate-100 pb-5 mb-5"
+              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4"
             >
               <div>
-                <h3
-                  class="text-xl font-black uppercase text-slate-900 tracking-tight"
-                >
+                <h3 class="text-xl font-normal text-gray-800">
                   Master Customer
                 </h3>
-                <p
-                  class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1"
-                >
-                  Daftar tujuan pengiriman
-                </p>
               </div>
-              <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-3 flex-wrap">
                 <div class="relative">
                   <i
-                    class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"
+                    class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"
                   ></i>
                   <input
                     type="text"
                     id="searchMasterCustomer"
                     oninput="renderCustomerTable(this.value)"
-                    placeholder="CARI CUSTOMER..."
-                    class="w-full sm:w-64 bg-slate-50 border border-slate-300 rounded-md pl-9 pr-3 py-2 text-xs font-bold uppercase outline-none focus:border-brand-500"
+                    placeholder="Cari customer..."
+                    class="mat-input pl-9 py-2 w-full sm:w-64"
                   />
                 </div>
                 <button
                   onclick="openModalCustomer()"
-                  class="role-admin hidden px-4 py-2 rounded-md bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider transition-colors"
+                  class="role-admin hidden mat-button flex items-center gap-2 py-2"
                 >
-                  <i class="fa-solid fa-plus mr-1"></i> Customer Baru
+                  <i class="fa-solid fa-plus"></i> Customer Baru
                 </button>
               </div>
             </div>
-            <div class="overflow-x-auto rounded border border-slate-200">
-              <table class="w-full text-xs border-collapse text-left">
-                <thead
-                  class="bg-slate-50 font-black uppercase text-[10px] text-slate-600 tracking-wider"
-                >
-                  <tr class="border-b border-slate-200">
-                    <th class="py-3 px-4">ID Customer</th>
-                    <th class="py-3 px-4">Perusahaan</th>
-                    <th class="py-3 px-4">Alamat</th>
-                    <th class="py-3 px-4 text-center w-28">Aksi</th>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left mat-table border-collapse">
+                <thead>
+                  <tr>
+                    <th>ID Customer</th>
+                    <th>Perusahaan</th>
+                    <th>Alamat</th>
+                    <th class="text-right w-28">Aksi</th>
                   </tr>
                 </thead>
-                <tbody
-                  id="tblCustomerBody"
-                  class="divide-y divide-slate-100 font-bold text-slate-800 bg-white"
-                >
+                <tbody id="tblCustomerBody">
                   <tr>
-                    <td colspan="4" class="py-10 text-center text-slate-400">
+                    <td
+                      colspan="4"
+                      class="py-12 text-center text-gray-500 text-sm"
+                    >
                       Memuat data...
                     </td>
                   </tr>
@@ -804,63 +758,52 @@
         </section>
 
         <!-- TAB KELOLA PENGGUNA -->
-        <section id="tab-users" class="tab-pane hidden space-y-6">
-          <div
-            class="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm"
-          >
+        <section id="tab-users" class="tab-pane hidden">
+          <div class="mat-card">
             <div
-              class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-slate-100 pb-5 mb-5"
+              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4"
             >
               <div>
-                <h3
-                  class="text-xl font-black uppercase text-slate-900 tracking-tight"
-                >
+                <h3 class="text-xl font-normal text-gray-800">
                   Kelola Pengguna
                 </h3>
-                <p
-                  class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1"
-                >
-                  Hak akses staf operasional
-                </p>
               </div>
-              <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-3 flex-wrap">
                 <div class="relative">
                   <i
-                    class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"
+                    class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"
                   ></i>
                   <input
                     type="text"
                     id="searchMasterUser"
                     oninput="renderUsersTable(this.value)"
-                    placeholder="CARI PENGGUNA..."
-                    class="w-full sm:w-64 bg-slate-50 border border-slate-300 rounded-md pl-9 pr-3 py-2 text-xs font-bold uppercase outline-none focus:border-brand-500"
+                    placeholder="Cari akun..."
+                    class="mat-input pl-9 py-2 w-full sm:w-64"
                   />
                 </div>
                 <button
                   onclick="openModalUser()"
-                  class="role-admin hidden px-4 py-2 rounded-md bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider transition-colors"
+                  class="role-admin hidden mat-button flex items-center gap-2 py-2"
                 >
-                  <i class="fa-solid fa-plus mr-1"></i> Akun Baru
+                  <i class="fa-solid fa-plus"></i> Akun Baru
                 </button>
               </div>
             </div>
-            <div class="overflow-x-auto rounded border border-slate-200">
-              <table class="w-full text-xs border-collapse text-left">
-                <thead
-                  class="bg-slate-50 font-black uppercase text-[10px] text-slate-600 tracking-wider"
-                >
-                  <tr class="border-b border-slate-200">
-                    <th class="py-3 px-4">Username</th>
-                    <th class="py-3 px-4">Otorisasi</th>
-                    <th class="py-3 px-4 text-center w-28">Aksi</th>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left mat-table border-collapse">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Otorisasi</th>
+                    <th class="text-right w-28">Aksi</th>
                   </tr>
                 </thead>
-                <tbody
-                  id="tblUsersBody"
-                  class="divide-y divide-slate-100 font-bold text-slate-800 bg-white"
-                >
+                <tbody id="tblUsersBody">
                   <tr>
-                    <td colspan="3" class="py-10 text-center text-slate-400">
+                    <td
+                      colspan="3"
+                      class="py-12 text-center text-gray-500 text-sm"
+                    >
                       Memuat data...
                     </td>
                   </tr>
@@ -875,78 +818,72 @@
     <!-- MODAL POPUP SCANNER (KHUSUS KAMERA HP) -->
     <div
       id="modalSmartAction"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden transition-opacity"
+      class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden transition-opacity"
     >
       <div
-        class="bg-white w-full max-w-md sm:rounded-xl shadow-xl relative overflow-hidden animate-slide-up sm:m-4 border border-slate-200"
+        class="bg-white w-full max-w-md sm:rounded-xl shadow-2xl relative overflow-hidden animate-slide-up sm:m-4"
       >
         <button
           onclick="closeSmartAction()"
-          class="absolute top-4 right-4 w-8 h-8 rounded bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors z-10"
+          class="absolute top-4 right-4 w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500 flex items-center justify-center transition-colors z-10"
         >
           <i class="fa-solid fa-xmark"></i>
         </button>
 
-        <div class="bg-slate-50 p-6 border-b border-slate-200 pt-8 relative">
+        <div class="bg-blue-50 p-6 border-b border-gray-200 pt-8 relative">
           <div
-            class="absolute -top-1 -left-1 bg-brand-500 text-white font-bold text-sm px-3 py-1 rounded-br-lg shadow-sm"
+            class="absolute -top-0 -left-0 bg-google-blue text-white font-medium text-sm px-3 py-1 rounded-br-lg shadow-sm"
             id="smInfoRell"
           >
             A.00
           </div>
           <div
             id="smInfoCustomer"
-            class="inline-block px-2.5 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded uppercase mb-2 mt-1"
+            class="inline-block px-2.5 py-1 bg-white text-google-blue border border-blue-100 text-[10px] font-bold rounded uppercase mb-2 mt-1"
           >
             TUJUAN: -
           </div>
           <h2
             id="smInfoPart"
-            class="text-2xl font-black text-slate-900 leading-none tracking-tight"
+            class="text-2xl font-bold text-gray-900 leading-none"
           >
             PART NUMBER
           </h2>
           <p
             id="smInfoNama"
-            class="text-xs font-bold text-slate-500 mt-1 uppercase"
+            class="text-xs font-medium text-gray-500 mt-1.5 uppercase"
           >
             Nama Barang
           </p>
         </div>
 
         <div
-          class="grid grid-cols-3 border-b border-slate-200 divide-x divide-slate-200"
+          class="grid grid-cols-3 border-b border-gray-200 divide-x divide-gray-200 bg-gray-50"
         >
-          <div class="p-3 text-center bg-white">
-            <p
-              class="text-[9px] font-black uppercase text-slate-400 tracking-wider"
-            >
+          <div class="p-3 text-center">
+            <p class="text-[10px] font-medium uppercase text-gray-500">
               Stok Awal
             </p>
-            <p id="smInfoStok" class="text-xl font-black text-slate-700 mt-0.5">
+            <p id="smInfoStok" class="text-xl font-bold text-gray-800 mt-0.5">
               0
             </p>
           </div>
-          <div class="p-3 text-center bg-red-50/50">
-            <p
-              class="text-[9px] font-black uppercase text-red-400 tracking-wider"
-            >
+          <div class="p-3 text-center">
+            <p class="text-[10px] font-medium uppercase text-google-red">
               Sisa Del
             </p>
-            <p id="smInfoTarget" class="text-xl font-black text-red-600 mt-0.5">
+            <p
+              id="smInfoTarget"
+              class="text-xl font-bold text-google-red mt-0.5"
+            >
               0
             </p>
           </div>
-          <div class="p-3 text-center bg-purple-50/50">
-            <p
-              class="text-[9px] font-black uppercase text-purple-400 tracking-wider"
-            >
+          <div class="p-3 text-center">
+            <p class="text-[10px] font-medium uppercase text-purple-500">
               Stok Assy
             </p>
-            <p
-              id="smInfoAssy"
-              class="text-xl font-black text-purple-600 mt-0.5"
-            >
+            <p id="smInfoAssy" class="text-xl font-bold text-purple-600 mt-0.5">
               0
             </p>
           </div>
@@ -954,28 +891,25 @@
 
         <div class="p-6 bg-white">
           <div id="wrapperSelectCustomer" class="mb-5 text-left">
-            <label
-              class="block text-xs font-black text-slate-600 mb-1.5 uppercase tracking-wide"
-              >Pilih Tujuan Pengiriman</label
+            <label class="block text-xs font-medium text-gray-600 mb-1.5"
+              >Tujuan Pengiriman</label
             >
             <select
               id="smSelectCustomer"
               onchange="handleChangeScannerCustomer(this.value)"
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+              class="mat-input w-full"
             >
               <option value="-">-- Pilih Customer --</option>
             </select>
           </div>
 
-          <p
-            class="text-[10px] font-black uppercase tracking-widest text-center text-slate-500 mb-3"
-          >
+          <p class="text-[11px] font-medium text-center text-gray-500 mb-3">
             Jumlah (Pcs)
           </p>
-          <div class="flex items-center justify-center gap-4 mb-6">
+          <div class="flex items-center justify-center gap-6 mb-8">
             <button
               onclick="adjSmartQty(-1)"
-              class="w-12 h-12 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xl flex items-center justify-center transition-colors"
+              class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xl flex items-center justify-center transition-colors"
             >
               -
             </button>
@@ -983,11 +917,11 @@
               type="number"
               id="smInputQty"
               value="1"
-              class="w-24 text-center text-3xl font-black border-b-2 border-slate-200 focus:border-brand-500 bg-transparent outline-none pb-1 text-slate-900"
+              class="w-24 text-center text-3xl font-bold border-b-2 border-gray-300 focus:border-google-blue bg-transparent outline-none pb-1 text-gray-900 transition-colors"
             />
             <button
               onclick="adjSmartQty(1)"
-              class="w-12 h-12 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xl flex items-center justify-center transition-colors"
+              class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xl flex items-center justify-center transition-colors"
             >
               +
             </button>
@@ -996,29 +930,29 @@
           <div id="btnGroupWH" class="flex gap-3 mb-2 hidden">
             <button
               onclick="submitSmartAction('IN')"
-              class="flex-1 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-wider transition-colors shadow-sm"
+              class="mat-button flex-1 bg-google-green hover:bg-green-600 py-3 text-sm"
             >
-              <i class="fa-solid fa-box-open mr-1"></i> MASUK
+              BARANG MASUK
             </button>
             <button
               onclick="submitSmartAction('OUT')"
-              class="flex-1 py-3 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-black text-xs uppercase tracking-wider transition-colors shadow-sm"
+              class="mat-button flex-1 bg-google-yellow hover:bg-yellow-500 text-gray-900 py-3 text-sm"
             >
-              <i class="fa-solid fa-truck-fast mr-1"></i> KELUAR
+              BARANG KELUAR
             </button>
           </div>
           <div id="btnGroupAssy" class="flex gap-3 hidden">
             <button
               onclick="submitSmartAction('ASSY_ADD')"
-              class="flex-1 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-wider transition-colors shadow-sm"
+              class="mat-button flex-1 bg-purple-600 hover:bg-purple-700 py-3 text-sm"
             >
-              <i class="fa-solid fa-plus mr-1"></i> Tambah Assy
+              + TAMBAH ASSY
             </button>
             <button
               onclick="submitSmartAction('ASSY_SET')"
-              class="flex-1 py-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-xs uppercase tracking-wider transition-colors"
+              class="mat-button flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 shadow-none py-3 text-sm"
             >
-              Set Total
+              SET TOTAL
             </button>
           </div>
         </div>
@@ -1028,20 +962,14 @@
     <!-- MODAL MASTER BARANG -->
     <div
       id="modalMasterBarang"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity"
+      class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity"
     >
       <div
-        class="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full shadow-xl relative border border-slate-200"
+        class="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative border border-gray-200"
       >
-        <button
-          onclick="closeModalBarang()"
-          class="absolute top-5 right-5 text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 w-8 h-8 rounded flex items-center justify-center transition-colors"
-        >
-          <i class="fa-solid fa-xmark"></i>
-        </button>
         <h3
           id="modalMasterBarangTitle"
-          class="text-xl font-black uppercase text-slate-900 tracking-tight mb-6"
+          class="text-xl font-normal text-gray-800 mb-6"
         >
           Form Part Number
         </h3>
@@ -1051,120 +979,99 @@
           class="space-y-4"
         >
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >Part Number *</label
             ><input
               type="text"
               id="mbPartNumber"
               required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="mat-input w-full"
             />
           </div>
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >Nama Barang *</label
             ><input
               type="text"
               id="mbNamaBarang"
               required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="mat-input w-full"
             />
           </div>
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >Customer Default</label
-            ><select
-              id="mbCustomer"
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-            >
+            ><select id="mbCustomer" class="mat-input w-full">
               <option value="-">-- Pilih Customer --</option>
             </select>
           </div>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid grid-cols-2 gap-4">
             <div>
-              <label
-                class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+              <label class="block text-[11px] font-medium text-gray-500 mb-1"
                 >Kategori</label
-              ><input
-                type="text"
-                id="mbKategori"
-                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-              />
+              ><input type="text" id="mbKategori" class="mat-input w-full" />
             </div>
             <div>
-              <label
-                class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+              <label class="block text-[11px] font-medium text-gray-500 mb-1"
                 >Satuan</label
               ><input
                 type="text"
                 id="mbSatuan"
                 value="Pcs"
-                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="mat-input w-full"
               />
             </div>
           </div>
-          <div class="grid grid-cols-3 gap-3">
+          <div class="grid grid-cols-3 gap-4">
             <div>
-              <label
-                class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+              <label class="block text-[11px] font-medium text-gray-500 mb-1"
                 >Std Pack</label
               ><input
                 type="number"
                 id="mbStdPack"
                 value="1"
-                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="mat-input w-full"
               />
             </div>
             <div>
-              <label
-                class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+              <label class="block text-[11px] font-medium text-gray-500 mb-1"
                 >Stok Awal</label
               ><input
                 type="number"
                 id="mbStok"
                 value="0"
-                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="mat-input w-full"
               />
             </div>
             <div>
-              <label
-                class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+              <label class="block text-[11px] font-medium text-gray-500 mb-1"
                 >Stok Min</label
               ><input
                 type="number"
                 id="mbStokMin"
                 value="10"
-                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="mat-input w-full"
               />
             </div>
           </div>
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
-              >No Rel Rak *</label
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+              >No Rak *</label
             ><input
               type="text"
               id="mbNoRel"
               required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="mat-input w-full"
             />
           </div>
-          <div class="pt-4 flex gap-3">
+          <div class="pt-5 flex justify-end gap-3">
             <button
               type="button"
               onclick="closeModalBarang()"
-              class="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition-colors"
+              class="px-4 py-2 text-google-blue font-medium text-sm hover:bg-blue-50 rounded transition-colors"
             >
               Batal</button
-            ><button
-              type="submit"
-              class="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm"
-            >
-              Simpan
-            </button>
+            ><button type="submit" class="mat-button">Simpan</button>
           </div>
         </form>
       </div>
@@ -1173,20 +1080,14 @@
     <!-- MODAL MASTER CUSTOMER -->
     <div
       id="modalMasterCustomer"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity"
+      class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity"
     >
       <div
-        class="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full shadow-xl relative border border-slate-200"
+        class="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative border border-gray-200"
       >
-        <button
-          onclick="closeModalCustomer()"
-          class="absolute top-5 right-5 text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 w-8 h-8 rounded flex items-center justify-center transition-colors"
-        >
-          <i class="fa-solid fa-xmark"></i>
-        </button>
         <h3
           id="modalMasterCustomerTitle"
-          class="text-xl font-black uppercase text-slate-900 tracking-tight mb-6"
+          class="text-xl font-normal text-gray-800 mb-6"
         >
           Form Customer
         </h3>
@@ -1196,60 +1097,37 @@
           class="space-y-4"
         >
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >ID Customer *</label
-            ><input
-              type="text"
-              id="mcId"
-              required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-            />
+            ><input type="text" id="mcId" required class="mat-input w-full" />
           </div>
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >Nama Perusahaan *</label
-            ><input
-              type="text"
-              id="mcNama"
-              required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-            />
+            ><input type="text" id="mcNama" required class="mat-input w-full" />
           </div>
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >Kontak</label
-            ><input
-              type="text"
-              id="mcKontak"
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-            />
+            ><input type="text" id="mcKontak" class="mat-input w-full" />
           </div>
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >Alamat Pabrik</label
             ><textarea
               id="mcAlamat"
               rows="3"
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-xs font-bold uppercase outline-none resize-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="mat-input w-full resize-none"
             ></textarea>
           </div>
-          <div class="pt-4 flex gap-3">
+          <div class="pt-5 flex justify-end gap-3">
             <button
               type="button"
               onclick="closeModalCustomer()"
-              class="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition-colors"
+              class="px-4 py-2 text-google-blue font-medium text-sm hover:bg-blue-50 rounded transition-colors"
             >
               Batal</button
-            ><button
-              type="submit"
-              class="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm"
-            >
-              Simpan
-            </button>
+            ><button type="submit" class="mat-button">Simpan</button>
           </div>
         </form>
       </div>
@@ -1258,20 +1136,14 @@
     <!-- MODAL MASTER USER -->
     <div
       id="modalMasterUser"
-      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity"
+      class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity"
     >
       <div
-        class="bg-white rounded-xl p-6 sm:p-8 max-w-sm w-full shadow-xl relative border border-slate-200"
+        class="bg-white rounded-xl p-6 sm:p-8 max-w-sm w-full shadow-2xl relative border border-gray-200"
       >
-        <button
-          onclick="closeModalUser()"
-          class="absolute top-5 right-5 text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 w-8 h-8 rounded flex items-center justify-center transition-colors"
-        >
-          <i class="fa-solid fa-xmark"></i>
-        </button>
         <h3
           id="modalMasterUserTitle"
-          class="text-xl font-black uppercase text-slate-900 tracking-tight mb-6"
+          class="text-xl font-normal text-gray-800 mb-6"
         >
           Akun Sistem
         </h3>
@@ -1281,54 +1153,42 @@
           class="space-y-4"
         >
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >Username *</label
             ><input
               type="text"
               id="muUsername"
               required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="mat-input w-full"
             />
           </div>
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >Password *</label
             ><input
               type="password"
               id="muPassword"
               required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="mat-input w-full"
             />
           </div>
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1"
+            <label class="block text-[11px] font-medium text-gray-500 mb-1"
               >Otorisasi *</label
-            ><select
-              id="muRole"
-              required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-            >
+            ><select id="muRole" required class="mat-input w-full">
               <option value="Warehouse">Warehouse (Keluar/Masuk)</option>
               <option value="Produksi">Produksi (Perakitan)</option>
               <option value="Admin">Admin (Akses Penuh)</option>
             </select>
           </div>
-          <div class="pt-4 flex gap-3">
+          <div class="pt-5 flex justify-end gap-3">
             <button
               type="button"
               onclick="closeModalUser()"
-              class="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition-colors"
+              class="px-4 py-2 text-google-blue font-medium text-sm hover:bg-blue-50 rounded transition-colors"
             >
               Batal</button
-            ><button
-              type="submit"
-              class="flex-1 py-2.5 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold text-xs uppercase tracking-wider transition-colors shadow-sm"
-            >
-              Daftarkan
-            </button>
+            ><button type="submit" class="mat-button">Daftarkan</button>
           </div>
         </form>
       </div>
@@ -1337,61 +1197,55 @@
     <!-- MODAL LOGIN -->
     <div
       id="modalLogin"
-      class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity"
+      class="fixed inset-0 bg-gray-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity"
     >
       <div
-        class="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl relative border border-slate-200"
+        class="bg-white rounded-2xl p-10 max-w-sm w-full shadow-2xl relative"
       >
         <div class="text-center mb-8">
           <div
-            class="w-16 h-16 bg-slate-100 text-slate-800 rounded-lg flex items-center justify-center text-2xl mx-auto mb-4 border border-slate-200 shadow-sm"
+            class="w-16 h-16 bg-blue-50 text-google-blue rounded-full flex items-center justify-center text-3xl mx-auto mb-4"
           >
-            <i class="fa-solid fa-boxes-stacked"></i>
+            <i class="fa-brands fa-google"></i>
           </div>
-          <h3
-            class="text-2xl font-black text-slate-900 tracking-tight uppercase"
-          >
-            SIM-INVENTORY
-          </h3>
-          <p
-            class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1"
-          >
-            Enterprise Edition
-          </p>
+          <h3 class="text-2xl font-normal text-gray-800">Sign in</h3>
+          <p class="text-sm text-gray-600 mt-2">SIM-INVENTORY Workspace</p>
         </div>
-        <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <form onsubmit="handleLoginSubmit(event)" class="space-y-5">
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1.5"
-              >Username</label
-            ><input
+            <input
               type="text"
               id="loginUsername"
               required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-sm font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+              placeholder="Username"
+              class="mat-input w-full py-3"
             />
           </div>
           <div>
-            <label
-              class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1.5"
-              >Password</label
-            ><input
+            <input
               type="password"
               id="loginPassword"
               required
-              class="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-3 text-sm font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+              placeholder="Password"
+              class="mat-input w-full py-3"
             />
           </div>
-          <button
-            type="submit"
-            class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-black uppercase tracking-wider text-sm rounded-lg shadow-md transition-colors mt-2"
-          >
-            Login
-          </button>
+          <div class="pt-4 flex justify-between items-center">
+            <button
+              type="button"
+              onclick="closeLoginModal()"
+              class="text-sm text-google-blue font-medium hover:underline"
+            >
+              Tutup
+            </button>
+            <button type="submit" class="mat-button px-6 py-2.5">Login</button>
+          </div>
         </form>
       </div>
     </div>
 
-    <script src="script.js?v=professional_neo_brutalism_final"></script>
+    <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
+
+    <script src="script.js?v=google_material_design"></script>
   </body>
 </html>
