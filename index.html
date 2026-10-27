@@ -26,7 +26,6 @@
     <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     
     <style>
@@ -38,7 +37,6 @@
       ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
       ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       
-      /* Style khusus untuk tabel Papan Kontrol agar persis seperti gambar referensi Anda */
       .pro-table th, .pro-table td { border-color: #cbd5e1 !important; border-width: 1px !important; border-style: solid !important; }
       .header-main { border-bottom: 2px solid #0f172a; }
     </style>
@@ -70,9 +68,6 @@
             <nav class="space-y-1">
               <button onclick="switchTab('overview')" id="btn-tab-overview" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all bg-slate-800 text-white">
                 <i class="fa-solid fa-table w-4 text-center"></i><span>Papan Kontrol</span>
-              </button>
-              <button onclick="switchTab('analitik')" id="btn-tab-analitik" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-all text-slate-600 hover:bg-slate-50">
-                <i class="fa-solid fa-chart-pie w-4 text-center"></i><span>Analitik Visual</span>
               </button>
               <button onclick="switchTab('scanner')" id="btn-tab-scanner" class="role-auth hidden nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium text-sm transition-all text-slate-600 hover:bg-slate-50">
                 <i class="fa-solid fa-barcode w-4 text-center"></i><span>Smart Scanner</span>
@@ -132,7 +127,7 @@
 
       <div class="p-4 sm:p-8 space-y-6 flex-1 max-w-[1600px] mx-auto w-full">
         
-        <!-- TAB PAPAN KONTROL (PRO STYLE, BERDASARKAN GAMBAR) -->
+        <!-- TAB PAPAN KONTROL -->
         <section id="tab-overview" class="tab-pane block">
           <div class="bg-white p-6 sm:p-8 rounded-xl border border-slate-200 shadow-sm">
             <div class="header-main flex flex-col sm:flex-row sm:items-end justify-between pb-4 mb-6 gap-4">
@@ -141,9 +136,6 @@
                 <p class="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">Monitoring Live Stok & Delivery (Rollover Otomatis Jam 08:00)</p>
               </div>
               <div class="flex items-center gap-2">
-                <button onclick="exportToExcel('PapanKontrol')" class="px-4 py-2 border-2 border-emerald-600 bg-emerald-100 text-emerald-800 hover:bg-emerald-200 font-black text-xs uppercase shadow-[2px_2px_0px_#059669] transition-all flex items-center gap-2">
-                  <i class="fa-solid fa-file-excel"></i> Ekspor
-                </button>
                 <div class="px-4 py-2 border-2 border-slate-800 bg-yellow-300 text-slate-900 font-black text-xs shadow-[2px_2px_0px_#1e293b]">
                   Total Baris: <span id="cntTotalSeatAssy">0</span>
                 </div>
@@ -152,10 +144,10 @@
             
             <div class="mb-5 relative w-full sm:w-1/3">
               <i class="fa-solid fa-magnifying-glass absolute left-4 top-3 text-slate-400"></i>
-              <input type="text" id="globalSearchInput" oninput="handleGlobalSearch(this.value)" placeholder="CARI CUSTOMER, PART NUMBER..." class="w-full bg-slate-50 border-2 border-slate-300 rounded-lg pl-10 pr-4 py-2 font-bold text-xs uppercase focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors" />
+              <input type="text" id="globalSearchInput" oninput="handleGlobalSearch(this.value)" placeholder="CARI CUSTOMER ATAU PART NUMBER..." class="w-full bg-slate-50 border-2 border-slate-300 rounded-lg pl-10 pr-4 py-2 font-bold text-xs uppercase focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-colors" />
             </div>
 
-            <!-- TABEL PRO (Sesuai Gambar: Kotak-kotak tegas, bisa diklik) -->
+            <!-- TABEL PRO -->
             <div class="overflow-x-auto rounded border border-slate-300 shadow-sm">
               <table class="w-full text-xs border-collapse pro-table bg-white text-center">
                 <thead>
@@ -178,22 +170,6 @@
                   <tr><td colspan="9" class="py-10 text-slate-400 font-medium">Memuat data...</td></tr>
                 </tbody>
               </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- TAB ANALITIK VISUAL -->
-        <section id="tab-analitik" class="tab-pane hidden space-y-6">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-              <h3 class="text-lg font-black uppercase text-slate-900 mb-1">Top 5 Fast-Moving</h3>
-              <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-6">Barang Paling Sering Keluar Berdasarkan Riwayat</p>
-              <div class="relative w-full h-72 flex-1"><canvas id="fastMovingChart"></canvas></div>
-            </div>
-            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-              <h3 class="text-lg font-black uppercase text-slate-900 mb-1">Radar Stok Kritis</h3>
-              <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mb-6">Posisi Stok Mendekati Minimum</p>
-              <div class="relative w-full h-72 flex-1"><canvas id="stockStatusChart"></canvas></div>
             </div>
           </div>
         </section>
@@ -263,8 +239,8 @@
                 <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">Aktivitas Barang Masuk, Keluar, dan Target</p>
               </div>
               <div class="flex items-center gap-2 flex-wrap">
-                <input type="month" id="filterBulanRiwayat" onchange="renderRiwayatTable()" class="bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs font-bold uppercase outline-none focus:border-brand-500 text-slate-700 cursor-pointer" title="Pilih Bulan" />
-                <select id="filterRiwayat" onchange="renderRiwayatTable()" class="bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-xs font-bold uppercase outline-none focus:border-brand-500 text-slate-700 cursor-pointer">
+                <input type="month" id="filterBulanRiwayat" onchange="renderRiwayatTable()" class="bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-sm font-bold uppercase outline-none focus:border-brand-500 text-slate-700 cursor-pointer" title="Pilih Bulan" />
+                <select id="filterRiwayat" onchange="renderRiwayatTable()" class="bg-slate-50 border border-slate-300 rounded-md px-3 py-2 text-sm font-bold uppercase outline-none focus:border-brand-500 text-slate-700 cursor-pointer">
                   <option value="ALL">Semua Aktivitas</option><option value="IN">Masuk (IN)</option><option value="OUT">Keluar (OUT)</option>
                 </select>
                 <button onclick="exportToExcel('Riwayat')" class="px-4 py-2 rounded-md bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100 font-bold text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5">
@@ -462,7 +438,7 @@
             <div><label class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">Stok Min</label><input type="number" id="mbStokMin" value="10" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" /></div>
           </div>
           <div><label class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">No Rel Rak *</label><input type="text" id="mbNoRel" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" /></div>
-          <div class="pt-4 flex gap-3"><button type="button" onclick="closeModalBarang()" class="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-black text-xs uppercase tracking-wider hover:bg-slate-200 transition-colors">Batal</button><button type="submit" class="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-black text-xs uppercase tracking-wider transition-colors shadow-sm">Simpan</button></div>
+          <div class="pt-4 flex gap-3"><button type="button" onclick="closeModalBarang()" class="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition-colors">Batal</button><button type="submit" class="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm">Simpan</button></div>
         </form>
       </div>
     </div>
@@ -477,7 +453,7 @@
           <div><label class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">Nama Perusahaan *</label><input type="text" id="mcNama" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" /></div>
           <div><label class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">Kontak</label><input type="text" id="mcKontak" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" /></div>
           <div><label class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">Alamat Pabrik</label><textarea id="mcAlamat" rows="3" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-xs font-bold uppercase outline-none resize-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"></textarea></div>
-          <div class="pt-4 flex gap-3"><button type="button" onclick="closeModalCustomer()" class="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-black text-xs uppercase tracking-wider hover:bg-slate-200 transition-colors">Batal</button><button type="submit" class="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-black text-xs uppercase tracking-wider transition-colors shadow-sm">Simpan</button></div>
+          <div class="pt-4 flex gap-3"><button type="button" onclick="closeModalCustomer()" class="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition-colors">Batal</button><button type="submit" class="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm">Simpan</button></div>
         </form>
       </div>
     </div>
@@ -491,7 +467,7 @@
           <div><label class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">Username *</label><input type="text" id="muUsername" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" /></div>
           <div><label class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">Password *</label><input type="password" id="muPassword" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" /></div>
           <div><label class="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">Otorisasi *</label><select id="muRole" required class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs font-bold uppercase outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"><option value="Warehouse">Warehouse (Keluar/Masuk)</option><option value="Produksi">Produksi (Perakitan)</option><option value="Admin">Admin (Akses Penuh)</option></select></div>
-          <div class="pt-4 flex gap-3"><button type="button" onclick="closeModalUser()" class="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-black text-xs uppercase tracking-wider hover:bg-slate-200 transition-colors">Batal</button><button type="submit" class="flex-1 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-black text-xs uppercase tracking-wider transition-colors shadow-sm">Daftarkan</button></div>
+          <div class="pt-4 flex gap-3"><button type="button" onclick="closeModalUser()" class="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-wider hover:bg-slate-200 transition-colors">Batal</button><button type="submit" class="flex-1 py-2.5 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-bold text-xs uppercase tracking-wider transition-colors shadow-sm">Daftarkan</button></div>
         </form>
       </div>
     </div>
@@ -514,6 +490,6 @@
     
     <canvas id="hiddenBarcodeCanvas" style="display:none;"></canvas>
     
-    <script src="script.js?v=professional_neo_brutalism"></script>
+    <script src="script.js?v=professional_neo_brutalism_final"></script>
   </body>
 </html>
