@@ -6,34 +6,34 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>SIM-INVENTORY | Material Design</title>
+    <title>SIM-INVENTORY | Glassmorphism</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
-            colors: {
-              google: {
-                blue: "#1a73e8",
-                blueHover: "#1765cc",
-                red: "#ea4335",
-                green: "#34a853",
-                yellow: "#fbbc04",
-                gray: "#f1f3f4",
-              },
-            },
             fontFamily: {
-              sans: ["Roboto", "system-ui", "-apple-system", "sans-serif"],
+              sans: [
+                "-apple-system",
+                "BlinkMacSystemFont",
+                "San Francisco",
+                "Helvetica Neue",
+                "sans-serif",
+              ],
+            },
+            colors: {
+              apple: {
+                blur: "rgba(255, 255, 255, 0.65)",
+                border: "rgba(255, 255, 255, 0.5)",
+                text: "#1d1d1f",
+                blue: "#0071e3",
+              },
             },
           },
         },
       };
     </script>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
 
     <!-- Ikon FontAwesome -->
     <link
@@ -49,94 +49,113 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
     <style>
+      /* Background Mesh Gradient ala Apple */
       body {
-        background-color: #f8f9fa;
-        color: #202124;
-        font-family: "Roboto", sans-serif;
+        background-color: #f5f5f7;
+        background-image:
+          radial-gradient(
+            at 0% 0%,
+            hsla(253, 16%, 7%, 0.03) 0,
+            transparent 50%
+          ),
+          radial-gradient(
+            at 50% 0%,
+            hsla(225, 39%, 30%, 0.03) 0,
+            transparent 50%
+          ),
+          radial-gradient(
+            at 100% 0%,
+            hsla(339, 49%, 30%, 0.03) 0,
+            transparent 50%
+          );
+        background-attachment: fixed;
+        color: #1d1d1f;
       }
+
+      /* Animasi */
       .animate-slide-up {
-        animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
       @keyframes slideUp {
         from {
-          transform: translateY(100%);
+          transform: translateY(100%) scale(0.95);
+          opacity: 0;
         }
         to {
-          transform: translateY(0);
+          transform: translateY(0) scale(1);
+          opacity: 1;
         }
       }
+
+      /* Scrollbar ala macOS */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #f1f3f4;
+        background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #dadce0;
-        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.15);
+        border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #bdc1c6;
+        background: rgba(0, 0, 0, 0.3);
       }
 
-      /* Material UI Table Styles */
-      .mat-table th {
-        border-bottom: 2px solid #dadce0;
-        background-color: #ffffff;
-        color: #5f6368;
-        font-weight: 500;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        padding: 12px 16px;
+      /* GLASSMORPHISM CLASSES */
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
       }
-      .mat-table td {
-        border-bottom: 1px solid #dadce0;
-        padding: 12px 16px;
-        font-size: 0.875rem;
+      .glass-header {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.5);
       }
-      .mat-card {
-        background: #ffffff;
-        border-radius: 8px;
-        box-shadow:
-          0 1px 2px 0 rgba(60, 64, 67, 0.3),
-          0 1px 3px 1px rgba(60, 64, 67, 0.15);
-        border: none;
+      .glass-input {
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+        transition: all 0.3s ease;
       }
-      .mat-button {
-        background-color: #1a73e8;
-        color: white;
-        border-radius: 4px;
-        padding: 8px 16px;
-        font-weight: 500;
-        font-size: 0.875rem;
-        box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3);
-        transition:
-          background-color 0.2s,
-          box-shadow 0.2s;
-        letter-spacing: 0.25px;
-      }
-      .mat-button:hover {
-        background-color: #1765cc;
-        box-shadow:
-          0 1px 3px 1px rgba(60, 64, 67, 0.15),
-          0 2px 6px 2px rgba(60, 64, 67, 0.15);
-      }
-      .mat-input {
-        border: 1px solid #dadce0;
-        border-radius: 4px;
-        padding: 10px 14px;
-        font-size: 0.875rem;
-        transition: border-color 0.2s;
-      }
-      .mat-input:focus {
-        border-color: #1a73e8;
+      .glass-input:focus {
+        background: rgba(255, 255, 255, 0.9);
+        border-color: #0071e3;
         outline: none;
-        box-shadow: inset 0 0 0 1px #1a73e8;
+        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+      }
+      .glass-btn {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 1);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        transition: all 0.2s ease;
+      }
+      .glass-btn:hover {
+        background: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       }
 
-      /* FIX: CSS khusus untuk input angka SweetAlert (Peringatan Dihilangkan) */
+      .glass-table th {
+        padding: 14px 16px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        letter-spacing: 0.02em;
+        color: #86868b;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      }
+      .glass-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      }
+
+      /* FIX: Hapus tanda panah pada input number SweetAlert */
       input[type="number"]::-webkit-inner-spin-button,
       input[type="number"]::-webkit-outer-spin-button {
         -webkit-appearance: none;
@@ -155,140 +174,148 @@
     <div
       id="sidebarBackdrop"
       onclick="closeSidebar()"
-      class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300"
+      class="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300"
     ></div>
 
-    <!-- SIDEBAR MATERIAL -->
+    <!-- SIDEBAR GLASSMORPHISM -->
     <aside
       id="mainSidebar"
-      class="fixed inset-y-0 left-0 z-50 w-72 bg-white flex flex-col justify-between transform -translate-x-full transition-transform duration-300 ease-in-out shadow-[4px_0_8px_rgba(0,0,0,0.1)] rounded-r-2xl sm:rounded-none"
+      class="fixed inset-y-0 left-0 z-50 w-72 glass-panel flex flex-col justify-between transform -translate-x-full transition-transform duration-300 ease-in-out border-r border-white/80 rounded-r-3xl sm:rounded-none"
     >
-      <div>
-        <div
-          class="flex items-center justify-between p-6 border-b border-gray-100"
-        >
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-8">
           <div class="flex items-center gap-3">
-            <div class="text-google-blue text-2xl">
-              <i class="fa-solid fa-boxes-stacked"></i>
+            <div
+              class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-lg shadow-lg shadow-blue-500/30"
+            >
+              <i class="fa-solid fa-cube"></i>
             </div>
             <div>
-              <h1 class="font-bold text-lg text-gray-800 leading-tight">
-                Inventory
+              <h1
+                class="font-bold text-[15px] tracking-tight text-gray-900 leading-tight"
+              >
+                SIM-INVENTORY
               </h1>
-              <p class="text-xs text-gray-500 font-medium">Workspace</p>
+              <p
+                class="text-[10px] text-gray-500 font-semibold tracking-wider uppercase"
+              >
+                Mac Edition
+              </p>
             </div>
           </div>
           <button
             onclick="closeSidebar()"
-            class="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500 flex items-center justify-center transition-colors lg:hidden"
+            class="w-8 h-8 rounded-full glass-btn text-gray-500 flex items-center justify-center lg:hidden"
           >
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
-        <div class="p-4 space-y-4">
+        <div class="space-y-6">
           <div>
             <p
-              class="px-4 text-xs font-medium text-gray-500 mb-1 tracking-wide"
+              class="px-4 text-[10px] font-semibold text-gray-400 mb-2 tracking-widest uppercase"
             >
-              OPERASIONAL
+              Operasional
             </p>
-            <nav class="space-y-0.5">
+            <nav class="space-y-1">
               <button
                 onclick="switchTab('overview')"
                 id="btn-tab-overview"
-                class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all bg-blue-50 text-google-blue"
+                class="nav-item w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all bg-white shadow-sm text-apple-blue"
               >
-                <i class="fa-solid fa-table w-5 text-center"></i
+                <i class="fa-solid fa-table w-4 text-center"></i
                 ><span>Papan Kontrol</span>
               </button>
               <button
                 onclick="switchTab('scanner')"
                 id="btn-tab-scanner"
-                class="role-auth hidden nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
+                class="role-auth hidden nav-item w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all text-gray-600 hover:bg-white/50"
               >
-                <i class="fa-solid fa-barcode w-5 text-center"></i
+                <i class="fa-solid fa-barcode w-4 text-center"></i
                 ><span>Smart Scanner</span>
               </button>
               <button
                 onclick="switchTab('riwayat')"
                 id="btn-tab-riwayat"
-                class="role-auth hidden nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
+                class="role-auth hidden nav-item w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all text-gray-600 hover:bg-white/50"
               >
-                <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i
+                <i class="fa-solid fa-clock-rotate-left w-4 text-center"></i
                 ><span>Riwayat Transaksi</span>
               </button>
             </nav>
           </div>
           <div class="role-admin hidden">
             <p
-              class="px-4 text-xs font-medium text-gray-500 mb-1 tracking-wide border-t border-gray-100 pt-4"
+              class="px-4 text-[10px] font-semibold text-gray-400 mb-2 tracking-widest uppercase border-t border-black/5 pt-4"
             >
-              MASTER DATA
+              Master Data
             </p>
-            <nav class="space-y-0.5">
+            <nav class="space-y-1">
               <button
                 onclick="switchTab('barang')"
                 id="btn-tab-barang"
-                class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
+                class="nav-item w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all text-gray-600 hover:bg-white/50"
               >
-                <i class="fa-solid fa-cubes w-5 text-center"></i
+                <i class="fa-solid fa-box-open w-4 text-center"></i
                 ><span>Master Barang</span>
               </button>
               <button
                 onclick="switchTab('customer')"
                 id="btn-tab-customer"
-                class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
+                class="nav-item w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all text-gray-600 hover:bg-white/50"
               >
-                <i class="fa-solid fa-building w-5 text-center"></i
+                <i class="fa-solid fa-building w-4 text-center"></i
                 ><span>Master Customer</span>
               </button>
               <button
                 onclick="switchTab('users')"
                 id="btn-tab-users"
-                class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-r-full font-medium text-sm transition-all text-gray-700 hover:bg-gray-100"
+                class="nav-item w-full flex items-center gap-3.5 px-4 py-2.5 rounded-xl font-medium text-sm transition-all text-gray-600 hover:bg-white/50"
               >
-                <i class="fa-solid fa-users-gear w-5 text-center"></i
+                <i class="fa-solid fa-user-group w-4 text-center"></i
                 ><span>Kelola Pengguna</span>
               </button>
             </nav>
           </div>
         </div>
       </div>
-      <div class="p-4 border-t border-gray-100">
+      <div class="p-6 border-t border-white/50">
         <div
           id="userProfileCard"
-          class="hidden items-center justify-between px-4 py-3 rounded-xl bg-gray-50 border border-gray-200"
+          class="hidden items-center justify-between p-3 rounded-2xl glass-input"
         >
           <div class="flex items-center gap-3">
             <div
-              class="w-8 h-8 rounded-full bg-google-blue text-white flex items-center justify-center font-bold text-sm shadow-sm"
+              class="w-9 h-9 rounded-full bg-gradient-to-tr from-gray-200 to-white text-gray-700 flex items-center justify-center font-bold text-sm shadow-sm border border-white"
             >
               <span id="avatarLetter">U</span>
             </div>
             <div>
               <p
                 id="userNameDisplay"
-                class="text-sm font-medium text-gray-800 leading-tight"
+                class="text-xs font-semibold text-gray-900 leading-tight"
               >
                 User
               </p>
               <span
                 id="userRoleBadge"
-                class="text-[11px] font-medium text-gray-500 block"
+                class="text-[10px] font-medium text-gray-500"
                 >Role</span
               >
             </div>
           </div>
           <button
             onclick="logoutAction()"
-            class="text-gray-400 hover:text-red-500 transition-colors"
-            title="Keluar"
+            class="w-8 h-8 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors"
           >
-            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <i class="fa-solid fa-power-off"></i>
           </button>
         </div>
         <div id="guestLoginPrompt" class="text-center">
-          <button onclick="openLoginModal()" class="mat-button w-full">
+          <button
+            onclick="openLoginModal()"
+            class="w-full py-3 rounded-2xl bg-gray-900 hover:bg-black text-white font-medium text-sm transition-colors shadow-lg"
+          >
             Masuk Sistem
           </button>
         </div>
@@ -296,114 +323,126 @@
     </aside>
 
     <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
-      <!-- HEADER MATERIAL -->
+      <!-- HEADER GLASSMORPHISM -->
       <header
-        class="bg-white py-3 px-4 sm:px-6 flex items-center justify-between gap-4 sticky top-0 z-20 shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]"
+        class="glass-header py-4 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20"
       >
         <div class="flex items-center gap-4">
           <button
             onclick="toggleSidebar()"
-            class="w-10 h-10 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center transition-colors"
+            class="w-10 h-10 rounded-full glass-btn text-gray-600 flex items-center justify-center"
           >
-            <i class="fa-solid fa-bars text-lg"></i>
+            <i class="fa-solid fa-bars text-sm"></i>
           </button>
           <div>
             <h2
               id="greetingTitle"
-              class="text-xl font-normal text-gray-800 tracking-tight"
+              class="text-xl font-bold text-gray-900 tracking-tight"
             >
-              Dashboard
+              Overview
             </h2>
           </div>
         </div>
         <div class="flex items-center gap-3">
           <div
-            class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-google-blue font-medium text-xs"
+            class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full glass-input font-medium text-xs text-gray-600"
           >
-            <i class="fa-regular fa-clock"></i
-            ><span id="liveClock">--:--:--</span>
+            <span
+              class="w-1.5 h-1.5 inline-block rounded-full bg-green-500 animate-pulse"
+            ></span>
+            <span id="liveClock">--:--:--</span>
           </div>
           <button
             onclick="refreshAllData()"
-            class="w-10 h-10 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center transition-colors"
+            class="w-10 h-10 rounded-full glass-btn text-gray-600 flex items-center justify-center"
             title="Sinkronisasi"
           >
-            <i class="fa-solid fa-rotate-right" id="syncSpinner"></i>
+            <i class="fa-solid fa-rotate-right text-xs" id="syncSpinner"></i>
           </button>
         </div>
       </header>
 
-      <div class="p-4 sm:p-6 space-y-6 flex-1 max-w-[1600px] mx-auto w-full">
-        <!-- TAB PAPAN KONTROL (MATERIAL) -->
+      <div class="p-4 sm:p-8 space-y-6 flex-1 max-w-[1600px] mx-auto w-full">
+        <!-- TAB PAPAN KONTROL -->
         <section id="tab-overview" class="tab-pane block">
-          <div class="mat-card">
+          <div class="glass-panel rounded-3xl p-6 sm:p-8">
             <div
-              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              class="flex flex-col sm:flex-row sm:items-end justify-between pb-6 mb-6 gap-4 border-b border-black/5"
             >
               <div>
-                <h3 class="text-xl font-normal text-gray-800">
-                  Kontrol Perakitan (Seat Assy)
+                <h3 class="text-2xl font-bold text-gray-900 tracking-tight">
+                  Papan Kontrol Seat Assy
                 </h3>
-                <p class="text-sm text-gray-500 mt-1">
-                  Live Andon &bull; Rollover otomatis tiap jam 08:00 pagi
+                <p class="text-sm font-medium text-gray-500 mt-1">
+                  Monitoring Live Stok & Delivery (Rollover 08:00)
                 </p>
               </div>
               <div class="flex items-center gap-3">
                 <div
-                  class="px-4 py-2 bg-blue-50 text-google-blue rounded-md font-medium text-sm"
+                  class="px-5 py-2.5 rounded-full bg-white/50 border border-white font-medium text-xs text-gray-600 shadow-sm"
                 >
                   Total Baris:
-                  <span id="cntTotalSeatAssy" class="font-bold">0</span>
+                  <span
+                    id="cntTotalSeatAssy"
+                    class="font-bold text-gray-900 ml-1"
+                    >0</span
+                  >
                 </div>
               </div>
             </div>
 
-            <div class="p-5 sm:p-6 border-b border-gray-100 bg-gray-50/50">
-              <div class="relative w-full sm:w-1/3">
-                <i
-                  class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"
-                ></i>
-                <input
-                  type="text"
-                  id="globalSearchInput"
-                  oninput="handleGlobalSearch(this.value)"
-                  placeholder="Cari Part Number atau Customer..."
-                  class="mat-input w-full pl-10 bg-white"
-                />
-              </div>
+            <div class="mb-6 relative w-full sm:w-1/3">
+              <i
+                class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-gray-400"
+              ></i>
+              <input
+                type="text"
+                id="globalSearchInput"
+                oninput="handleGlobalSearch(this.value)"
+                placeholder="Cari Part Number atau Customer..."
+                class="glass-input w-full rounded-full pl-11 pr-5 py-3 text-sm font-medium"
+              />
             </div>
 
-            <!-- TABEL MATERIAL CLEAN -->
-            <div class="overflow-x-auto">
-              <table class="w-full text-left mat-table border-collapse">
+            <!-- TABEL APPLE STYLE -->
+            <div
+              class="overflow-x-auto rounded-2xl bg-white/40 border border-white shadow-sm"
+            >
+              <table class="w-full text-sm text-left glass-table">
                 <thead>
                   <tr>
-                    <th rowspan="2">Customer</th>
-                    <th rowspan="2" class="text-center">Rak</th>
+                    <th rowspan="2" class="w-28 text-center">Cust</th>
+                    <th rowspan="2" class="w-16 text-center">Rak</th>
                     <th rowspan="2">Part Number</th>
-                    <th rowspan="2" class="text-center">Stock</th>
+                    <th rowspan="2" class="text-center text-blue-600">Stock</th>
                     <th
                       colspan="3"
-                      class="text-center border-l border-r border-gray-200"
+                      class="text-center border-l border-r border-black/5"
                     >
                       Delivery
                     </th>
-                    <th rowspan="2" class="text-center">Assy In<br />FSG</th>
-                    <th rowspan="2" class="text-right">Status</th>
+                    <th rowspan="2" class="text-center text-purple-600">
+                      Assy In<br />FSG
+                    </th>
+                    <th rowspan="2" class="text-center">Status</th>
                   </tr>
-                  <tr class="bg-gray-50">
-                    <th class="text-center border-l border-gray-200">Target</th>
-                    <th class="text-center">Terkirim</th>
-                    <th class="text-center border-r border-gray-200">Sisa</th>
+                  <tr>
+                    <th class="text-center border-l border-black/5 w-20">
+                      Target
+                    </th>
+                    <th class="text-center w-20">Out</th>
+                    <th class="text-center border-r border-black/5 w-20">
+                      Sisa
+                    </th>
                   </tr>
                 </thead>
-                <tbody id="tblSeatAssyControlBody">
+                <tbody
+                  id="tblSeatAssyControlBody"
+                  class="font-medium text-gray-700"
+                >
                   <tr>
-                    <td
-                      colspan="9"
-                      class="py-12 text-center text-gray-500 font-medium text-sm"
-                    >
-                      Memuat data...
+                    <td colspan="9" class="py-12 text-center text-gray-400">
+                      Memuat data ruang kerja...
                     </td>
                   </tr>
                 </tbody>
@@ -415,62 +454,68 @@
         <!-- TAB SCANNER -->
         <section id="tab-scanner" class="tab-pane hidden space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            <!-- Panel Kamera & Input -->
-            <div class="mat-card p-6 flex flex-col justify-between">
+            <div
+              class="glass-panel rounded-3xl p-6 sm:p-8 flex flex-col justify-between"
+            >
               <div>
-                <h3 class="text-lg font-medium text-gray-800 mb-1">
-                  Pindai Barcode
+                <h3 class="text-xl font-bold text-gray-900 mb-2">
+                  Smart Scanner
                 </h3>
-                <p class="text-sm text-gray-500 mb-6">
-                  Gunakan kamera perangkat atau Gun Scanner.
+                <p class="text-xs font-medium text-gray-500 mb-6">
+                  Deteksi instan YIMM PDF417 & QRCode.
                 </p>
                 <div
                   id="smartReaderWrapper"
-                  class="bg-black rounded-lg overflow-hidden mb-6 hidden relative shadow-inner"
+                  class="bg-black/90 rounded-2xl p-2 mb-6 hidden relative shadow-inner overflow-hidden"
                 >
                   <video
                     id="smartReaderVideo"
-                    class="w-full aspect-square object-cover opacity-90"
+                    class="w-full aspect-square object-cover rounded-xl opacity-90"
                   ></video>
+                  <div
+                    class="absolute inset-0 border border-white/20 m-12 rounded-2xl pointer-events-none"
+                  ></div>
                   <p
-                    class="text-xs text-white/90 font-medium mt-2 absolute bottom-4 w-full text-center"
+                    class="text-[10px] text-white/70 font-medium mt-2 absolute bottom-4 w-full text-center"
                   >
-                    Fokuskan Barcode YIMM/PDF417 di tengah
+                    Arahkan barcode ke dalam bingkai
                   </p>
                 </div>
                 <div class="space-y-3">
                   <button
                     id="btnStartScan"
                     onclick="startSmartScanner()"
-                    class="mat-button w-full flex items-center justify-center gap-2 py-2.5"
+                    class="w-full py-4 rounded-2xl bg-apple-blue hover:bg-blue-600 text-white font-medium text-sm transition-all shadow-lg flex items-center justify-center gap-2"
                   >
                     <i class="fa-solid fa-camera"></i> Aktifkan Kamera
                   </button>
                   <button
                     id="btnStopScan"
                     onclick="stopSmartScanner()"
-                    class="hidden w-full py-2.5 rounded text-gray-600 bg-gray-100 hover:bg-gray-200 font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                    class="hidden w-full py-4 rounded-2xl glass-btn text-gray-700 font-medium text-sm flex items-center justify-center gap-2"
                   >
-                    <i class="fa-solid fa-stop"></i> Hentikan Kamera
+                    <i class="fa-solid fa-stop"></i> Matikan Kamera
                   </button>
                 </div>
               </div>
-              <div class="mt-8 pt-6 border-t border-gray-200">
-                <p class="text-sm font-medium text-gray-800 mb-2">
-                  <i class="fa-solid fa-barcode text-gray-400 mr-2"></i> Mode
-                  Gun Scanner (Batch Troli)
+              <div class="mt-8 pt-6 border-t border-black/5">
+                <p class="text-sm font-semibold text-gray-800 mb-1">
+                  Mode Gun Scanner (Batch Troli)
+                </p>
+                <p class="text-xs text-gray-500 font-medium mb-4">
+                  Tembak berurutan, eksekusi belakangan.
                 </p>
                 <div class="flex gap-3">
                   <input
                     type="text"
                     id="manualSmartInput"
                     onkeypress="handleScannerGun(event)"
-                    placeholder="Scan disini..."
-                    class="mat-input flex-1"
+                    placeholder="Klik & Scan barcode..."
+                    class="glass-input flex-1 rounded-xl px-4 py-3 text-sm font-medium"
                   />
                   <button
                     onclick="triggerManualGunButton()"
-                    class="mat-button bg-gray-800 hover:bg-gray-900 shadow-none"
+                    class="px-6 rounded-xl bg-gray-900 hover:bg-black text-white font-medium text-sm transition-colors shadow-md"
                   >
                     Tambah
                   </button>
@@ -478,37 +523,34 @@
               </div>
             </div>
 
-            <!-- Panel Batch Troli -->
-            <div class="mat-card p-6 flex flex-col justify-between">
+            <div
+              class="glass-panel rounded-3xl p-6 sm:p-8 flex flex-col justify-between"
+            >
               <div>
                 <div
-                  class="flex items-center justify-between border-b border-gray-200 pb-4 mb-4"
+                  class="flex items-center justify-between border-b border-black/5 pb-4 mb-5"
                 >
-                  <div>
-                    <h3
-                      class="text-lg font-medium text-gray-800 tracking-tight"
-                    >
-                      <i class="fa-solid fa-dolly text-gray-400 mr-2"></i>
-                      Keranjang Troli
-                    </h3>
-                  </div>
+                  <h3 class="text-xl font-bold text-gray-900 tracking-tight">
+                    Daftar Troli
+                  </h3>
                   <button
                     onclick="clearBatchTrolley()"
-                    class="px-3 py-1.5 hover:bg-red-50 text-red-500 rounded text-sm font-medium transition-colors"
+                    class="w-8 h-8 flex items-center justify-center rounded-full glass-btn text-red-500 hover:bg-red-50 transition-colors"
+                    title="Kosongkan Troli"
                   >
-                    Kosongkan
+                    <i class="fa-solid fa-trash-can text-xs"></i>
                   </button>
                 </div>
                 <div id="batchCustWrapper" class="mb-5">
                   <label
-                    class="block text-xs font-medium text-gray-500 mb-1.5 uppercase"
+                    class="block text-[11px] font-semibold text-gray-500 mb-2 uppercase tracking-wide"
                     >Tujuan Pengiriman Massal</label
                   >
                   <select
                     id="batchSelectCustomer"
-                    class="mat-input w-full bg-gray-50"
+                    class="glass-input w-full rounded-xl px-4 py-3 text-sm font-medium"
                   >
-                    <option value="-">-- Sesuai Default Barang --</option>
+                    <option value="-">-- Sesuai Default Part --</option>
                   </select>
                 </div>
                 <div
@@ -516,25 +558,25 @@
                   class="space-y-3 max-h-[300px] overflow-y-auto pr-2"
                 >
                   <div
-                    class="py-12 text-center text-gray-400 text-sm font-medium bg-gray-50 rounded-lg border border-dashed border-gray-300"
+                    class="py-12 text-center text-gray-400 font-medium text-sm bg-white/40 rounded-2xl border border-white border-dashed"
                   >
-                    Belum ada barang di Troli.
+                    Troli masih kosong.
                   </div>
                 </div>
               </div>
-              <div class="pt-5 mt-5 border-t border-gray-200">
+              <div class="pt-6 mt-6 border-t border-black/5">
                 <div id="batchBtnGroupWH" class="grid grid-cols-2 gap-3">
                   <button
                     onclick="submitBatchTrolley('IN')"
-                    class="mat-button bg-google-green hover:bg-green-600 flex items-center justify-center gap-2"
+                    class="py-3.5 rounded-2xl bg-white text-gray-900 border border-gray-200 shadow-sm font-medium text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                   >
-                    <i class="fa-solid fa-box-open"></i> MASUK (IN)
+                    <i class="fa-solid fa-box-open text-green-500"></i> MASUK
                   </button>
                   <button
                     onclick="submitBatchTrolley('OUT')"
-                    class="mat-button bg-google-yellow hover:bg-yellow-500 text-gray-900 flex items-center justify-center gap-2"
+                    class="py-3.5 rounded-2xl bg-gray-900 hover:bg-black text-white font-medium text-sm shadow-lg transition-colors flex items-center justify-center gap-2"
                   >
-                    <i class="fa-solid fa-truck-fast"></i> KELUAR (OUT)
+                    <i class="fa-solid fa-truck-fast text-blue-400"></i> KELUAR
                   </button>
                 </div>
                 <div
@@ -543,9 +585,9 @@
                 >
                   <button
                     onclick="submitBatchTrolley('ASSY_ADD')"
-                    class="mat-button flex items-center justify-center gap-2"
+                    class="py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm shadow-lg transition-colors flex items-center justify-center gap-2"
                   >
-                    <i class="fa-solid fa-plus"></i> Tambah Semua ke ASSY
+                    <i class="fa-solid fa-plus"></i> Tambah ke Assy
                   </button>
                 </div>
               </div>
@@ -554,17 +596,17 @@
         </section>
 
         <!-- TAB RIWAYAT TRANSAKSI -->
-        <section id="tab-riwayat" class="tab-pane hidden">
-          <div class="mat-card">
+        <section id="tab-riwayat" class="tab-pane hidden space-y-6">
+          <div class="glass-panel rounded-3xl p-6 sm:p-8">
             <div
-              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4"
+              class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-black/5 pb-6 mb-6"
             >
               <div>
-                <h3 class="text-xl font-normal text-gray-800">
+                <h3 class="text-2xl font-bold text-gray-900">
                   Riwayat Transaksi
                 </h3>
-                <p class="text-sm text-gray-500 mt-1">
-                  Lacak keluar-masuk dan perubahan sistem
+                <p class="text-sm font-medium text-gray-500 mt-1">
+                  Lacak semua aktivitas dan perubahan selisih
                 </p>
               </div>
               <div class="flex items-center gap-3 flex-wrap">
@@ -572,44 +614,43 @@
                   type="month"
                   id="filterBulanRiwayat"
                   onchange="renderRiwayatTable()"
-                  class="mat-input py-2 text-sm text-gray-600 cursor-pointer"
+                  class="glass-input rounded-full px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer"
                   title="Pilih Bulan"
                 />
                 <select
                   id="filterRiwayat"
                   onchange="renderRiwayatTable()"
-                  class="mat-input py-2 text-sm text-gray-600 cursor-pointer"
+                  class="glass-input rounded-full px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer"
                 >
                   <option value="ALL">Semua Aktivitas</option>
-                  <option value="IN">Masuk Saja (IN)</option>
-                  <option value="OUT">Keluar Saja (OUT)</option>
+                  <option value="IN">Masuk (IN)</option>
+                  <option value="OUT">Keluar (OUT)</option>
                 </select>
                 <button
                   onclick="exportToExcel('Riwayat')"
-                  class="px-4 py-2 rounded border border-gray-300 text-google-blue font-medium text-sm hover:bg-blue-50 transition-colors flex items-center gap-2"
+                  class="px-5 py-2.5 rounded-full bg-white text-gray-800 border border-gray-200 hover:bg-gray-50 font-medium text-sm transition-colors shadow-sm flex items-center gap-2"
                 >
-                  <i class="fa-solid fa-file-excel"></i> Ekspor
+                  <i class="fa-solid fa-arrow-down-to-line"></i> Ekspor
                 </button>
               </div>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left mat-table border-collapse">
+            <div
+              class="overflow-x-auto rounded-2xl bg-white/40 border border-white shadow-sm"
+            >
+              <table class="w-full text-sm text-left glass-table">
                 <thead>
                   <tr>
-                    <th class="w-40">Waktu</th>
+                    <th class="w-36">Waktu</th>
                     <th class="w-24">Tipe</th>
                     <th>Part Number</th>
-                    <th class="text-right w-28">Jumlah</th>
+                    <th class="text-center w-24">Selisih</th>
                     <th class="w-32">Petugas</th>
-                    <th>Keterangan</th>
+                    <th>Catatan</th>
                   </tr>
                 </thead>
-                <tbody id="tblRiwayatBody">
+                <tbody id="tblRiwayatBody" class="font-medium text-gray-700">
                   <tr>
-                    <td
-                      colspan="6"
-                      class="py-12 text-center text-gray-500 text-sm"
-                    >
+                    <td colspan="6" class="py-12 text-center text-gray-400">
                       Memuat data...
                     </td>
                   </tr>
@@ -620,49 +661,51 @@
         </section>
 
         <!-- TAB MASTER BARANG -->
-        <section id="tab-barang" class="tab-pane hidden">
-          <div class="mat-card">
+        <section id="tab-barang" class="tab-pane hidden space-y-6">
+          <div class="glass-panel rounded-3xl p-6 sm:p-8">
             <div
-              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4"
+              class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-black/5 pb-6 mb-6"
             >
               <div>
-                <h3 class="text-xl font-normal text-gray-800">
+                <h3 class="text-2xl font-bold text-gray-900">
                   Master Data Barang
                 </h3>
               </div>
               <div class="flex items-center gap-3 flex-wrap">
                 <div class="relative">
                   <i
-                    class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"
+                    class="fa-solid fa-magnifying-glass absolute left-4 top-3 text-gray-400"
                   ></i>
                   <input
                     type="text"
                     id="searchMasterBarang"
                     oninput="renderMasterBarangTable(this.value)"
                     placeholder="Cari part..."
-                    class="mat-input pl-9 py-2 w-full sm:w-64"
+                    class="glass-input rounded-full pl-10 pr-4 py-2 w-full sm:w-64 text-sm font-medium"
                   />
                 </div>
                 <button
                   id="btnBulkDeleteBarang"
                   onclick="bulkDeleteBarang()"
-                  class="hidden px-4 py-2 text-google-red border border-gray-200 hover:bg-red-50 rounded font-medium text-sm transition-colors items-center gap-2"
+                  class="hidden px-5 py-2.5 bg-red-500 text-white rounded-full font-medium text-sm transition-colors items-center gap-2 shadow-md"
                 >
-                  <i class="fa-regular fa-trash-can"></i> (<span
+                  <i class="fa-solid fa-trash-can"></i> (<span
                     id="lblCountDelete"
                     >0</span
                   >)
                 </button>
                 <button
                   onclick="openModalBarang()"
-                  class="role-admin hidden mat-button flex items-center gap-2 py-2"
+                  class="role-admin hidden px-5 py-2.5 rounded-full bg-apple-blue hover:bg-blue-600 text-white font-medium text-sm transition-colors shadow-md flex items-center gap-2"
                 >
                   <i class="fa-solid fa-plus"></i> Part Baru
                 </button>
               </div>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left mat-table border-collapse">
+            <div
+              class="overflow-x-auto rounded-2xl bg-white/40 border border-white shadow-sm"
+            >
+              <table class="w-full text-sm text-left glass-table">
                 <thead>
                   <tr>
                     <th class="w-12 text-center">
@@ -670,7 +713,7 @@
                         type="checkbox"
                         id="chkAllBarang"
                         onchange="toggleAllBarang(this)"
-                        class="w-4 h-4 rounded text-google-blue cursor-pointer accent-google-blue"
+                        class="w-4 h-4 rounded text-apple-blue cursor-pointer"
                       />
                     </th>
                     <th>Part Number</th>
@@ -679,12 +722,12 @@
                     <th class="text-right w-32">Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="tblMasterBarangBody">
+                <tbody
+                  id="tblMasterBarangBody"
+                  class="font-medium text-gray-700"
+                >
                   <tr>
-                    <td
-                      colspan="5"
-                      class="py-12 text-center text-gray-500 text-sm"
-                    >
+                    <td colspan="5" class="py-12 text-center text-gray-400">
                       Memuat data...
                     </td>
                   </tr>
@@ -695,39 +738,41 @@
         </section>
 
         <!-- TAB MASTER CUSTOMER -->
-        <section id="tab-customer" class="tab-pane hidden">
-          <div class="mat-card">
+        <section id="tab-customer" class="tab-pane hidden space-y-6">
+          <div class="glass-panel rounded-3xl p-6 sm:p-8">
             <div
-              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4"
+              class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-black/5 pb-6 mb-6"
             >
               <div>
-                <h3 class="text-xl font-normal text-gray-800">
+                <h3 class="text-2xl font-bold text-gray-900">
                   Master Customer
                 </h3>
               </div>
               <div class="flex items-center gap-3 flex-wrap">
                 <div class="relative">
                   <i
-                    class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"
+                    class="fa-solid fa-magnifying-glass absolute left-4 top-3 text-gray-400"
                   ></i>
                   <input
                     type="text"
                     id="searchMasterCustomer"
                     oninput="renderCustomerTable(this.value)"
                     placeholder="Cari customer..."
-                    class="mat-input pl-9 py-2 w-full sm:w-64"
+                    class="glass-input rounded-full pl-10 pr-4 py-2 w-full sm:w-64 text-sm font-medium"
                   />
                 </div>
                 <button
                   onclick="openModalCustomer()"
-                  class="role-admin hidden mat-button flex items-center gap-2 py-2"
+                  class="role-admin hidden px-5 py-2.5 rounded-full bg-apple-blue hover:bg-blue-600 text-white font-medium text-sm transition-colors shadow-md flex items-center gap-2"
                 >
                   <i class="fa-solid fa-plus"></i> Customer Baru
                 </button>
               </div>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left mat-table border-collapse">
+            <div
+              class="overflow-x-auto rounded-2xl bg-white/40 border border-white shadow-sm"
+            >
+              <table class="w-full text-sm text-left glass-table">
                 <thead>
                   <tr>
                     <th>ID Customer</th>
@@ -736,12 +781,9 @@
                     <th class="text-right w-28">Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="tblCustomerBody">
+                <tbody id="tblCustomerBody" class="font-medium text-gray-700">
                   <tr>
-                    <td
-                      colspan="4"
-                      class="py-12 text-center text-gray-500 text-sm"
-                    >
+                    <td colspan="4" class="py-12 text-center text-gray-400">
                       Memuat data...
                     </td>
                   </tr>
@@ -752,39 +794,41 @@
         </section>
 
         <!-- TAB KELOLA PENGGUNA -->
-        <section id="tab-users" class="tab-pane hidden">
-          <div class="mat-card">
+        <section id="tab-users" class="tab-pane hidden space-y-6">
+          <div class="glass-panel rounded-3xl p-6 sm:p-8">
             <div
-              class="p-5 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4"
+              class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-black/5 pb-6 mb-6"
             >
               <div>
-                <h3 class="text-xl font-normal text-gray-800">
+                <h3 class="text-2xl font-bold text-gray-900">
                   Kelola Pengguna
                 </h3>
               </div>
               <div class="flex items-center gap-3 flex-wrap">
                 <div class="relative">
                   <i
-                    class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"
+                    class="fa-solid fa-magnifying-glass absolute left-4 top-3 text-gray-400"
                   ></i>
                   <input
                     type="text"
                     id="searchMasterUser"
                     oninput="renderUsersTable(this.value)"
                     placeholder="Cari akun..."
-                    class="mat-input pl-9 py-2 w-full sm:w-64"
+                    class="glass-input rounded-full pl-10 pr-4 py-2 w-full sm:w-64 text-sm font-medium"
                   />
                 </div>
                 <button
                   onclick="openModalUser()"
-                  class="role-admin hidden mat-button flex items-center gap-2 py-2"
+                  class="role-admin hidden px-5 py-2.5 rounded-full bg-apple-blue hover:bg-blue-600 text-white font-medium text-sm transition-colors shadow-md flex items-center gap-2"
                 >
                   <i class="fa-solid fa-plus"></i> Akun Baru
                 </button>
               </div>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left mat-table border-collapse">
+            <div
+              class="overflow-x-auto rounded-2xl bg-white/40 border border-white shadow-sm"
+            >
+              <table class="w-full text-sm text-left glass-table">
                 <thead>
                   <tr>
                     <th>Username</th>
@@ -792,12 +836,9 @@
                     <th class="text-right w-28">Aksi</th>
                   </tr>
                 </thead>
-                <tbody id="tblUsersBody">
+                <tbody id="tblUsersBody" class="font-medium text-gray-700">
                   <tr>
-                    <td
-                      colspan="3"
-                      class="py-12 text-center text-gray-500 text-sm"
-                    >
+                    <td colspan="3" class="py-12 text-center text-gray-400">
                       Memuat data...
                     </td>
                   </tr>
@@ -809,72 +850,73 @@
       </div>
     </main>
 
-    <!-- MODAL POPUP SCANNER (KHUSUS KAMERA HP) -->
+    <!-- MODAL POPUP SCANNER (GLASSMORPHISM) -->
     <div
       id="modalSmartAction"
-      class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden transition-opacity"
+      class="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-end sm:items-center justify-center hidden transition-opacity"
     >
       <div
-        class="bg-white w-full max-w-md sm:rounded-xl shadow-2xl relative overflow-hidden animate-slide-up sm:m-4"
+        class="bg-white/80 backdrop-blur-2xl w-full max-w-md sm:rounded-[32px] shadow-2xl relative overflow-hidden animate-slide-up sm:m-4 border border-white"
       >
         <button
           onclick="closeSmartAction()"
-          class="absolute top-4 right-4 w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500 flex items-center justify-center transition-colors z-10"
+          class="absolute top-5 right-5 w-8 h-8 rounded-full bg-black/5 hover:bg-black/10 text-gray-500 flex items-center justify-center transition-colors z-10"
         >
           <i class="fa-solid fa-xmark"></i>
         </button>
 
-        <div class="bg-blue-50 p-6 border-b border-gray-200 pt-8 relative">
+        <div class="p-8 pb-6 border-b border-black/5 relative">
           <div
-            class="absolute -top-0 -left-0 bg-google-blue text-white font-medium text-sm px-3 py-1 rounded-br-lg shadow-sm"
-            id="smInfoRell"
+            class="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-full uppercase mb-3 shadow-sm border border-white"
           >
-            A.00
-          </div>
-          <div
-            id="smInfoCustomer"
-            class="inline-block px-2.5 py-1 bg-white text-google-blue border border-blue-100 text-[10px] font-bold rounded uppercase mb-2 mt-1"
-          >
-            TUJUAN: -
+            TUJUAN:
+            <span id="smInfoCustomer" class="ml-1 text-apple-blue">-</span>
           </div>
           <h2
             id="smInfoPart"
-            class="text-2xl font-bold text-gray-900 leading-none"
+            class="text-3xl font-bold text-gray-900 leading-none tracking-tight"
           >
             PART NUMBER
           </h2>
           <p
             id="smInfoNama"
-            class="text-xs font-medium text-gray-500 mt-1.5 uppercase"
+            class="text-xs font-medium text-gray-500 mt-2 uppercase"
           >
             Nama Barang
           </p>
+          <div
+            class="absolute top-6 right-6 text-2xl font-black text-gray-200"
+            id="smInfoRell"
+          >
+            A.00
+          </div>
         </div>
 
-        <div
-          class="grid grid-cols-3 border-b border-gray-200 divide-x divide-gray-200 bg-gray-50"
-        >
-          <div class="p-3 text-center">
-            <p class="text-[10px] font-medium uppercase text-gray-500">
-              Stok Awal
+        <div class="grid grid-cols-3 border-b border-black/5 bg-white/50">
+          <div class="p-4 text-center border-r border-black/5">
+            <p
+              class="text-[10px] font-semibold uppercase text-gray-400 tracking-wider"
+            >
+              Stok
             </p>
             <p id="smInfoStok" class="text-xl font-bold text-gray-800 mt-0.5">
               0
             </p>
           </div>
-          <div class="p-3 text-center">
-            <p class="text-[10px] font-medium uppercase text-google-red">
+          <div class="p-4 text-center border-r border-black/5">
+            <p
+              class="text-[10px] font-semibold uppercase text-red-400 tracking-wider"
+            >
               Sisa Del
             </p>
-            <p
-              id="smInfoTarget"
-              class="text-xl font-bold text-google-red mt-0.5"
-            >
+            <p id="smInfoTarget" class="text-xl font-bold text-red-500 mt-0.5">
               0
             </p>
           </div>
-          <div class="p-3 text-center">
-            <p class="text-[10px] font-medium uppercase text-purple-500">
+          <div class="p-4 text-center">
+            <p
+              class="text-[10px] font-semibold uppercase text-purple-400 tracking-wider"
+            >
               Stok Assy
             </p>
             <p id="smInfoAssy" class="text-xl font-bold text-purple-600 mt-0.5">
@@ -883,27 +925,25 @@
           </div>
         </div>
 
-        <div class="p-6 bg-white">
-          <div id="wrapperSelectCustomer" class="mb-5 text-left">
-            <label class="block text-xs font-medium text-gray-600 mb-1.5"
-              >Tujuan Pengiriman</label
+        <div class="p-8">
+          <div id="wrapperSelectCustomer" class="mb-6">
+            <label
+              class="block text-[11px] font-semibold text-gray-500 mb-2 uppercase tracking-wide"
+              >Pilih Tujuan Pengiriman</label
             >
             <select
               id="smSelectCustomer"
               onchange="handleChangeScannerCustomer(this.value)"
-              class="mat-input w-full"
+              class="glass-input w-full rounded-xl px-4 py-3 text-sm font-medium"
             >
               <option value="-">-- Pilih Customer --</option>
             </select>
           </div>
 
-          <p class="text-[11px] font-medium text-center text-gray-500 mb-3">
-            Jumlah (Pcs)
-          </p>
           <div class="flex items-center justify-center gap-6 mb-8">
             <button
               onclick="adjSmartQty(-1)"
-              class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xl flex items-center justify-center transition-colors"
+              class="w-12 h-12 rounded-full glass-btn text-gray-600 font-medium text-xl flex items-center justify-center"
             >
               -
             </button>
@@ -911,11 +951,11 @@
               type="number"
               id="smInputQty"
               value="1"
-              class="w-24 text-center text-3xl font-bold border-b-2 border-gray-300 focus:border-google-blue bg-transparent outline-none pb-1 text-gray-900 transition-colors"
+              class="w-24 text-center text-4xl font-bold bg-transparent outline-none pb-1 text-gray-900 border-b-2 border-gray-200 focus:border-apple-blue transition-colors"
             />
             <button
               onclick="adjSmartQty(1)"
-              class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xl flex items-center justify-center transition-colors"
+              class="w-12 h-12 rounded-full glass-btn text-gray-600 font-medium text-xl flex items-center justify-center"
             >
               +
             </button>
@@ -924,29 +964,29 @@
           <div id="btnGroupWH" class="flex gap-3 mb-2 hidden">
             <button
               onclick="submitSmartAction('IN')"
-              class="mat-button flex-1 bg-google-green hover:bg-green-600 py-3 text-sm"
+              class="flex-1 py-3.5 rounded-2xl bg-white text-gray-800 border border-gray-200 font-medium text-sm shadow-sm hover:bg-gray-50 transition-colors flex justify-center items-center gap-2"
             >
-              BARANG MASUK
+              <i class="fa-solid fa-box-open text-green-500"></i> IN
             </button>
             <button
               onclick="submitSmartAction('OUT')"
-              class="mat-button flex-1 bg-google-yellow hover:bg-yellow-500 text-gray-900 py-3 text-sm"
+              class="flex-1 py-3.5 rounded-2xl bg-gray-900 text-white font-medium text-sm shadow-lg hover:bg-black transition-colors flex justify-center items-center gap-2"
             >
-              BARANG KELUAR
+              <i class="fa-solid fa-truck-fast text-blue-400"></i> OUT
             </button>
           </div>
           <div id="btnGroupAssy" class="flex gap-3 hidden">
             <button
               onclick="submitSmartAction('ASSY_ADD')"
-              class="mat-button flex-1 bg-purple-600 hover:bg-purple-700 py-3 text-sm"
+              class="flex-1 py-3.5 rounded-2xl bg-purple-600 text-white font-medium text-sm shadow-lg hover:bg-purple-700 transition-colors flex justify-center items-center gap-2"
             >
-              + TAMBAH ASSY
+              <i class="fa-solid fa-plus"></i> Tambah Assy
             </button>
             <button
               onclick="submitSmartAction('ASSY_SET')"
-              class="mat-button flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 shadow-none py-3 text-sm"
+              class="flex-1 py-3.5 rounded-2xl bg-white border border-gray-200 text-gray-700 font-medium text-sm shadow-sm hover:bg-gray-50 transition-colors"
             >
-              SET TOTAL
+              Set Total
             </button>
           </div>
         </div>
@@ -956,14 +996,20 @@
     <!-- MODAL MASTER BARANG -->
     <div
       id="modalMasterBarang"
-      class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity"
+      class="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity"
     >
       <div
-        class="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative border border-gray-200"
+        class="bg-white/90 backdrop-blur-2xl rounded-3xl p-8 max-w-md w-full shadow-2xl relative border border-white"
       >
+        <button
+          onclick="closeModalBarang()"
+          class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full glass-btn flex items-center justify-center transition-colors"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
         <h3
           id="modalMasterBarangTitle"
-          class="text-xl font-normal text-gray-800 mb-6"
+          class="text-2xl font-bold text-gray-900 tracking-tight mb-6"
         >
           Form Part Number
         </h3>
@@ -973,99 +1019,111 @@
           class="space-y-4"
         >
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >Part Number *</label
             ><input
               type="text"
               id="mbPartNumber"
               required
-              class="mat-input w-full"
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
             />
           </div>
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >Nama Barang *</label
             ><input
               type="text"
               id="mbNamaBarang"
               required
-              class="mat-input w-full"
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
             />
           </div>
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >Customer Default</label
-            ><select id="mbCustomer" class="mat-input w-full">
+            ><select
+              id="mbCustomer"
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
+            >
               <option value="-">-- Pilih Customer --</option>
             </select>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-[11px] font-medium text-gray-500 mb-1"
+              <label class="block text-[11px] font-semibold text-gray-500 mb-1"
                 >Kategori</label
-              ><input type="text" id="mbKategori" class="mat-input w-full" />
+              ><input
+                type="text"
+                id="mbKategori"
+                class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
+              />
             </div>
             <div>
-              <label class="block text-[11px] font-medium text-gray-500 mb-1"
+              <label class="block text-[11px] font-semibold text-gray-500 mb-1"
                 >Satuan</label
               ><input
                 type="text"
                 id="mbSatuan"
                 value="Pcs"
-                class="mat-input w-full"
+                class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
               />
             </div>
           </div>
           <div class="grid grid-cols-3 gap-4">
             <div>
-              <label class="block text-[11px] font-medium text-gray-500 mb-1"
+              <label class="block text-[11px] font-semibold text-gray-500 mb-1"
                 >Std Pack</label
               ><input
                 type="number"
                 id="mbStdPack"
                 value="1"
-                class="mat-input w-full"
+                class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-center"
               />
             </div>
             <div>
-              <label class="block text-[11px] font-medium text-gray-500 mb-1"
+              <label class="block text-[11px] font-semibold text-gray-500 mb-1"
                 >Stok Awal</label
               ><input
                 type="number"
                 id="mbStok"
                 value="0"
-                class="mat-input w-full"
+                class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-center"
               />
             </div>
             <div>
-              <label class="block text-[11px] font-medium text-gray-500 mb-1"
+              <label class="block text-[11px] font-semibold text-gray-500 mb-1"
                 >Stok Min</label
               ><input
                 type="number"
                 id="mbStokMin"
                 value="10"
-                class="mat-input w-full"
+                class="glass-input w-full rounded-xl px-4 py-2.5 text-sm text-center"
               />
             </div>
           </div>
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >No Rak *</label
             ><input
               type="text"
               id="mbNoRel"
               required
-              class="mat-input w-full"
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
             />
           </div>
-          <div class="pt-5 flex justify-end gap-3">
+          <div class="pt-6 flex gap-3">
             <button
               type="button"
               onclick="closeModalBarang()"
-              class="px-4 py-2 text-google-blue font-medium text-sm hover:bg-blue-50 rounded transition-colors"
+              class="flex-1 py-3 rounded-xl glass-btn text-gray-700 font-medium text-sm"
             >
               Batal</button
-            ><button type="submit" class="mat-button">Simpan</button>
+            ><button
+              type="submit"
+              class="flex-1 py-3 rounded-xl bg-gray-900 text-white font-medium text-sm shadow-md"
+            >
+              Simpan
+            </button>
           </div>
         </form>
       </div>
@@ -1074,14 +1132,20 @@
     <!-- MODAL MASTER CUSTOMER -->
     <div
       id="modalMasterCustomer"
-      class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity"
+      class="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity"
     >
       <div
-        class="bg-white rounded-xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative border border-gray-200"
+        class="bg-white/90 backdrop-blur-2xl rounded-3xl p-8 max-w-md w-full shadow-2xl relative border border-white"
       >
+        <button
+          onclick="closeModalCustomer()"
+          class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full glass-btn flex items-center justify-center transition-colors"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
         <h3
           id="modalMasterCustomerTitle"
-          class="text-xl font-normal text-gray-800 mb-6"
+          class="text-2xl font-bold text-gray-900 tracking-tight mb-6"
         >
           Form Customer
         </h3>
@@ -1091,37 +1155,56 @@
           class="space-y-4"
         >
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >ID Customer *</label
-            ><input type="text" id="mcId" required class="mat-input w-full" />
+            ><input
+              type="text"
+              id="mcId"
+              required
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
+            />
           </div>
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >Nama Perusahaan *</label
-            ><input type="text" id="mcNama" required class="mat-input w-full" />
+            ><input
+              type="text"
+              id="mcNama"
+              required
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
+            />
           </div>
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >Kontak</label
-            ><input type="text" id="mcKontak" class="mat-input w-full" />
+            ><input
+              type="text"
+              id="mcKontak"
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
+            />
           </div>
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >Alamat Pabrik</label
             ><textarea
               id="mcAlamat"
               rows="3"
-              class="mat-input w-full resize-none"
+              class="glass-input w-full rounded-xl p-4 text-sm resize-none"
             ></textarea>
           </div>
-          <div class="pt-5 flex justify-end gap-3">
+          <div class="pt-6 flex gap-3">
             <button
               type="button"
               onclick="closeModalCustomer()"
-              class="px-4 py-2 text-google-blue font-medium text-sm hover:bg-blue-50 rounded transition-colors"
+              class="flex-1 py-3 rounded-xl glass-btn text-gray-700 font-medium text-sm"
             >
               Batal</button
-            ><button type="submit" class="mat-button">Simpan</button>
+            ><button
+              type="submit"
+              class="flex-1 py-3 rounded-xl bg-gray-900 text-white font-medium text-sm shadow-md"
+            >
+              Simpan
+            </button>
           </div>
         </form>
       </div>
@@ -1130,14 +1213,20 @@
     <!-- MODAL MASTER USER -->
     <div
       id="modalMasterUser"
-      class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity"
+      class="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity"
     >
       <div
-        class="bg-white rounded-xl p-6 sm:p-8 max-w-sm w-full shadow-2xl relative border border-gray-200"
+        class="bg-white/90 backdrop-blur-2xl rounded-3xl p-8 max-w-sm w-full shadow-2xl relative border border-white"
       >
+        <button
+          onclick="closeModalUser()"
+          class="absolute top-6 right-6 text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full glass-btn flex items-center justify-center transition-colors"
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
         <h3
           id="modalMasterUserTitle"
-          class="text-xl font-normal text-gray-800 mb-6"
+          class="text-2xl font-bold text-gray-900 tracking-tight mb-6"
         >
           Akun Sistem
         </h3>
@@ -1147,42 +1236,51 @@
           class="space-y-4"
         >
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >Username *</label
             ><input
               type="text"
               id="muUsername"
               required
-              class="mat-input w-full"
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
             />
           </div>
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >Password *</label
             ><input
               type="password"
               id="muPassword"
               required
-              class="mat-input w-full"
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
             />
           </div>
           <div>
-            <label class="block text-[11px] font-medium text-gray-500 mb-1"
+            <label class="block text-[11px] font-semibold text-gray-500 mb-1"
               >Otorisasi *</label
-            ><select id="muRole" required class="mat-input w-full">
+            ><select
+              id="muRole"
+              required
+              class="glass-input w-full rounded-xl px-4 py-2.5 text-sm"
+            >
               <option value="Warehouse">Warehouse (Keluar/Masuk)</option>
               <option value="Produksi">Produksi (Perakitan)</option>
               <option value="Admin">Admin (Akses Penuh)</option>
             </select>
           </div>
-          <div class="pt-5 flex justify-end gap-3">
+          <div class="pt-6 flex gap-3">
             <button
               type="button"
               onclick="closeModalUser()"
-              class="px-4 py-2 text-google-blue font-medium text-sm hover:bg-blue-50 rounded transition-colors"
+              class="flex-1 py-3 rounded-xl glass-btn text-gray-700 font-medium text-sm"
             >
               Batal</button
-            ><button type="submit" class="mat-button">Daftarkan</button>
+            ><button
+              type="submit"
+              class="flex-1 py-3 rounded-xl bg-gray-900 text-white font-medium text-sm shadow-md"
+            >
+              Daftarkan
+            </button>
           </div>
         </form>
       </div>
@@ -1191,28 +1289,34 @@
     <!-- MODAL LOGIN -->
     <div
       id="modalLogin"
-      class="fixed inset-0 bg-gray-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity"
+      class="fixed inset-0 bg-black/40 backdrop-blur-lg z-50 flex items-center justify-center p-4 hidden transition-opacity"
     >
       <div
-        class="bg-white rounded-2xl p-10 max-w-sm w-full shadow-2xl relative"
+        class="bg-white/80 backdrop-blur-2xl rounded-[32px] p-10 max-w-sm w-full shadow-2xl relative border border-white"
       >
-        <div class="text-center mb-8">
+        <div class="text-center mb-10">
           <div
-            class="w-16 h-16 bg-blue-50 text-google-blue rounded-full flex items-center justify-center text-3xl mx-auto mb-4"
+            class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5 shadow-lg shadow-blue-500/30 border border-white/50"
           >
-            <i class="fa-brands fa-google"></i>
+            <i class="fa-solid fa-cube"></i>
           </div>
-          <h3 class="text-2xl font-normal text-gray-800">Sign in</h3>
-          <p class="text-sm text-gray-600 mt-2">SIM-INVENTORY Workspace</p>
+          <h3 class="text-2xl font-bold text-gray-900 tracking-tight">
+            Sign in
+          </h3>
+          <p
+            class="text-xs font-medium text-gray-500 mt-2 tracking-wide uppercase"
+          >
+            Mac Edition
+          </p>
         </div>
-        <form onsubmit="handleLoginSubmit(event)" class="space-y-5">
+        <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
           <div>
             <input
               type="text"
               id="loginUsername"
               required
               placeholder="Username"
-              class="mat-input w-full py-3"
+              class="glass-input w-full rounded-xl px-4 py-3.5 text-sm font-medium"
             />
           </div>
           <div>
@@ -1221,18 +1325,23 @@
               id="loginPassword"
               required
               placeholder="Password"
-              class="mat-input w-full py-3"
+              class="glass-input w-full rounded-xl px-4 py-3.5 text-sm font-medium"
             />
           </div>
-          <div class="pt-4 flex justify-between items-center">
+          <div class="pt-4 flex justify-between items-center px-1">
             <button
               type="button"
               onclick="closeLoginModal()"
-              class="text-sm text-google-blue font-medium hover:underline"
+              class="text-sm text-gray-500 hover:text-gray-800 font-medium transition-colors"
             >
               Tutup
             </button>
-            <button type="submit" class="mat-button px-6 py-2.5">Login</button>
+            <button
+              type="submit"
+              class="px-6 py-2.5 rounded-full bg-apple-blue hover:bg-blue-600 text-white font-medium shadow-lg shadow-blue-500/30 transition-all active:scale-95"
+            >
+              Login
+            </button>
           </div>
         </form>
       </div>
@@ -1240,6 +1349,6 @@
 
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=google_material_design"></script>
+    <script src="script.js?v=apple_glassmorphism"></script>
   </body>
 </html>
