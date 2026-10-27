@@ -39,7 +39,7 @@ let codeReader = null;
 let isCameraPaused = false;
 
 // =========================================================================
-// GAYA VISUAL APPLE GLASSMORPHISM (TOAST & SWEETALERT)
+// GAYA VISUAL APPLE GLASSMORPHISM (TOAST)
 // =========================================================================
 const style = document.createElement("style");
 style.innerHTML = `
@@ -424,13 +424,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -456,15 +458,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -565,13 +569,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
 
         if (payload.petugas) {
@@ -601,13 +607,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -650,13 +658,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -737,13 +747,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -1202,7 +1214,7 @@ function buildSeatAssyControlDataset() {
 }
 
 // =========================================================================
-// FUNGSI POPUP INTERAKTIF
+// FUNGSI POPUP INTERAKTIF (DASHBOARD)
 // =========================================================================
 function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   if (isProcessing) return;
@@ -1217,16 +1229,16 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
 
   swalUI
     .fire({
-      title: "ATUR CUSTOMER TUJUAN",
-      html: `<div class="text-left space-y-3"><p class="text-xs">Part Number: <b>${partNumber}</b></p>
-      <div><label class="block text-xs font-medium text-gray-500 mb-1">Customer:</label><select id="swalSelectCust" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">${optionsHtml}</select></div>
-      <div><label class="block text-xs font-medium text-gray-500 mb-1">Mode:</label>
+      title: "Pilih Customer Tujuan",
+      html: `<div class="text-left"><p class="text-sm font-bold text-gray-800 border-b border-gray-200 pb-2 mb-3">${partNumber}</p>
+      <div class="mb-3"><label class="block text-xs font-medium text-gray-500 mb-1">Customer:</label><select id="swalSelectCust" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">${optionsHtml}</select></div>
+      <div><label class="block text-xs font-medium text-gray-500 mb-1">Tindakan:</label>
         <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">
-          <option value="UPDATE">Ubah Customer Baris Ini</option><option value="ADD_NEW">+ Tambah Customer Baru (Beli Barang Sama)</option>
-          ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Customer Ini</option>` : ""}
+          <option value="UPDATE">Ubah Baris Ini Saja</option><option value="ADD_NEW">+ Tambah Tujuan Baru (Part Sama)</option>
+          ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Ini</option>` : ""}
         </select>
       </div>
-      <div id="swalWrapQtyBaru" class="hidden mt-3"><label class="block text-xs font-medium text-gray-500 mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="swal2-input" /></div>
+      <div id="swalWrapQtyBaru" class="hidden mt-3"><label class="block text-xs font-medium text-gray-500 mb-1">Target Pengiriman (Pcs):</label><input type="number" id="swalQtyOrderBaru" value="100" class="swal2-input" /></div>
     </div>`,
       showCancelButton: true,
       confirmButtonText: "Simpan",
@@ -1278,10 +1290,10 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
 
   swalUI
     .fire({
-      title: "UPDATE TOTAL ASSY",
-      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-gray-900">${partNumber}</b></p>
-           <p class="text-[11px] font-medium text-purple-600 mb-2">Total saat ini: <b>${currentQty}</b> Pcs</p>
-           <p class="text-[11px] font-medium text-gray-500">Masukkan TOTAL AKHIR. Sistem akan otomatis menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
+      title: "Update Stok Assy",
+      html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
+           <p class="text-xs text-purple-600 font-medium mb-3">Tercatat saat ini: <b>${currentQty}</b> Pcs</p>
+           <p class="text-[11px] text-gray-500">Masukkan <b>Total Akhir</b>. Sistem akan otomatis menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
       input: "number",
       inputValue: currentQty,
       inputAttributes: { min: 0 },
@@ -1333,9 +1345,10 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
 
   swalUI
     .fire({
-      title: "SET TARGET (QTY/DAY)",
-      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-gray-900">${partNumber}</b><br><span class="text-xs text-gray-500">Tujuan: ${customerName}</span></p>
-           <p class="text-[11px] font-medium text-apple-blue">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`,
+      title: "Set Target Harian",
+      html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
+           <p class="text-xs text-blue-600 font-medium mb-3">Tujuan: ${customerName}</p>
+           <p class="text-[11px] text-gray-500">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`,
       input: "number",
       inputValue: currentQty > 0 ? currentQty : "",
       showCancelButton: true,
@@ -1375,10 +1388,11 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 
   swalUI
     .fire({
-      title: "INPUT PENGIRIMAN (OUT)",
-      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-gray-900">${partNumber}</b><br><span class="text-xs text-gray-500">Tujuan: ${customerName}</span></p>
-           <p class="text-[11px] font-medium text-red-500 mb-2">Total terkirim saat ini: <b>${currentQtyOut}</b> Pcs</p>
-           <p class="text-[11px] font-medium text-gray-500">Masukkan TOTAL AKHIR pengiriman. Sistem otomatis menghitung selisih dan mencatatnya ke Riwayat (OUT).</p>`,
+      title: "Update Pengiriman",
+      html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
+           <p class="text-xs text-gray-600 font-medium mb-1">Tujuan: ${customerName}</p>
+           <p class="text-xs text-red-500 font-medium mb-3">Terkirim saat ini: <b>${currentQtyOut}</b> Pcs</p>
+           <p class="text-[11px] text-gray-500">Masukkan <b>Total Akhir</b> pengiriman. Sistem otomatis menghitung selisih dan mencatatnya ke Riwayat (OUT).</p>`,
       input: "number",
       inputValue: currentQtyOut,
       inputAttributes: { min: 0 },
@@ -1421,7 +1435,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
           isProcessing = false;
           Swal.close();
           if (response.success) {
-            showToast("success", "Berhasil Diupdate!");
+            showToast("success", "Berhasil Diperbarui!");
             refreshAllData();
           } else {
             showToast("error", "Gagal", response.message);
@@ -1432,7 +1446,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 }
 
 // =========================================================================
-// PAPAN KONTROL (TV / ANDON DISPLAY MODE)
+// PAPAN KONTROL (UKURAN LAPTOP / NORMAL)
 // =========================================================================
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
@@ -1451,7 +1465,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="py-16 text-center text-gray-400 text-lg font-bold">Memuat data Papan Kontrol...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-12 text-center text-gray-400">Memuat data ruang kerja...</td></tr>`;
     return;
   }
 
@@ -1483,13 +1497,12 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
           ? row.variance
           : "-";
 
-    // Status Badge dibesarkan ukurannya
     let varBadge =
       row.variance > 0
-        ? `<span class="inline-flex items-center px-4 py-2 rounded-full text-xl font-black bg-green-500/15 text-green-700 backdrop-blur-md">${varFormat}</span>`
+        ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-600 backdrop-blur-md">${varFormat}</span>`
         : row.variance < 0
-          ? `<span class="inline-flex items-center px-4 py-2 rounded-full text-xl font-black bg-red-500/15 text-red-700 backdrop-blur-md">${varFormat}</span>`
-          : `<span class="inline-flex items-center px-4 py-2 rounded-full text-xl font-black text-gray-500">-</span>`;
+          ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-600 backdrop-blur-md">${varFormat}</span>`
+          : `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-gray-400">-</span>`;
 
     const custClass = canEditCust
       ? "cursor-pointer hover:bg-black/5 transition-colors rounded-xl p-2 inline-block"
@@ -1530,22 +1543,21 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       }
     }
 
-    // Perombakan ukuran huruf ke mode RAKSASA (TV Display)
     html += `<tr class="hover:bg-black/5 transition-colors bg-white/40">`;
     if (isFirstOfGroup) {
-      html += `<td rowspan="${rowspan}" class="align-top font-bold text-gray-800 text-center text-lg bg-white/30"><span class="${custClass}" ${custAction} title="Ubah Customer">${row.Customer}</span></td>`;
+      html += `<td rowspan="${rowspan}" class="align-top font-bold text-gray-700 text-center bg-white/20"><span class="${custClass}" ${custAction} title="Ubah Customer">${row.Customer}</span></td>`;
     }
     html += `
-      <td class="text-center"><span class="px-3 py-1.5 rounded-full bg-black/10 text-gray-800 font-bold text-base">${row.No_Rel}</span></td>
+      <td class="text-center"><span class="px-2.5 py-1 rounded-full bg-black/5 text-gray-700 font-bold text-xs">${row.No_Rel}</span></td>
       <td>
-        <div class="font-black text-gray-900 text-2xl tracking-tight">${row.Part_Number}</div>
-        <div class="text-xs text-gray-600 uppercase mt-1 max-w-[200px] truncate font-bold">${row.nama_barang}</div>
+        <div class="font-bold text-gray-900">${row.Part_Number}</div>
+        <div class="text-[10px] text-gray-500 uppercase mt-0.5 max-w-[140px] truncate font-medium">${row.nama_barang}</div>
       </td>
-      <td class="text-center font-black text-blue-700 text-3xl">${formatNum(row.stock)}</td>
-      <td class="text-center font-black text-gray-700 text-3xl border-l border-black/10" title="${isAdmin ? "Klik untuk Ubah Target (QTY/DAY)" : ""}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
-      <td class="text-center font-black text-gray-700 text-3xl" title="${canEditCust ? "Klik untuk Ubah Total Terkirim" : ""}"><span class="${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
-      <td class="text-center font-black text-red-600 text-3xl border-r border-black/10">${formatNum(row.sisa_del)}</td>
-      <td class="text-center font-black text-purple-700 text-3xl" title="${canEditAssy ? "Klik untuk Ubah Stok Assy" : ""}"><span class="${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
+      <td class="text-center font-bold text-blue-600">${formatNum(row.stock)}</td>
+      <td class="text-center font-bold text-gray-700 border-l border-black/5" title="${isAdmin ? "Klik untuk Ubah Target (QTY/DAY)" : ""}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
+      <td class="text-center font-bold text-gray-700" title="${canEditCust ? "Klik untuk Ubah Total Terkirim" : ""}"><span class="${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
+      <td class="text-center font-bold text-red-500 border-r border-black/5">${formatNum(row.sisa_del)}</td>
+      <td class="text-center font-bold text-purple-600" title="${canEditAssy ? "Klik untuk Ubah Stok Assy" : ""}"><span class="${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
       <td class="text-center">${varBadge}</td>
     </tr>`;
   }
@@ -2332,6 +2344,38 @@ function renderRiwayatTable() {
 }
 
 // =========================================================================
+// FUNGSI FULLSCREEN (UNTUK LAYAR TV / ANDON)
+// =========================================================================
+function toggleFullScreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch((err) => {
+      showToast(
+        "error",
+        "Gagal",
+        "Fitur fullscreen tidak didukung browser ini.",
+      );
+    });
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+}
+
+document.addEventListener("fullscreenchange", () => {
+  const btn = document.getElementById("btnFullscreen");
+  const topHeader = document.getElementById("mainTopHeader");
+
+  if (document.fullscreenElement) {
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-compress text-sm"></i>';
+    if (topHeader) topHeader.classList.add("hidden");
+  } else {
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-expand text-sm"></i>';
+    if (topHeader) topHeader.classList.remove("hidden");
+  }
+});
+
+// =========================================================================
 // FUNGSI EKSPOR EXCEL (.XLSX)
 // =========================================================================
 function exportToExcel(tipe) {
@@ -2725,36 +2769,3 @@ function handleLoginSubmit(e) {
     } else showToast("error", "Akses Ditolak", res.message);
   });
 }
-// =========================================================================
-// FITUR FULLSCREEN (UNTUK LAYAR TV / ANDON)
-// =========================================================================
-function toggleFullScreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch((err) => {
-      showToast(
-        "error",
-        "Gagal",
-        "Fitur fullscreen tidak didukung browser ini.",
-      );
-    });
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    }
-  }
-}
-
-document.addEventListener("fullscreenchange", () => {
-  const btn = document.getElementById("btnFullscreen");
-  const topHeader = document.getElementById("mainTopHeader");
-
-  if (document.fullscreenElement) {
-    // Saat Layar Penuh: Ubah ikon dan sembunyikan header atas agar tabel makin luas
-    if (btn) btn.innerHTML = '<i class="fa-solid fa-compress text-lg"></i>';
-    if (topHeader) topHeader.classList.add("hidden");
-  } else {
-    // Saat Layar Normal: Kembalikan ikon dan munculkan header
-    if (btn) btn.innerHTML = '<i class="fa-solid fa-expand text-lg"></i>';
-    if (topHeader) topHeader.classList.remove("hidden");
-  }
-});
