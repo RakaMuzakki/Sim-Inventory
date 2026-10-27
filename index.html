@@ -152,7 +152,7 @@
       .glass-table th {
         padding: 16px 20px;
         font-weight: 800;
-        font-size: 1.15rem; /* Huruf lebih besar */
+        font-size: 1.15rem;
         letter-spacing: 0.03em;
         color: #333;
         text-transform: uppercase;
@@ -384,9 +384,10 @@
     </aside>
 
     <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
-      <!-- HEADER GLASSMORPHISM -->
+      <!-- HEADER GLASSMORPHISM (Ditambahkan ID mainTopHeader) -->
       <header
-        class="glass-header py-4 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20"
+        id="mainTopHeader"
+        class="glass-header py-4 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 transition-all duration-300"
       >
         <div class="flex items-center gap-4">
           <button
@@ -453,6 +454,15 @@
                     >0</span
                   >
                 </div>
+                <!-- TOMBOL FULLSCREEN BARU -->
+                <button
+                  onclick="toggleFullScreen()"
+                  id="btnFullscreen"
+                  class="w-12 h-12 rounded-full bg-gray-900 hover:bg-black text-white transition-colors shadow-lg flex items-center justify-center"
+                  title="Layar Penuh"
+                >
+                  <i class="fa-solid fa-expand text-lg"></i>
+                </button>
               </div>
             </div>
 
@@ -928,7 +938,7 @@
       </div>
     </main>
 
-    <!-- MODAL POPUP SCANNER -->
+    <!-- MODAL POPUP SCANNER (GLASSMORPHISM) -->
     <div
       id="modalSmartAction"
       class="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-end sm:items-center justify-center hidden transition-opacity"
@@ -1071,8 +1081,7 @@
       </div>
     </div>
 
-    <!-- MODAL LAINNYA... -->
-    <!-- (Formulir Master Barang, Customer, User, dan Login tetap dibiarkan agar tidak terlalu panjang) -->
+    <!-- MODAL LAINNYA DIBIARKAN UTUH... -->
 
     <!-- MODAL MASTER BARANG -->
     <div
@@ -1430,6 +1439,6 @@
 
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=andon_display_edition"></script>
+    <script src="script.js?v=andon_display_fullscreen"></script>
   </body>
 </html>
