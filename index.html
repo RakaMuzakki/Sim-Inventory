@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>SIM-INVENTORY | Glassmorphism TV Display</title>
+    <title>SIM-INVENTORY | Glassmorphism</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -141,25 +141,25 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       }
 
-      /* FIX GRID TABEL: Diperbesar khusus untuk Layar TV / Andon */
+      /* FIX GRID TABEL: Ukuran Normal */
       .glass-table {
         border-collapse: collapse;
       }
       .glass-table th,
       .glass-table td {
-        border: 1px solid rgba(0, 0, 0, 0.15) !important;
+        border: 1px solid rgba(0, 0, 0, 0.12) !important;
       }
       .glass-table th {
-        padding: 16px 20px;
-        font-weight: 800;
-        font-size: 1.15rem;
-        letter-spacing: 0.03em;
-        color: #333;
+        padding: 14px 16px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        letter-spacing: 0.02em;
+        color: #86868b;
         text-transform: uppercase;
-        background: rgba(0, 0, 0, 0.04);
+        background: rgba(0, 0, 0, 0.02);
       }
       .glass-table td {
-        padding: 16px 20px;
+        padding: 14px 16px;
       }
 
       /* Hapus panah pada input number SweetAlert */
@@ -187,6 +187,13 @@
         color: #1d1d1f !important;
         font-weight: 700 !important;
       }
+
+      /* FIX: PERBAIKAN JARAK ANTAR TOMBOL */
+      div:where(.swal2-container) div:where(.swal2-actions) {
+        gap: 12px !important;
+        margin-top: 24px !important;
+      }
+
       div:where(.swal2-container) input:where(.swal2-input) {
         background: rgba(255, 255, 255, 0.6) !important;
         border: 1px solid rgba(0, 0, 0, 0.1) !important;
@@ -384,7 +391,7 @@
     </aside>
 
     <main class="flex-1 w-full flex flex-col min-h-screen overflow-x-hidden">
-      <!-- HEADER GLASSMORPHISM (Ditambahkan ID mainTopHeader) -->
+      <!-- HEADER GLASSMORPHISM -->
       <header
         id="mainTopHeader"
         class="glass-header py-4 px-6 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-20 transition-all duration-300"
@@ -424,101 +431,77 @@
         </div>
       </header>
 
-      <div class="p-4 sm:p-8 space-y-6 flex-1 max-w-full mx-auto w-full">
-        <!-- TAB PAPAN KONTROL (TV DISPLAY) -->
+      <div class="p-4 sm:p-8 space-y-6 flex-1 max-w-[1600px] mx-auto w-full">
+        <!-- TAB PAPAN KONTROL -->
         <section id="tab-overview" class="tab-pane block">
           <div class="glass-panel rounded-3xl p-6 sm:p-8 w-full">
             <div
               class="flex flex-col sm:flex-row sm:items-end justify-between pb-6 mb-6 gap-4 border-b border-black/5"
             >
               <div>
-                <h3
-                  class="text-3xl font-black text-gray-900 tracking-tight uppercase"
-                >
+                <h3 class="text-2xl font-bold text-gray-900 tracking-tight">
                   Papan Kontrol Seat Assy
                 </h3>
-                <p
-                  class="text-base font-semibold text-gray-500 mt-2 uppercase tracking-wide"
-                >
+                <p class="text-sm font-medium text-gray-500 mt-1">
                   Monitoring Live Stok & Delivery (Rollover 08:00)
                 </p>
               </div>
               <div class="flex items-center gap-3">
                 <div
-                  class="px-6 py-3 rounded-full bg-white/50 border border-white font-bold text-sm text-gray-600 shadow-sm"
+                  class="px-5 py-2.5 rounded-full bg-white/50 border border-white font-medium text-xs text-gray-600 shadow-sm"
                 >
                   Total Baris:
                   <span
                     id="cntTotalSeatAssy"
-                    class="font-black text-gray-900 ml-1 text-lg"
+                    class="font-bold text-gray-900 ml-1"
                     >0</span
                   >
                 </div>
-                <!-- TOMBOL FULLSCREEN BARU -->
                 <button
                   onclick="toggleFullScreen()"
                   id="btnFullscreen"
-                  class="w-12 h-12 rounded-full bg-gray-900 hover:bg-black text-white transition-colors shadow-lg flex items-center justify-center"
+                  class="w-9 h-9 rounded-full bg-gray-900 hover:bg-black text-white transition-colors shadow-md flex items-center justify-center"
                   title="Layar Penuh"
                 >
-                  <i class="fa-solid fa-expand text-lg"></i>
+                  <i class="fa-solid fa-expand text-sm"></i>
                 </button>
               </div>
             </div>
 
             <div class="mb-6 relative w-full sm:w-1/3">
               <i
-                class="fa-solid fa-magnifying-glass absolute left-4 top-4 text-gray-400 text-lg"
+                class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-gray-400"
               ></i>
               <input
                 type="text"
                 id="globalSearchInput"
                 oninput="handleGlobalSearch(this.value)"
                 placeholder="Cari Part Number..."
-                class="glass-input w-full rounded-full pl-12 pr-5 py-3.5 text-base font-medium"
+                class="glass-input w-full rounded-full pl-11 pr-5 py-3 text-sm font-medium"
               />
             </div>
 
-            <!-- TABEL APPLE STYLE GRID - UKURAN RAKSASA -->
+            <!-- TABEL APPLE STYLE GRID -->
             <div
               class="overflow-x-auto rounded-2xl bg-white/40 border border-white shadow-sm w-full"
             >
-              <table class="w-full text-left glass-table">
+              <table class="w-full text-sm text-left glass-table">
                 <thead>
                   <tr>
-                    <th rowspan="2" class="w-32 text-center text-gray-800">
-                      Cust
-                    </th>
-                    <th rowspan="2" class="w-24 text-center text-gray-800">
-                      Rak
-                    </th>
-                    <th rowspan="2" class="text-gray-800">Part Number</th>
-                    <th rowspan="2" class="text-center text-blue-700">Stock</th>
-                    <th
-                      colspan="3"
-                      class="text-center border-l border-r border-black/10 text-gray-800"
-                    >
-                      Delivery
-                    </th>
-                    <th rowspan="2" class="text-center text-purple-700">
+                    <th rowspan="2" class="w-28 text-center">Cust</th>
+                    <th rowspan="2" class="w-16 text-center">Rak</th>
+                    <th rowspan="2">Part Number</th>
+                    <th rowspan="2" class="text-center text-blue-600">Stock</th>
+                    <th colspan="3" class="text-center">Delivery</th>
+                    <th rowspan="2" class="text-center text-purple-600">
                       Assy In<br />FSG
                     </th>
-                    <th rowspan="2" class="text-center text-gray-800">
-                      [ +/- ]
-                    </th>
+                    <th rowspan="2" class="text-center">[ +/- ]</th>
                   </tr>
                   <tr>
-                    <th
-                      class="text-center border-l border-black/10 w-32 text-gray-800"
-                    >
-                      Target
-                    </th>
-                    <th class="text-center w-32 text-gray-800">Out</th>
-                    <th
-                      class="text-center border-r border-black/10 w-32 text-gray-800"
-                    >
-                      Sisa
-                    </th>
+                    <th class="text-center w-20">Target</th>
+                    <th class="text-center w-20">Out</th>
+                    <th class="text-center w-20">Sisa</th>
                   </tr>
                 </thead>
                 <tbody
@@ -526,11 +509,8 @@
                   class="font-medium text-gray-700"
                 >
                   <tr>
-                    <td
-                      colspan="9"
-                      class="py-16 text-center text-gray-400 text-lg font-bold"
-                    >
-                      Memuat data Papan Kontrol...
+                    <td colspan="9" class="py-12 text-center text-gray-400">
+                      Memuat data ruang kerja...
                     </td>
                   </tr>
                 </tbody>
@@ -539,7 +519,7 @@
           </div>
         </section>
 
-        <!-- TAB SCANNER (Tetap Proporsional) -->
+        <!-- TAB SCANNER -->
         <section id="tab-scanner" class="tab-pane hidden space-y-6">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
             <div
@@ -1081,8 +1061,6 @@
       </div>
     </div>
 
-    <!-- MODAL LAINNYA DIBIARKAN UTUH... -->
-
     <!-- MODAL MASTER BARANG -->
     <div
       id="modalMasterBarang"
@@ -1439,6 +1417,6 @@
 
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=andon_display_fullscreen"></script>
+    <script src="script.js?v=andon_display_normal"></script>
   </body>
 </html>
