@@ -75,7 +75,6 @@ function showToast(type, title, message = "") {
     icon = '<i class="fa-solid fa-circle-info text-xl"></i>';
   }
 
-  // Efek Glass pada Toast
   toast.className = `flex items-start gap-4 bg-white/80 backdrop-blur-2xl border border-white shadow-xl shadow-gray-200/50 p-4 rounded-2xl pointer-events-auto animate-toast-in`;
   toast.innerHTML = `
     <div class="${iconColor} mt-0.5">${icon}</div>
@@ -96,13 +95,12 @@ function showToast(type, title, message = "") {
   }, 3000);
 }
 
-// FIX: Menghapus customClass untuk menyerahkan 100% desain SweetAlert ke CSS di index.html
 const swalUI = Swal.mixin({
   buttonsStyling: false,
 });
 
 // =========================================================================
-// PENERJEMAH BARCODE CERDAS (YIMM / PDF417 / KANBAN)
+// PENERJEMAH BARCODE CERDAS
 // =========================================================================
 function parseYimmBarcode(rawCode) {
   let result = {
@@ -110,23 +108,17 @@ function parseYimmBarcode(rawCode) {
     original: rawCode,
     qty: 1,
   };
-
   if (rawCode.startsWith("[)>")) {
     let partMatch = rawCode.match(/P([A-Z0-9]+)V/);
-    if (partMatch && partMatch[1]) {
-      result.partNumberClean = partMatch[1];
-    } else {
+    if (partMatch && partMatch[1]) result.partNumberClean = partMatch[1];
+    else {
       let fallbackPart = rawCode.match(/P([A-Z0-9]{10,15})/);
       if (fallbackPart) result.partNumberClean = fallbackPart[1];
     }
-
     let qtyMatch = rawCode.match(/Q(\d{6})/);
-    if (qtyMatch && qtyMatch[1]) {
-      result.qty = parseInt(qtyMatch[1], 10);
-    }
+    if (qtyMatch && qtyMatch[1]) result.qty = parseInt(qtyMatch[1], 10);
     return result;
   }
-
   if (rawCode.includes("|")) {
     let segment1 = rawCode.split("|")[0];
     let parts = segment1.split("-");
@@ -229,33 +221,25 @@ async function checkAndRunDailyRollover() {
   if (markerUser.password !== opKey) {
     isProcessing = true;
     try {
-      // 1. Catat bahwa sistem sudah di-reset hari ini
       await _supabase
         .from("Users")
         .update({ password: opKey })
         .eq("username", "__SYSTEM_ROLLOVER__");
       markerUser.password = opKey;
 
-      // 2. Hitung selisih dan Pindahkan ke Stok
       for (const itemBarang of appData.barang) {
         const partNum = String(itemBarang.Part_Number).trim();
         const relatedOrders = appData.orders.filter(
           (o) => String(o.Part_Number).trim() === partNum,
         );
-
-        // Ambil total target QTY/DAY kemarin
         const totalQtyDay = relatedOrders.reduce(
           (sum, o) => sum + (Number(o.qty_order) || 0),
           0,
         );
-
         const currentStock = Number(itemBarang.stok) || 0;
         const assyFsg = Number(itemBarang.assy_fsg) || 0;
-
-        // RUMUS: (Stok Awal + Assy) - Target Kirim
         const newOpeningStock = currentStock + assyFsg - totalQtyDay;
 
-        // Update database: Timpa stok baru dan kosongkan ASSY
         await _supabase
           .from("Master_Barang")
           .update({ stok: newOpeningStock, assy_fsg: 0 })
@@ -264,7 +248,6 @@ async function checkAndRunDailyRollover() {
         itemBarang.assy_fsg = 0;
       }
 
-      // 3. Kosongkan Target (QTY/DAY) menjadi 0 untuk shift hari ini
       for (const ord of appData.orders) {
         if (ord.id !== undefined) {
           await _supabase
@@ -312,7 +295,6 @@ function extractCustomerFromCatatan(catatan) {
       return resolveCustomerDisplay(raw);
     }
   }
-
   const matchManual = String(catatan).match(
     /(?:Kirim ke|Dari|Tujuan):\s*(.+)$/i,
   );
@@ -939,7 +921,7 @@ async function sendToBackend(action, payload = {}) {
 }
 
 // =========================================================================
-// UI & NAVIGASI (AUTO-CLOSE SIDEBAR)
+// UI & NAVIGASI
 // =========================================================================
 function startLiveClock() {
   setInterval(() => {
@@ -1007,7 +989,6 @@ function switchTab(tabId) {
     setTimeout(() => document.getElementById("manualSmartInput")?.focus(), 100);
   }
 
-  // MENUTUP SIDEBAR OTOMATIS SAAT MENU DIPILIH DI HP ATAU LAYAR KECIL
   if (window.innerWidth < 1024) {
     closeSidebar();
   }
@@ -1233,7 +1214,7 @@ function buildSeatAssyControlDataset() {
 }
 
 // =========================================================================
-// FUNGSI POPUP INTERAKTIF (DASHBOARD) - DENGAN DELTA TRACKING
+// FUNGSI POPUP INTERAKTIF
 // =========================================================================
 function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   if (isProcessing) return;
@@ -1248,16 +1229,16 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
 
   swalUI
     .fire({
-      title: "Pilih Customer Tujuan",
-      html: `<div class="text-left"><p class="text-sm font-bold text-gray-800 border-b border-gray-200 pb-2 mb-3">${partNumber}</p>
-      <div class="mb-3"><label class="block text-xs font-medium text-gray-500 mb-1">Customer:</label><select id="swalSelectCust" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">${optionsHtml}</select></div>
-      <div><label class="block text-xs font-medium text-gray-500 mb-1">Tindakan:</label>
+      title: "ATUR CUSTOMER TUJUAN",
+      html: `<div class="text-left space-y-3"><p class="text-xs">Part Number: <b>${partNumber}</b></p>
+      <div><label class="block text-xs font-medium text-gray-500 mb-1">Customer:</label><select id="swalSelectCust" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">${optionsHtml}</select></div>
+      <div><label class="block text-xs font-medium text-gray-500 mb-1">Mode:</label>
         <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">
-          <option value="UPDATE">Ubah Baris Ini Saja</option><option value="ADD_NEW">+ Tambah Tujuan Baru (Part Sama)</option>
-          ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Ini</option>` : ""}
+          <option value="UPDATE">Ubah Customer Baris Ini</option><option value="ADD_NEW">+ Tambah Customer Baru (Beli Barang Sama)</option>
+          ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Customer Ini</option>` : ""}
         </select>
       </div>
-      <div id="swalWrapQtyBaru" class="hidden mt-3"><label class="block text-xs font-medium text-gray-500 mb-1">Target Pengiriman (Pcs):</label><input type="number" id="swalQtyOrderBaru" value="100" class="swal2-input" /></div>
+      <div id="swalWrapQtyBaru" class="hidden mt-3"><label class="block text-xs font-medium text-gray-500 mb-1">Target QTY/DAY Baru:</label><input type="number" id="swalQtyOrderBaru" value="100" class="swal2-input" /></div>
     </div>`,
       showCancelButton: true,
       confirmButtonText: "Simpan",
@@ -1309,15 +1290,15 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
 
   swalUI
     .fire({
-      title: "Update Stok Assy",
-      html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
-           <p class="text-xs text-purple-600 font-medium mb-3">Tercatat saat ini: ${currentQty} Pcs</p>
-           <p class="text-[11px] text-gray-500">Masukkan <b>Total Akhir</b>. Sistem akan mengkalkulasi selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
+      title: "UPDATE TOTAL ASSY",
+      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-gray-900">${partNumber}</b></p>
+           <p class="text-[11px] font-medium text-purple-600 mb-2">Total saat ini: <b>${currentQty}</b> Pcs</p>
+           <p class="text-[11px] font-medium text-gray-500">Masukkan TOTAL AKHIR. Sistem akan otomatis menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
       input: "number",
       inputValue: currentQty,
       inputAttributes: { min: 0 },
       showCancelButton: true,
-      confirmButtonText: "Simpan",
+      confirmButtonText: "Simpan Total",
       cancelButtonText: "Batal",
     })
     .then((res) => {
@@ -1348,7 +1329,7 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
           isProcessing = false;
           Swal.close();
           if (response.success) {
-            showToast("success", "Berhasil Diperbarui!");
+            showToast("success", "Berhasil Diupdate!");
             refreshAllData();
           } else {
             showToast("error", "Gagal", response.message);
@@ -1364,10 +1345,9 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
 
   swalUI
     .fire({
-      title: "Set Target Harian",
-      html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
-           <p class="text-xs text-blue-600 font-medium mb-3">Tujuan: ${customerName}</p>
-           <p class="text-[11px] text-gray-500">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`,
+      title: "SET TARGET (QTY/DAY)",
+      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-gray-900">${partNumber}</b><br><span class="text-xs text-gray-500">Tujuan: ${customerName}</span></p>
+           <p class="text-[11px] font-medium text-apple-blue">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`,
       input: "number",
       inputValue: currentQty > 0 ? currentQty : "",
       showCancelButton: true,
@@ -1407,16 +1387,15 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 
   swalUI
     .fire({
-      title: "Update Pengiriman",
-      html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
-           <p class="text-xs text-gray-600 font-medium mb-1">Tujuan: ${customerName}</p>
-           <p class="text-xs text-red-500 font-medium mb-3">Terkirim saat ini: ${currentQtyOut} Pcs</p>
-           <p class="text-[11px] text-gray-500">Masukkan <b>Total Akhir</b>. Sistem akan mengkalkulasi selisihnya ke Riwayat (OUT).</p>`,
+      title: "INPUT PENGIRIMAN (OUT)",
+      html: `<p class="text-sm mb-3">Part Number:<br><b class="text-lg text-gray-900">${partNumber}</b><br><span class="text-xs text-gray-500">Tujuan: ${customerName}</span></p>
+           <p class="text-[11px] font-medium text-red-500 mb-2">Total terkirim saat ini: <b>${currentQtyOut}</b> Pcs</p>
+           <p class="text-[11px] font-medium text-gray-500">Masukkan TOTAL AKHIR pengiriman. Sistem otomatis menghitung selisih dan mencatatnya ke Riwayat (OUT).</p>`,
       input: "number",
       inputValue: currentQtyOut,
       inputAttributes: { min: 0 },
       showCancelButton: true,
-      confirmButtonText: "Simpan",
+      confirmButtonText: "Simpan Total",
       cancelButtonText: "Batal",
     })
     .then((res) => {
@@ -1454,7 +1433,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
           isProcessing = false;
           Swal.close();
           if (response.success) {
-            showToast("success", "Berhasil Diperbarui!");
+            showToast("success", "Berhasil Diupdate!");
             refreshAllData();
           } else {
             showToast("error", "Gagal", response.message);
@@ -1465,7 +1444,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 }
 
 // =========================================================================
-// PAPAN KONTROL APPLE GLASSMORPHISM
+// PAPAN KONTROL (TV / ANDON DISPLAY MODE)
 // =========================================================================
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
@@ -1484,7 +1463,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="py-12 text-center text-gray-400">Memuat data ruang kerja...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-16 text-center text-gray-400 text-lg font-bold">Memuat data Papan Kontrol...</td></tr>`;
     return;
   }
 
@@ -1516,12 +1495,13 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
           ? row.variance
           : "-";
 
+    // Status Badge dibesarkan ukurannya
     let varBadge =
       row.variance > 0
-        ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-600 backdrop-blur-md">${varFormat}</span>`
+        ? `<span class="inline-flex items-center px-4 py-2 rounded-full text-xl font-black bg-green-500/15 text-green-700 backdrop-blur-md">${varFormat}</span>`
         : row.variance < 0
-          ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-600 backdrop-blur-md">${varFormat}</span>`
-          : `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-gray-400">-</span>`;
+          ? `<span class="inline-flex items-center px-4 py-2 rounded-full text-xl font-black bg-red-500/15 text-red-700 backdrop-blur-md">${varFormat}</span>`
+          : `<span class="inline-flex items-center px-4 py-2 rounded-full text-xl font-black text-gray-500">-</span>`;
 
     const custClass = canEditCust
       ? "cursor-pointer hover:bg-black/5 transition-colors rounded-xl p-2 inline-block"
@@ -1562,21 +1542,22 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       }
     }
 
+    // Perombakan ukuran huruf ke mode RAKSASA (TV Display)
     html += `<tr class="hover:bg-black/5 transition-colors bg-white/40">`;
     if (isFirstOfGroup) {
-      html += `<td rowspan="${rowspan}" class="align-top font-bold text-gray-700 text-center bg-white/20"><span class="${custClass}" ${custAction} title="Ubah Customer">${row.Customer}</span></td>`;
+      html += `<td rowspan="${rowspan}" class="align-top font-bold text-gray-800 text-center text-lg bg-white/30"><span class="${custClass}" ${custAction} title="Ubah Customer">${row.Customer}</span></td>`;
     }
     html += `
-      <td class="text-center"><span class="px-2.5 py-1 rounded-full bg-black/5 text-gray-700 font-bold text-xs">${row.No_Rel}</span></td>
+      <td class="text-center"><span class="px-3 py-1.5 rounded-full bg-black/10 text-gray-800 font-bold text-base">${row.No_Rel}</span></td>
       <td>
-        <div class="font-bold text-gray-900">${row.Part_Number}</div>
-        <div class="text-[10px] text-gray-500 uppercase mt-0.5 max-w-[140px] truncate font-medium">${row.nama_barang}</div>
+        <div class="font-black text-gray-900 text-2xl tracking-tight">${row.Part_Number}</div>
+        <div class="text-xs text-gray-600 uppercase mt-1 max-w-[200px] truncate font-bold">${row.nama_barang}</div>
       </td>
-      <td class="text-center font-bold text-blue-600">${formatNum(row.stock)}</td>
-      <td class="text-center font-bold text-gray-700" title="${isAdmin ? "Klik untuk Ubah Target (QTY/DAY)" : ""}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
-      <td class="text-center font-bold text-gray-700" title="${canEditCust ? "Klik untuk Ubah Total Terkirim" : ""}"><span class="${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
-      <td class="text-center font-bold text-red-500">${formatNum(row.sisa_del)}</td>
-      <td class="text-center font-bold text-purple-600" title="${canEditAssy ? "Klik untuk Ubah Stok Assy" : ""}"><span class="${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
+      <td class="text-center font-black text-blue-700 text-3xl">${formatNum(row.stock)}</td>
+      <td class="text-center font-black text-gray-700 text-3xl border-l border-black/10" title="${isAdmin ? "Klik untuk Ubah Target (QTY/DAY)" : ""}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
+      <td class="text-center font-black text-gray-700 text-3xl" title="${canEditCust ? "Klik untuk Ubah Total Terkirim" : ""}"><span class="${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
+      <td class="text-center font-black text-red-600 text-3xl border-r border-black/10">${formatNum(row.sisa_del)}</td>
+      <td class="text-center font-black text-purple-700 text-3xl" title="${canEditAssy ? "Klik untuk Ubah Stok Assy" : ""}"><span class="${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
       <td class="text-center">${varBadge}</td>
     </tr>`;
   }
