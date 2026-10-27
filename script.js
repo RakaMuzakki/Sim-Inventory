@@ -95,7 +95,7 @@ function showToast(type, title, message = "") {
   }, 3000);
 }
 
-// FIX: Menonaktifkan gaya bawaan agar style CSS index.html bisa mengambil alih 100%
+// Menonaktifkan gaya bawaan agar style CSS index.html bisa mengambil alih 100%
 const swalUI = Swal.mixin({
   buttonsStyling: false,
 });
@@ -1478,7 +1478,9 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     return 0;
   });
 
-  const isAdmin = currentUser && currentUser.role === "Admin";
+  // FIX: Mengizinkan SEMUA USER yang sudah login untuk edit Target (QTY/DAY)
+  const canEditTarget = currentUser !== null;
+
   const canEditCust =
     currentUser &&
     (currentUser.role === "Admin" || currentUser.role === "Warehouse");
@@ -1512,10 +1514,11 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
       : "";
 
-    const qtyDayClass = isAdmin
+    // FIX: Menggunakan canEditTarget (berlaku untuk Admin, Warehouse, dan Produksi)
+    const qtyDayClass = canEditTarget
       ? "cursor-pointer hover:bg-black/5 transition-colors rounded-full block py-1.5"
       : "";
-    const qtyDayAction = isAdmin
+    const qtyDayAction = canEditTarget
       ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"`
       : "";
 
@@ -1555,7 +1558,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
         <div class="text-[10px] text-gray-500 uppercase mt-0.5 max-w-[140px] truncate font-medium">${row.nama_barang}</div>
       </td>
       <td class="text-center font-bold text-blue-600">${formatNum(row.stock)}</td>
-      <td class="text-center font-bold text-gray-700 border-l border-black/5" title="${isAdmin ? "Klik untuk Ubah Target (QTY/DAY)" : ""}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
+      <td class="text-center font-bold text-gray-700 border-l border-black/5" title="${canEditTarget ? "Klik untuk Ubah Target (QTY/DAY)" : ""}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
       <td class="text-center font-bold text-gray-700" title="${canEditCust ? "Klik untuk Ubah Total Terkirim" : ""}"><span class="${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
       <td class="text-center font-bold text-red-500 border-r border-black/5">${formatNum(row.sisa_del)}</td>
       <td class="text-center font-bold text-purple-600" title="${canEditAssy ? "Klik untuk Ubah Stok Assy" : ""}"><span class="${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
