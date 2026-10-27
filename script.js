@@ -581,13 +581,14 @@ async function sendToBackend(action, payload = {}) {
             ]);
         }
 
-        if (payload.petugas) {
+        // FIX: Mencatat SELISIH (delta) target ke Riwayat Transaksi agar terlihat pergerakannya
+        if (payload.petugas && payload.diff !== 0) {
           await _supabase.from("Transaksi_Masuk").insert([
             {
               Part_Number: payload.partNumber,
-              qty: 0,
+              qty: payload.diff,
               petugas: payload.petugas,
-              catatan: `Set Target QTY/DAY menjadi ${payload.qty} Pcs (${custTarget})`,
+              catatan: `Update Target QTY/DAY (${custTarget})`,
               tanggal: new Date().toISOString(),
             },
           ]);
@@ -1304,7 +1305,7 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
     })
     .then((res) => {
       if (res.isConfirmed) {
-        const newTotal = Number(res.value);
+        const newTotal = Number(res.value) || 0;
         if (newTotal < 0)
           return showToast("error", "Error", "Total tidak boleh minus");
         if (newTotal === currentQty)
@@ -1344,29 +1345,46 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
   if (!currentUser) return openLoginModal();
   if (isProcessing) return;
 
+  // FIX: Memperbarui Pop-up agar memperingatkan pengguna bahwa sistem akan menghitung selisihnya otomatis
   swalUI
     .fire({
       title: "Set Target Harian",
       html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
-           <p class="text-xs text-blue-600 font-medium mb-3">Tujuan: ${customerName}</p>
-           <p class="text-[11px] text-gray-500">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`,
+           <p class="text-xs text-gray-600 font-medium mb-1">Tujuan: ${customerName}</p>
+           <p class="text-xs text-apple-blue font-medium mb-3">Target saat ini: <b>${currentQty}</b> Pcs</p>
+           <p class="text-[11px] text-gray-500">Masukkan <b>Total Akhir Target</b>. Sistem akan otomatis menghitung selisih perubahannya dan mencatatnya ke Riwayat Transaksi.</p>`,
       input: "number",
       inputValue: currentQty > 0 ? currentQty : "",
       showCancelButton: true,
-      confirmButtonText: "Simpan",
+      confirmButtonText: "Simpan Target",
       cancelButtonText: "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
+        const newTotal = Number(res.value) || 0;
+        if (newTotal < 0)
+          return showToast("error", "Error", "Target tidak boleh minus");
+
+        const diff = newTotal - currentQty;
+        if (diff === 0)
+          return showToast(
+            "info",
+            "Tidak ada perubahan",
+            "Angka target sama dengan sebelumnya",
+          );
+
         isProcessing = true;
         swalUI.fire({
           title: "Menyimpan...",
           allowOutsideClick: false,
           didOpen: () => Swal.showLoading(),
         });
+
+        // Mengirim nilai diff (selisih) ke backend untuk dicatat
         sendToBackend("apiUpdateQtyDay", {
           partNumber: partNumber,
-          qty: Number(res.value) || 0,
+          qty: newTotal,
+          diff: diff,
           customer: customerName,
           petugas: currentUser.username,
         }).then((response) => {
@@ -1403,7 +1421,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
     })
     .then((res) => {
       if (res.isConfirmed) {
-        const newTotal = Number(res.value);
+        const newTotal = Number(res.value) || 0;
         if (newTotal < 0)
           return showToast("error", "Error", "Total tidak boleh minus");
         if (newTotal === currentQtyOut)
@@ -1478,9 +1496,8 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     return 0;
   });
 
-  // FIX: Mengizinkan SEMUA USER yang sudah login untuk edit Target (QTY/DAY)
+  // FIX: SEMUA USER BISA EDIT TARGET ASALKAN SUDAH LOGIN
   const canEditTarget = currentUser !== null;
-
   const canEditCust =
     currentUser &&
     (currentUser.role === "Admin" || currentUser.role === "Warehouse");
@@ -1514,7 +1531,6 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
       : "";
 
-    // FIX: Menggunakan canEditTarget (berlaku untuk Admin, Warehouse, dan Produksi)
     const qtyDayClass = canEditTarget
       ? "cursor-pointer hover:bg-black/5 transition-colors rounded-full block py-1.5"
       : "";
@@ -2032,7 +2048,7 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// TABEL MASTER DATA (APPLE GLASSMORPHISM)
+// TABEL MASTER DATA
 // =========================================================================
 
 function renderMasterBarangTable(keyword = "") {
@@ -2059,13 +2075,40 @@ function renderMasterBarangTable(keyword = "") {
       const isChecked = selectedForDelete.includes(String(b.Part_Number))
         ? "checked"
         : "";
+
+      // Membersihkan kata "null"
+      const namaBarang =
+        b.nama_barang === null ||
+        b.nama_barang === undefined ||
+        String(b.nama_barang).toUpperCase() === "NULL"
+          ? "-"
+          : b.nama_barang;
+      const stokValue =
+        b.stok === null ||
+        b.stok === undefined ||
+        String(b.stok).toLowerCase() === "null"
+          ? 0
+          : b.stok;
+      const noRel =
+        b.No_Rel === null ||
+        b.No_Rel === undefined ||
+        String(b.No_Rel).toLowerCase() === "null"
+          ? "-"
+          : b.No_Rel;
+      const satuan =
+        b.satuan === null ||
+        b.satuan === undefined ||
+        String(b.satuan).toLowerCase() === "null"
+          ? "Pcs"
+          : b.satuan;
+
       return `
     <tr class="hover:bg-black/5 transition-colors bg-white/40">
       <td class="text-center"><input type="checkbox" class="chk-barang w-4 h-4 rounded text-blue-500 border-gray-300 focus:ring-blue-500 cursor-pointer" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
       <td class="font-bold text-gray-900">${b.Part_Number}</td>
-      <td class="text-left font-medium text-gray-600 uppercase">${b.nama_barang}</td>
-      <td class="font-bold text-blue-600">${b.stok} <span class="text-[10px] text-gray-400 font-medium">${b.satuan || "Pcs"}</span></td>
-      <td><span class="px-2.5 py-1 rounded-full bg-black/5 text-gray-700 font-medium text-xs">${b.No_Rel || "-"}</span></td>
+      <td class="text-left font-medium text-gray-600 uppercase">${namaBarang}</td>
+      <td class="font-bold text-blue-600">${stokValue} <span class="text-[10px] text-gray-400 font-medium">${satuan}</span></td>
+      <td><span class="px-2.5 py-1 rounded-full bg-black/5 text-gray-700 font-medium text-xs">${noRel}</span></td>
       <td class="text-right">
         <div class="flex items-center justify-end gap-1.5">
            <button onclick="editBarang('${b.Part_Number}')" class="w-8 h-8 rounded-full glass-btn text-gray-500 hover:text-blue-500 flex items-center justify-center" title="Edit Barang"><i class="fa-solid fa-pen text-xs"></i></button>
@@ -2265,6 +2308,7 @@ function renderUsersTable(keyword = "") {
     .join("");
 }
 
+// FIX: Menyesuaikan tampilan di Riwayat agar memperlihatkan nilai selisih [ +/- ] saat Target diubah
 function renderRiwayatTable() {
   const tbody = document.getElementById("tblRiwayatBody");
   if (!tbody) return;
@@ -2322,8 +2366,13 @@ function renderRiwayatTable() {
             let bgTipe = "bg-black/5 text-gray-600";
 
             if (isTarget) {
-              displayQty = `TARGET`;
-              color = "text-blue-500 font-semibold text-xs";
+              // Tampilan khusus jika log ini adalah log perubahan QTY/DAY Target
+              displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
+              color =
+                r.qty > 0
+                  ? "text-blue-500 font-bold text-base"
+                  : "text-amber-500 font-bold text-base";
+              bgTipe = "bg-blue-500/10 text-blue-700 border border-blue-500/20";
             } else if (r.tipe === "IN") {
               displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
               color = r.qty > 0 ? "text-green-500" : "text-red-500";
@@ -2337,7 +2386,7 @@ function renderRiwayatTable() {
 
             return `<tr class="hover:bg-black/5 transition-colors bg-white/40">
       <td class="text-xs font-medium text-gray-500">${r.waktu.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
-      <td class="text-center"><span class="px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase ${bgTipe}">${isTarget ? "UPDATE" : r.tipe}</span></td>
+      <td class="text-center"><span class="px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase ${bgTipe}">${isTarget ? "TARGET" : r.tipe}</span></td>
       <td class="font-bold text-gray-900">${r.part}</td>
       <td class="text-center font-bold text-base ${color}">${displayQty}</td>
       <td class="text-xs font-medium uppercase text-gray-600">${r.petugas || "-"}</td>
