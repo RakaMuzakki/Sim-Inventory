@@ -95,6 +95,7 @@ function showToast(type, title, message = "") {
   }, 3000);
 }
 
+// FIX: Menonaktifkan gaya bawaan agar style CSS index.html bisa mengambil alih 100%
 const swalUI = Swal.mixin({
   buttonsStyling: false,
 });
@@ -1446,7 +1447,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 }
 
 // =========================================================================
-// PAPAN KONTROL (UKURAN LAPTOP / NORMAL)
+// PAPAN KONTROL (UKURAN NORMAL / LAPTOP)
 // =========================================================================
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
@@ -2344,7 +2345,7 @@ function renderRiwayatTable() {
 }
 
 // =========================================================================
-// FUNGSI FULLSCREEN (UNTUK LAYAR TV / ANDON)
+// FUNGSI FULLSCREEN
 // =========================================================================
 function toggleFullScreen() {
   if (!document.fullscreenElement) {
