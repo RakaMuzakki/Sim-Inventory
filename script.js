@@ -30,14 +30,14 @@ let codeReader = null;
 let isCameraPaused = false; 
 
 // =========================================================================
-// GAYA VISUAL GOOGLE MATERIAL DESIGN (SNACKBAR & DIALOGS)
+// GAYA VISUAL APPLE GLASSMORPHISM (TOAST & SWEETALERT)
 // =========================================================================
 const style = document.createElement('style');
 style.innerHTML = `
-  @keyframes snackbarSlideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
-  @keyframes snackbarSlideDown { from { transform: translate(-50%, 0); opacity: 1; } to { transform: translate(-50%, 100%); opacity: 0; } }
-  .animate-snackbar-in { animation: snackbarSlideUp 0.3s cubic-bezier(0.0, 0, 0.2, 1) forwards; }
-  .animate-snackbar-out { animation: snackbarSlideDown 0.3s cubic-bezier(0.4, 0, 1, 1) forwards; }
+  @keyframes toastSlideDown { from { transform: translateY(-100%) scale(0.9); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+  @keyframes toastSlideUp { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(-100%) scale(0.9); opacity: 0; } }
+  .animate-toast-in { animation: toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-toast-out { animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 `;
 document.head.appendChild(style);
 
@@ -46,50 +46,41 @@ function showToast(type, title, message = "") {
   if (!container) {
     container = document.createElement("div");
     container.id = "toastContainer";
-    // Material Snackbar di bawah layar
-    container.className = "fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none w-[90%] max-w-md";
+    container.className = "fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
     document.body.appendChild(container);
   }
 
   const toast = document.createElement('div');
-  let iconColor = 'text-green-400';
-  let icon = '<i class="fa-solid fa-check-circle"></i>';
+  let iconColor = 'text-green-500';
+  let icon = '<i class="fa-solid fa-circle-check text-xl"></i>';
   
-  if (type === 'error') { iconColor = 'text-red-400'; icon = '<i class="fa-solid fa-circle-exclamation"></i>'; }
-  else if (type === 'warning') { iconColor = 'text-yellow-400'; icon = '<i class="fa-solid fa-triangle-exclamation"></i>'; }
-  else if (type === 'info') { iconColor = 'text-blue-400'; icon = '<i class="fa-solid fa-info-circle"></i>'; }
+  if (type === 'error') { iconColor = 'text-red-500'; icon = '<i class="fa-solid fa-circle-xmark text-xl"></i>'; }
+  else if (type === 'warning') { iconColor = 'text-amber-500'; icon = '<i class="fa-solid fa-triangle-exclamation text-xl"></i>'; }
+  else if (type === 'info') { iconColor = 'text-blue-500'; icon = '<i class="fa-solid fa-circle-info text-xl"></i>'; }
 
-  toast.className = `flex items-center justify-between gap-4 bg-gray-800 text-white shadow-lg px-4 py-3 rounded pointer-events-auto animate-snackbar-in`;
+  // Efek Glass pada Toast
+  toast.className = `flex items-start gap-4 bg-white/80 backdrop-blur-2xl border border-white shadow-xl shadow-gray-200/50 p-4 rounded-2xl pointer-events-auto animate-toast-in`;
   toast.innerHTML = `
-    <div class="flex items-center gap-3">
-      <div class="${iconColor} text-lg">${icon}</div>
-      <div class="text-sm font-medium tracking-wide">
-        ${title} ${message ? `<span class="font-normal opacity-80 pl-1">- ${message}</span>` : ''}
-      </div>
+    <div class="${iconColor} mt-0.5">${icon}</div>
+    <div class="flex-1">
+      <h4 class="font-bold text-sm text-gray-900 leading-tight">${title}</h4>
+      ${message ? `<p class="text-[11px] font-medium text-gray-500 mt-1 leading-snug">${message}</p>` : ''}
     </div>
-    <button onclick="this.parentElement.classList.replace('animate-snackbar-in', 'animate-snackbar-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-gray-400 hover:text-white transition-colors ml-2">
-      <i class="fa-solid fa-xmark"></i>
+    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-gray-400 hover:text-gray-800 transition-colors">
+      <i class="fa-solid fa-xmark text-lg"></i>
     </button>
   `;
   container.appendChild(toast);
   setTimeout(() => {
     if(toast.parentElement) {
-      toast.classList.replace('animate-snackbar-in', 'animate-snackbar-out');
+      toast.classList.replace('animate-toast-in', 'animate-toast-out');
       setTimeout(() => toast.remove(), 300);
     }
-  }, 4000); // Snackbar tampil lebih lama sedikit
+  }, 3000);
 }
 
+// FIX: Menghapus customClass untuk menyerahkan 100% desain SweetAlert ke CSS di index.html
 const swalUI = Swal.mixin({
-  customClass: {
-    popup: 'rounded-lg shadow-2xl bg-white border-none p-4 sm:p-6',
-    title: 'font-normal text-gray-800 text-xl text-left w-full mb-2',
-    htmlContainer: 'text-sm text-gray-600 text-left m-0',
-    actions: 'w-full justify-end mt-6 gap-2',
-    confirmButton: 'mat-button px-5 py-2 text-sm',
-    cancelButton: 'px-4 py-2 text-google-blue font-medium text-sm hover:bg-blue-50 rounded transition-colors bg-transparent border-none shadow-none',
-    input: 'mat-input w-full mt-4 text-center text-xl font-bold'
-  },
   buttonsStyling: false
 });
 
@@ -97,23 +88,41 @@ const swalUI = Swal.mixin({
 // PENERJEMAH BARCODE CERDAS (YIMM / PDF417 / KANBAN)
 // =========================================================================
 function parseYimmBarcode(rawCode) {
-  let result = { partNumberClean: rawCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase(), original: rawCode, qty: 1 };
+  let result = { 
+    partNumberClean: rawCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase(), 
+    original: rawCode, 
+    qty: 1 
+  };
+  
   if (rawCode.startsWith("[)>")) {
     let partMatch = rawCode.match(/P([A-Z0-9]+)V/);
-    if (partMatch && partMatch[1]) result.partNumberClean = partMatch[1];
-    else { let fallbackPart = rawCode.match(/P([A-Z0-9]{10,15})/); if (fallbackPart) result.partNumberClean = fallbackPart[1]; }
+    if (partMatch && partMatch[1]) {
+      result.partNumberClean = partMatch[1];
+    } else {
+      let fallbackPart = rawCode.match(/P([A-Z0-9]{10,15})/);
+      if (fallbackPart) result.partNumberClean = fallbackPart[1];
+    }
+    
     let qtyMatch = rawCode.match(/Q(\d{6})/);
-    if (qtyMatch && qtyMatch[1]) result.qty = parseInt(qtyMatch[1], 10);
+    if (qtyMatch && qtyMatch[1]) {
+      result.qty = parseInt(qtyMatch[1], 10);
+    }
     return result;
   }
+
   if (rawCode.includes('|')) {
     let segment1 = rawCode.split('|')[0];
     let parts = segment1.split('-');
     if (parts.length > 1) {
       let possibleQty = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(possibleQty)) { result.qty = possibleQty; parts.pop(); }
+      if (!isNaN(possibleQty)) {
+        result.qty = possibleQty;
+        parts.pop();
+      }
       result.partNumberClean = parts.join('').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    } else { result.partNumberClean = segment1.replace(/[^a-zA-Z0-9]/g, '').toUpperCase(); }
+    } else {
+      result.partNumberClean = segment1.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    }
   }
   return result;
 }
@@ -122,9 +131,13 @@ function parseYimmBarcode(rawCode) {
 // LOGIKA ROLLOVER JAM 08:00 PAGI
 // =========================================================================
 function getOperationalDayInfo() {
-  const now = new Date(); const opStart = new Date(now); opStart.setHours(8, 0, 0, 0);
+  const now = new Date();
+  const opStart = new Date(now);
+  opStart.setHours(8, 0, 0, 0);
   if (now < opStart) { opStart.setDate(opStart.getDate() - 1); }
-  const yyyy = opStart.getFullYear(); const mm = String(opStart.getMonth() + 1).padStart(2, "0"); const dd = String(opStart.getDate()).padStart(2, "0");
+  const yyyy = opStart.getFullYear();
+  const mm = String(opStart.getMonth() + 1).padStart(2, "0");
+  const dd = String(opStart.getDate()).padStart(2, "0");
   return { opKey: `${yyyy}-${mm}-${dd}`, opStart };
 }
 
@@ -216,6 +229,7 @@ function extractCustomerFromCatatan(catatan) {
     const raw = match[1].trim();
     if (raw && raw !== "-" && raw.toLowerCase() !== "undefined") { return resolveCustomerDisplay(raw); }
   }
+  
   const matchManual = String(catatan).match(/(?:Kirim ke|Dari|Tujuan):\s*(.+)$/i);
   if (matchManual && matchManual[1]) {
     const raw = matchManual[1].trim();
@@ -228,6 +242,7 @@ function getLocalMultiCustMap(partNum) {
   try { const raw = localStorage.getItem("multi_cust_orders_" + partNum); return raw ? JSON.parse(raw) : {}; } 
   catch (e) { return {}; }
 }
+
 function saveLocalMultiCustTarget(partNum, customerName, qtyOrder) {
   const cName = resolveCustomerDisplay(customerName);
   if (!cName || cName === "-") return;
@@ -236,6 +251,7 @@ function saveLocalMultiCustTarget(partNum, customerName, qtyOrder) {
   else if (map[cName] === undefined) map[cName] = 0;
   localStorage.setItem("multi_cust_orders_" + partNum, JSON.stringify(map));
 }
+
 function removeLocalMultiCustTarget(partNum, customerName) {
   const cName = resolveCustomerDisplay(customerName);
   const map = getLocalMultiCustMap(partNum);
@@ -307,9 +323,6 @@ async function sendToBackend(action, payload = {}) {
         await _supabase.from('Transaksi_Masuk').insert([{ Part_Number: payload.partNumber, qty: payload.qty, petugas: payload.petugas, catatan: payload.catatan, tanggal: new Date().toISOString() }]);
         return { success: true };
 
-      // ==================================================================
-      // KALKULATOR SELISIH
-      // ==================================================================
       case 'apiUpdateAssyFsg':
            const { data: bAssyData, error: errAssy } = await _supabase
                .from('Master_Barang')
@@ -520,7 +533,7 @@ async function sendToBackend(action, payload = {}) {
 }
 
 // =========================================================================
-// UI & NAVIGASI 
+// UI & NAVIGASI (AUTO-CLOSE SIDEBAR)
 // =========================================================================
 function startLiveClock() { setInterval(() => { const el = document.getElementById("liveClock"); if (el) el.innerText = new Date().toLocaleTimeString("id-ID", { hour12: false }); }, 1000); }
 function toggleSidebar() {
@@ -540,13 +553,13 @@ function switchTab(tabId) {
   if (activeTab) activeTab.classList.remove("hidden");
   
   document.querySelectorAll(".nav-item").forEach((btn) => { 
-    btn.classList.remove("bg-blue-50", "text-google-blue"); 
-    btn.classList.add("text-gray-700"); 
+    btn.classList.remove("bg-white", "shadow-sm", "text-apple-blue"); 
+    btn.classList.add("text-gray-600"); 
   });
   const activeNav = document.getElementById(`btn-tab-${tabId}`);
   if (activeNav) { 
-    activeNav.classList.add("bg-blue-50", "text-google-blue"); 
-    activeNav.classList.remove("text-gray-700"); 
+    activeNav.classList.add("bg-white", "shadow-sm", "text-apple-blue"); 
+    activeNav.classList.remove("text-gray-600"); 
   }
   
   if (tabId === "overview") renderSeatAssyControlBoard();
@@ -563,7 +576,7 @@ function switchTab(tabId) {
     setTimeout(() => document.getElementById("manualSmartInput")?.focus(), 100);
   }
   
-  // AUTO CLOSE SIDEBAR
+  // MENUTUP SIDEBAR OTOMATIS SAAT MENU DIPILIH DI HP ATAU LAYAR KECIL
   if (window.innerWidth < 1024) {
       closeSidebar();
   }
@@ -689,7 +702,7 @@ function buildSeatAssyControlDataset() {
 }
 
 // =========================================================================
-// FUNGSI POPUP INTERAKTIF (DASHBOARD)
+// FUNGSI POPUP INTERAKTIF (DASHBOARD) - DENGAN DELTA TRACKING 
 // =========================================================================
 function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   if (isProcessing) return;
@@ -704,14 +717,14 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   swalUI.fire({
     title: 'Pilih Customer Tujuan',
     html: `<div class="text-left"><p class="text-sm font-bold text-gray-800 border-b border-gray-200 pb-2 mb-3">${partNumber}</p>
-      <div class="mb-3"><label class="block text-xs font-medium text-gray-500 mb-1">Customer:</label><select id="swalSelectCust" class="mat-input w-full">${optionsHtml}</select></div>
+      <div class="mb-3"><label class="block text-xs font-medium text-gray-500 mb-1">Customer:</label><select id="swalSelectCust" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">${optionsHtml}</select></div>
       <div><label class="block text-xs font-medium text-gray-500 mb-1">Tindakan:</label>
-        <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="mat-input w-full">
+        <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">
           <option value="UPDATE">Ubah Baris Ini Saja</option><option value="ADD_NEW">+ Tambah Tujuan Baru (Part Sama)</option>
           ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Ini</option>` : ''}
         </select>
       </div>
-      <div id="swalWrapQtyBaru" class="hidden mt-3"><label class="block text-xs font-medium text-gray-500 mb-1">Target Pengiriman (Pcs):</label><input type="number" id="swalQtyOrderBaru" value="100" class="mat-input w-full text-left font-normal text-sm" /></div>
+      <div id="swalWrapQtyBaru" class="hidden mt-3"><label class="block text-xs font-medium text-gray-500 mb-1">Target Pengiriman (Pcs):</label><input type="number" id="swalQtyOrderBaru" value="100" class="swal2-input" /></div>
     </div>`,
     showCancelButton: true, confirmButtonText: 'Simpan', cancelButtonText: 'Batal',
     preConfirm: () => ({ customer: document.getElementById('swalSelectCust').value, mode: document.getElementById('swalModeCust').value, qtyOrder: document.getElementById('swalQtyOrderBaru').value })
@@ -770,8 +783,8 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
   swalUI.fire({ 
     title: 'Set Target Harian', 
     html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
-           <p class="text-xs text-google-blue font-medium mb-3">Customer: ${customerName}</p>
-           <p class="text-[11px] text-gray-500">Aksi ini akan dicatat di log Riwayat.</p>`, 
+           <p class="text-xs text-blue-600 font-medium mb-3">Tujuan: ${customerName}</p>
+           <p class="text-[11px] text-gray-500">Tindakan ini akan merubah Target dan dicatat di Riwayat.</p>`, 
     input: 'number', 
     inputValue: currentQty > 0 ? currentQty : '', 
     showCancelButton: true, 
@@ -798,7 +811,8 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 
   swalUI.fire({
     title: 'Update Pengiriman',
-    html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber} &mdash; ${customerName}</p>
+    html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
+           <p class="text-xs text-gray-600 font-medium mb-1">Tujuan: ${customerName}</p>
            <p class="text-xs text-red-500 font-medium mb-3">Terkirim saat ini: ${currentQtyOut} Pcs</p>
            <p class="text-[11px] text-gray-500">Masukkan <b>Total Akhir</b>. Sistem akan mengkalkulasi selisihnya ke Riwayat (OUT).</p>`,
     input: 'number',
@@ -831,7 +845,7 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 }
 
 // =========================================================================
-// PAPAN KONTROL MATERIAL DESIGN
+// PAPAN KONTROL APPLE GLASSMORPHISM
 // =========================================================================
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
@@ -844,7 +858,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
   }
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
-  if (dataset.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="py-12 text-center text-gray-500 text-sm">Belum ada barang di database.</td></tr>`; return; }
+  if (dataset.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="py-12 text-center text-gray-400">Memuat data ruang kerja...</td></tr>`; return; }
 
   dataset.sort((a, b) => {
     if (a.Customer < b.Customer) return -1;
@@ -865,23 +879,22 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     const formatNum = (num) => num === 0 ? "-" : num;
     let varFormat = row.variance > 0 ? "+" + row.variance : (row.variance < 0 ? row.variance : "-");
     
-    // Status Badges
     let varBadge = row.variance > 0 
-      ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">${varFormat}</span>` 
+      ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-500/10 text-green-600 backdrop-blur-md">${varFormat}</span>` 
       : (row.variance < 0 
-         ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">${varFormat}</span>` 
-         : `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-gray-500">-</span>`);
+         ? `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-600 backdrop-blur-md">${varFormat}</span>` 
+         : `<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold text-gray-400">-</span>`);
 
-    const custClass = canEditCust ? "cursor-pointer hover:text-google-blue transition-colors hover:underline" : "";
+    const custClass = canEditCust ? "cursor-pointer hover:bg-black/5 transition-colors rounded-xl p-2 inline-block" : "";
     const custAction = canEditCust ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"` : "";
     
-    const qtyDayClass = isAdmin ? "cursor-pointer hover:bg-gray-100 transition-colors rounded block py-1" : "";
+    const qtyDayClass = isAdmin ? "cursor-pointer hover:bg-black/5 transition-colors rounded-full block py-1.5" : "";
     const qtyDayAction = isAdmin ? `onclick="promptUpdateQtyDay('${row.Part_Number}', ${row.qty_day}, '${row.Customer}')"` : "";
     
-    const qtyOutClass = canEditCust ? "cursor-pointer hover:bg-gray-100 transition-colors rounded block py-1" : "";
+    const qtyOutClass = canEditCust ? "cursor-pointer hover:bg-red-50 hover:text-red-500 transition-colors rounded-full block py-1.5" : "";
     const qtyOutAction = canEditCust ? `onclick="promptUpdateQtyOut('${row.Part_Number}', '${row.Customer}', ${row.qty_out})"` : "";
 
-    const assyClass = canEditAssy ? "cursor-pointer hover:bg-purple-50 hover:text-purple-700 transition-colors rounded block py-1" : "";
+    const assyClass = canEditAssy ? "cursor-pointer hover:bg-purple-50 hover:text-purple-600 transition-colors rounded-full block py-1.5" : "";
     const assyAction = canEditAssy ? `onclick="promptUpdateAssyFsg('${row.Part_Number}', ${row.assy_fsg})"` : "";
 
     let isFirstOfGroup = false;
@@ -895,22 +908,22 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
       }
     }
 
-    html += `<tr class="hover:bg-gray-50/50 transition-colors">`;
+    html += `<tr class="hover:bg-black/5 transition-colors bg-white/40">`;
     if (isFirstOfGroup) {
-      html += `<td rowspan="${rowspan}" class="align-top font-bold text-gray-700 ${custClass}" ${custAction} title="Ubah Customer">${row.Customer}</td>`;
+      html += `<td rowspan="${rowspan}" class="align-top font-bold text-gray-700 text-center bg-white/20"><span class="${custClass}" ${custAction} title="Ubah Customer">${row.Customer}</span></td>`;
     }
     html += `
-      <td class="text-center"><span class="px-2 py-1 rounded bg-yellow-100 text-yellow-800 font-medium text-xs">${row.No_Rel}</span></td>
+      <td class="text-center"><span class="px-2.5 py-1 rounded-full bg-black/5 text-gray-700 font-bold text-xs">${row.No_Rel}</span></td>
       <td>
         <div class="font-bold text-gray-900">${row.Part_Number}</div>
-        <div class="text-[10px] text-gray-500 uppercase mt-0.5 max-w-[140px] truncate">${row.nama_barang}</div>
+        <div class="text-[10px] text-gray-500 uppercase mt-0.5 max-w-[140px] truncate font-medium">${row.nama_barang}</div>
       </td>
-      <td class="text-center font-bold text-google-blue">${formatNum(row.stock)}</td>
-      <td class="text-center font-medium text-gray-700 border-l border-gray-100" title="${isAdmin ? 'Klik untuk Ubah Target' : ''}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
-      <td class="text-center font-medium text-gray-700" title="${canEditCust ? 'Klik untuk Ubah Total Terkirim' : ''}"><span class="${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
-      <td class="text-center font-bold text-google-red border-r border-gray-100">${formatNum(row.sisa_del)}</td>
+      <td class="text-center font-bold text-blue-600">${formatNum(row.stock)}</td>
+      <td class="text-center font-bold text-gray-700" title="${isAdmin ? 'Klik untuk Ubah Target (QTY/DAY)' : ''}"><span class="${qtyDayClass}" ${qtyDayAction}>${formatNum(row.qty_day)}</span></td>
+      <td class="text-center font-bold text-gray-700" title="${canEditCust ? 'Klik untuk Ubah Total Terkirim' : ''}"><span class="${qtyOutClass}" ${qtyOutAction}>${formatNum(row.qty_out)}</span></td>
+      <td class="text-center font-bold text-red-500">${formatNum(row.sisa_del)}</td>
       <td class="text-center font-bold text-purple-600" title="${canEditAssy ? 'Klik untuk Ubah Stok Assy' : ''}"><span class="${assyClass}" ${assyAction}>${formatNum(row.assy_fsg)}</span></td>
-      <td class="text-right">${varBadge}</td>
+      <td class="text-center">${varBadge}</td>
     </tr>`;
   }
   tbody.innerHTML = html;
@@ -974,24 +987,24 @@ function clearBatchTrolley() { batchTrolley = []; updateBatchTrolleyUI(); }
 function updateBatchTrolleyUI() {
   const container = document.getElementById("batchTrolleyInlineList");
   if (!container) return;
-  if (batchTrolley.length === 0) { container.innerHTML = `<div class="py-12 text-center text-gray-400 text-sm font-medium bg-gray-50 rounded-lg border border-dashed border-gray-300">Belum ada barang di Troli.</div>`; return; }
+  if (batchTrolley.length === 0) { container.innerHTML = `<div class="py-12 text-center text-gray-400 font-medium text-sm bg-white/40 rounded-2xl border border-white border-dashed">Troli masih kosong.</div>`; return; }
   
   container.innerHTML = batchTrolley.map((b, idx) => `
-    <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-google-blue transition-colors">
+    <div class="flex items-center justify-between p-4 bg-white/60 border border-white rounded-2xl shadow-sm hover:shadow-md transition-all">
       <div class="text-left pr-2">
         <div class="flex items-center gap-2 mb-1">
-           <span class="px-2 py-0.5 bg-gray-100 text-gray-700 font-bold text-[10px] rounded">${b.No_Rel}</span>
+           <span class="px-2 py-0.5 bg-gray-200 text-gray-700 font-bold text-[10px] rounded-full shadow-sm">${b.No_Rel}</span>
            <span class="font-bold text-sm text-gray-900">${b.Part_Number}</span>
         </div>
         <div class="text-[10px] font-medium text-gray-500 uppercase">${b.nama_barang}</div>
-        <div class="text-[10px] font-medium text-google-blue mt-1"><i class="fa-solid fa-boxes-stacked mr-1"></i> ${b.trolleyCount}x Troli &nbsp;|&nbsp; <span class="text-gray-600">Cust: ${b.Customer}</span></div>
+        <div class="text-[10px] font-medium text-blue-600 mt-1"><i class="fa-solid fa-boxes-stacked mr-1"></i> ${b.trolleyCount}x Troli &nbsp;|&nbsp; <span class="text-gray-600">Cust: ${b.Customer}</span></div>
       </div>
       <div class="flex items-center gap-3">
         <div class="text-center">
           <label class="block text-[9px] font-medium uppercase text-gray-400 mb-0.5">Total Qty</label>
-          <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="w-16 bg-gray-50 border border-gray-200 px-2 py-1 text-center font-bold text-sm rounded focus:border-google-blue outline-none text-gray-800" />
+          <input type="number" min="1" value="${b.qtyInput}" oninput="batchTrolley[${idx}].qtyInput = Number(this.value)" class="glass-input w-16 px-2 py-1 text-center font-bold text-sm rounded-xl outline-none text-gray-800" />
         </div>
-        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-8 h-8 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
+        <button onclick="batchTrolley.splice(${idx}, 1); updateBatchTrolleyUI();" class="w-8 h-8 rounded-full glass-btn text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors"><i class="fa-solid fa-xmark"></i></button>
       </div>
     </div>
   `).join("");
@@ -1183,7 +1196,7 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// TABEL MASTER DATA (MATERIAL DESIGN)
+// TABEL MASTER DATA (APPLE GLASSMORPHISM)
 // =========================================================================
 
 function renderMasterBarangTable(keyword = "") {
@@ -1197,26 +1210,24 @@ function renderMasterBarangTable(keyword = "") {
   }
   
   if (dataset.length === 0) { 
-    tbody.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-gray-500 text-sm">Tidak ada barang ditemukan.</td></tr>`; 
+    tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-gray-400">Tidak ada barang ditemukan.</td></tr>`; 
     return; 
   }
   
   tbody.innerHTML = dataset.map(b => {
     const isChecked = selectedForDelete.includes(String(b.Part_Number)) ? "checked" : "";
     return `
-    <tr class="hover:bg-gray-50 transition-colors">
-      <td class="text-center"><input type="checkbox" class="chk-barang w-4 h-4 rounded text-google-blue cursor-pointer accent-google-blue" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
-      <td class="font-bold text-gray-800">${b.Part_Number}</td>
-      <td>
-        <div class="text-gray-800 font-medium">${b.nama_barang}</div>
-      </td>
-      <td class="font-bold text-google-blue">${b.stok} <span class="text-xs text-gray-500 font-normal">${b.satuan || 'Pcs'}</span></td>
-      <td><span class="px-2.5 py-1 rounded bg-gray-100 text-gray-700 font-medium text-xs">${b.No_Rel || "-"}</span></td>
+    <tr class="hover:bg-black/5 transition-colors bg-white/40">
+      <td class="text-center"><input type="checkbox" class="chk-barang w-4 h-4 rounded text-blue-500 border-gray-300 focus:ring-blue-500 cursor-pointer" value="${b.Part_Number}" ${isChecked} onchange="toggleSingleBarang(this)"></td>
+      <td class="font-bold text-gray-900">${b.Part_Number}</td>
+      <td class="text-left font-medium text-gray-600 uppercase">${b.nama_barang}</td>
+      <td class="font-bold text-blue-600">${b.stok} <span class="text-[10px] text-gray-400 font-medium">${b.satuan || 'Pcs'}</span></td>
+      <td><span class="px-2.5 py-1 rounded-full bg-black/5 text-gray-700 font-medium text-xs">${b.No_Rel || "-"}</span></td>
       <td class="text-right">
         <div class="flex items-center justify-end gap-1.5">
-           <button onclick="editBarang('${b.Part_Number}')" class="w-8 h-8 rounded text-gray-500 hover:text-google-blue hover:bg-blue-50 flex items-center justify-center transition-colors" title="Edit"><i class="fa-solid fa-pen text-sm"></i></button>
-           <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 rounded text-gray-500 hover:text-gray-800 hover:bg-gray-200 flex items-center justify-center transition-colors" title="Print"><i class="fa-solid fa-print text-sm"></i></button>
-           <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 rounded text-gray-500 hover:text-google-red hover:bg-red-50 flex items-center justify-center transition-colors" title="Hapus"><i class="fa-solid fa-trash-can text-sm"></i></button>
+           <button onclick="editBarang('${b.Part_Number}')" class="w-8 h-8 rounded-full glass-btn text-gray-500 hover:text-blue-500 flex items-center justify-center" title="Edit Barang"><i class="fa-solid fa-pen text-xs"></i></button>
+           <button onclick="printBarcode('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 rounded-full glass-btn text-gray-500 hover:text-gray-900 flex items-center justify-center" title="Cetak Barcode"><i class="fa-solid fa-print text-xs"></i></button>
+           <button onclick="deleteBarang('${b.Part_Number}', '${b.nama_barang}')" class="w-8 h-8 rounded-full glass-btn text-gray-500 hover:text-red-500 flex items-center justify-center" title="Hapus Barang"><i class="fa-solid fa-trash-can text-xs"></i></button>
         </div>
       </td>
     </tr>`
@@ -1275,9 +1286,9 @@ function bulkDeleteBarang() {
   if (selectedForDelete.length === 0) return;
   
   swalUI.fire({
-    title: 'Hapus Item Terpilih?',
-    html: `Anda akan menghapus permanen <b class="text-google-red">${selectedForDelete.length}</b> part dari sistem.`,
-    showCancelButton: true, confirmButtonText: 'Hapus Semua', cancelButtonText: 'Batal'
+    title: 'Hapus Massal?',
+    html: `Menghapus permanen <b class="text-red-600">${selectedForDelete.length}</b> part terpilih dari database.`,
+    showCancelButton: true, confirmButtonText: 'Ya, Hapus', cancelButtonText: 'Batal'
   }).then((result) => {
     if (result.isConfirmed) {
       isProcessing = true; 
@@ -1315,19 +1326,19 @@ function renderCustomerTable(keyword = "") {
   }
 
   if (dataset.length === 0) { 
-    tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-500 text-sm">Tidak ada customer.</td></tr>`; 
+    tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400">Tidak ada customer.</td></tr>`; 
     return; 
   }
 
   tbody.innerHTML = dataset.map(c => `
-    <tr class="hover:bg-gray-50 transition-colors">
-      <td class="font-bold text-gray-800">${c.id_customer}</td>
-      <td class="font-medium text-gray-800">${c.nama_customer}</td>
-      <td class="text-gray-500">${c.alamat || "-"}</td>
+    <tr class="hover:bg-black/5 transition-colors bg-white/40">
+      <td class="font-bold text-gray-900">${c.id_customer}</td>
+      <td class="text-left font-medium text-gray-700">${c.nama_customer}</td>
+      <td class="text-left text-gray-500">${c.alamat || "-"}</td>
       <td class="text-right">
         <div class="flex items-center justify-end gap-1.5">
-           <button onclick="editCustomer('${c.id_customer}')" class="w-8 h-8 rounded text-gray-500 hover:text-google-blue hover:bg-blue-50 flex items-center justify-center transition-colors"><i class="fa-solid fa-pen text-sm"></i></button>
-           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-8 h-8 rounded text-gray-500 hover:text-google-red hover:bg-red-50 flex items-center justify-center transition-colors"><i class="fa-solid fa-trash-can text-sm"></i></button>
+           <button onclick="editCustomer('${c.id_customer}')" class="w-8 h-8 rounded-full glass-btn text-gray-500 hover:text-blue-500 flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
+           <button onclick="deleteCustomer('${c.id_customer}', '${c.nama_customer}')" class="w-8 h-8 rounded-full glass-btn text-gray-500 hover:text-red-500 flex items-center justify-center"><i class="fa-solid fa-trash-can text-xs"></i></button>
         </div>
       </td>
     </tr>`).join("");
@@ -1344,23 +1355,23 @@ function renderUsersTable(keyword = "") {
   }
 
   if (usersList.length === 0) { 
-    tbody.innerHTML = `<tr><td colspan="3" class="py-12 text-center text-gray-500 text-sm">Tidak ada akun.</td></tr>`; 
+    tbody.innerHTML = `<tr><td colspan="3" class="py-12 text-center text-gray-400">Tidak ada pengguna.</td></tr>`; 
     return; 
   }
 
   tbody.innerHTML = usersList.map(u => {
-    let roleBadge = `<span class="px-2.5 py-1 rounded bg-gray-100 text-gray-600 font-medium text-xs">${u.role}</span>`;
-    if (u.role === 'Admin') roleBadge = `<span class="px-2.5 py-1 rounded bg-blue-50 text-google-blue font-medium text-xs">${u.role}</span>`;
-    if (u.role === 'Produksi') roleBadge = `<span class="px-2.5 py-1 rounded bg-purple-50 text-purple-700 font-medium text-xs">${u.role}</span>`;
+    let roleBadge = `<span class="px-3 py-1 rounded-full bg-black/5 text-gray-700 font-medium text-[10px] uppercase tracking-widest">${u.role}</span>`;
+    if (u.role === 'Admin') roleBadge = `<span class="px-3 py-1 rounded-full bg-blue-500/10 text-blue-700 font-medium text-[10px] uppercase tracking-widest">${u.role}</span>`;
+    if (u.role === 'Produksi') roleBadge = `<span class="px-3 py-1 rounded-full bg-purple-500/10 text-purple-700 font-medium text-[10px] uppercase tracking-widest">${u.role}</span>`;
 
     return `
-    <tr class="hover:bg-gray-50 transition-colors">
-      <td class="font-bold text-gray-800">${u.username}</td>
+    <tr class="hover:bg-black/5 transition-colors bg-white/40">
+      <td class="font-bold text-gray-900">${u.username}</td>
       <td>${roleBadge}</td>
       <td class="text-right">
         <div class="flex items-center justify-end gap-1.5">
-           <button onclick="editUser('${u.username}')" class="w-8 h-8 rounded text-gray-500 hover:text-google-blue hover:bg-blue-50 flex items-center justify-center transition-colors"><i class="fa-solid fa-pen text-sm"></i></button>
-           <button onclick="deleteUser('${u.username}')" class="w-8 h-8 rounded text-gray-500 hover:text-google-red hover:bg-red-50 flex items-center justify-center transition-colors"><i class="fa-solid fa-trash-can text-sm"></i></button>
+           <button onclick="editUser('${u.username}')" class="w-8 h-8 rounded-full glass-btn text-gray-500 hover:text-blue-500 flex items-center justify-center"><i class="fa-solid fa-pen text-xs"></i></button>
+           <button onclick="deleteUser('${u.username}')" class="w-8 h-8 rounded-full glass-btn text-gray-500 hover:text-red-500 flex items-center justify-center"><i class="fa-solid fa-trash-can text-xs"></i></button>
         </div>
       </td>
     </tr>`
@@ -1398,29 +1409,32 @@ function renderRiwayatTable() {
   }
   logs.sort((a,b) => b.waktu - a.waktu);
   
-  tbody.innerHTML = logs.length === 0 ? `<tr><td colspan="6" class="py-12 text-center text-gray-500 text-sm">Belum ada riwayat transaksi.</td></tr>` : logs.map(r => {
+  tbody.innerHTML = logs.length === 0 ? `<tr><td colspan="6" class="py-12 text-center text-gray-400">Belum ada riwayat transaksi.</td></tr>` : logs.map(r => {
     let isTarget = r.catatan && String(r.catatan).includes('QTY/DAY');
     let displayQty = r.qty;
-    let color = 'text-gray-800';
+    let color = 'text-gray-900';
+    let bgTipe = 'bg-black/5 text-gray-600';
 
     if (isTarget) {
         displayQty = `TARGET`;
-        color = 'text-google-blue font-medium text-xs';
+        color = 'text-blue-500 font-semibold text-xs';
     } else if (r.tipe === 'IN') {
         displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
-        color = r.qty > 0 ? 'text-google-green' : 'text-google-red';
+        color = r.qty > 0 ? 'text-green-500' : 'text-red-500';
+        bgTipe = 'bg-green-500/10 text-green-700 border border-green-500/20';
     } else {
         displayQty = r.qty > 0 ? `-${r.qty}` : `+${Math.abs(r.qty)}`;
-        color = r.qty > 0 ? 'text-google-red' : 'text-google-green';
+        color = r.qty > 0 ? 'text-red-500' : 'text-green-500';
+        bgTipe = 'bg-red-500/10 text-red-700 border border-red-500/20';
     }
 
-    return `<tr class="hover:bg-gray-50">
+    return `<tr class="hover:bg-black/5 transition-colors bg-white/40">
       <td class="text-xs font-medium text-gray-500">${r.waktu.toLocaleString('id-ID', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
-      <td><span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase ${isTarget ? 'bg-gray-100 text-gray-600' : (r.tipe === 'IN' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700')}">${isTarget ? 'UPDATE' : r.tipe}</span></td>
-      <td class="font-bold text-gray-800">${r.part}</td>
-      <td class="text-right font-bold text-base ${color}">${displayQty}</td>
-      <td class="text-xs font-medium text-gray-600">${r.petugas||'-'}</td>
-      <td class="text-xs text-gray-500">${r.catatan||'-'}</td>
+      <td class="text-center"><span class="px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase ${bgTipe}">${isTarget ? 'UPDATE' : r.tipe}</span></td>
+      <td class="font-bold text-gray-900">${r.part}</td>
+      <td class="text-center font-bold text-base ${color}">${displayQty}</td>
+      <td class="text-xs font-medium uppercase text-gray-600">${r.petugas||'-'}</td>
+      <td class="text-xs font-medium text-gray-500">${r.catatan||'-'}</td>
     </tr>`;
   }).join("");
 }

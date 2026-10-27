@@ -141,6 +141,14 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       }
 
+      /* FIX GRID TABEL: Garis jelas tapi tetap elegan */
+      .glass-table {
+        border-collapse: collapse;
+      }
+      .glass-table th,
+      .glass-table td {
+        border: 1px solid rgba(0, 0, 0, 0.12) !important;
+      }
       .glass-table th {
         padding: 14px 16px;
         font-weight: 600;
@@ -148,14 +156,13 @@
         letter-spacing: 0.02em;
         color: #86868b;
         text-transform: uppercase;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        background: rgba(0, 0, 0, 0.02);
       }
       .glass-table td {
         padding: 14px 16px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.04);
       }
 
-      /* FIX: Hapus tanda panah pada input number SweetAlert */
+      /* Hapus panah pada input number SweetAlert */
       input[type="number"]::-webkit-inner-spin-button,
       input[type="number"]::-webkit-outer-spin-button {
         -webkit-appearance: none;
@@ -164,6 +171,60 @@
       input[type="number"] {
         -moz-appearance: textfield;
         appearance: textfield;
+      }
+
+      /* FIX: DESAIN POPUP SWEETALERT (APPLE GLASSMORPHISM) */
+      div:where(.swal2-container) div:where(.swal2-popup) {
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(24px) !important;
+        -webkit-backdrop-filter: blur(24px) !important;
+        border-radius: 24px !important;
+        border: 1px solid rgba(255, 255, 255, 0.6) !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important;
+        padding: 24px !important;
+      }
+      div:where(.swal2-container) h2:where(.swal2-title) {
+        color: #1d1d1f !important;
+        font-weight: 700 !important;
+      }
+      div:where(.swal2-container) input:where(.swal2-input) {
+        background: rgba(255, 255, 255, 0.6) !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        color: #1d1d1f !important;
+        text-align: center !important;
+        width: 70% !important;
+        margin: 1.5em auto !important;
+        box-shadow: none !important;
+      }
+      div:where(.swal2-container) input:where(.swal2-input):focus {
+        border-color: #0071e3 !important;
+        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2) !important;
+        background: #ffffff !important;
+      }
+      div:where(.swal2-container) select:where(.swal2-select) {
+        border-radius: 12px !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        background: rgba(255, 255, 255, 0.7) !important;
+        color: #1d1d1f !important;
+      }
+      div:where(.swal2-container) select:where(.swal2-select):focus {
+        border-color: #0071e3 !important;
+      }
+      div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
+        background-color: #0071e3 !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        padding: 10px 28px !important;
+        box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3) !important;
+      }
+      div:where(.swal2-container) button:where(.swal2-styled).swal2-cancel {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+        color: #1d1d1f !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        padding: 10px 24px !important;
       }
     </style>
   </head>
@@ -399,12 +460,12 @@
                 type="text"
                 id="globalSearchInput"
                 oninput="handleGlobalSearch(this.value)"
-                placeholder="Cari Part Number atau Customer..."
+                placeholder="Cari Part Number..."
                 class="glass-input w-full rounded-full pl-11 pr-5 py-3 text-sm font-medium"
               />
             </div>
 
-            <!-- TABEL APPLE STYLE -->
+            <!-- TABEL APPLE STYLE GRID -->
             <div
               class="overflow-x-auto rounded-2xl bg-white/40 border border-white shadow-sm"
             >
@@ -415,25 +476,16 @@
                     <th rowspan="2" class="w-16 text-center">Rak</th>
                     <th rowspan="2">Part Number</th>
                     <th rowspan="2" class="text-center text-blue-600">Stock</th>
-                    <th
-                      colspan="3"
-                      class="text-center border-l border-r border-black/5"
-                    >
-                      Delivery
-                    </th>
+                    <th colspan="3" class="text-center">Delivery</th>
                     <th rowspan="2" class="text-center text-purple-600">
                       Assy In<br />FSG
                     </th>
                     <th rowspan="2" class="text-center">Status</th>
                   </tr>
                   <tr>
-                    <th class="text-center border-l border-black/5 w-20">
-                      Target
-                    </th>
+                    <th class="text-center w-20">Target</th>
                     <th class="text-center w-20">Out</th>
-                    <th class="text-center border-r border-black/5 w-20">
-                      Sisa
-                    </th>
+                    <th class="text-center w-20">Sisa</th>
                   </tr>
                 </thead>
                 <tbody
@@ -641,7 +693,7 @@
                 <thead>
                   <tr>
                     <th class="w-36">Waktu</th>
-                    <th class="w-24">Tipe</th>
+                    <th class="w-24 text-center">Tipe</th>
                     <th>Part Number</th>
                     <th class="text-center w-24">Selisih</th>
                     <th class="w-32">Petugas</th>
