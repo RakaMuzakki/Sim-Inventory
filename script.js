@@ -1,7 +1,6 @@
 // =========================================================================
 // FITUR TRANSLATE (INDONESIA - MANDARIN)
 // =========================================================================
-let currentLang = localStorage.getItem("sim_lang") || "id";
 
 const dict = {
   id: {
@@ -56,20 +55,21 @@ const dict = {
     th_user: "Username",
     th_auth: "Otorisasi",
   },
+
   zh: {
-    nav_ops: "运营操作",
-    nav_board: "控制面板 (Dashboard)",
-    nav_scan: "智能扫描 (Scanner)",
-    nav_hist: "交易记录 (History)",
-    nav_master: "主数据 (Master Data)",
-    nav_item: "物料数据 (Items)",
-    nav_cust: "客户数据 (Customers)",
-    nav_user: "用户管理 (Users)",
-    btn_login: "登录系统 (Login)",
-    hdr_overview: "总览 (Overview)",
-    title_board: "座椅组装控制面板",
-    desc_board: "实时库存与发货监控 (早上 08:00 结算)",
-    lbl_tot_row: "总行数:",
+    nav_ops: "运营",
+    nav_board: "控制面板",
+    nav_scan: "智能扫码",
+    nav_hist: "交易记录",
+    nav_master: "主数据",
+    nav_item: "物料主数据",
+    nav_cust: "客户主数据",
+    nav_user: "用户管理",
+    btn_login: "登录系统",
+    hdr_overview: "总览",
+    title_board: "座椅总成控制面板",
+    desc_board: "实时库存与发货监控（每日 08:00 重置）",
+    lbl_tot_row: "总行数：",
     search_part: "搜索零件号...",
     search_cust: "搜索客户...",
     search_user: "搜索账号...",
@@ -77,58 +77,74 @@ const dict = {
     th_rak: "货架",
     th_part: "零件号",
     th_stock: "库存",
-    th_del: "发货",
+    th_del: "发货量",
     th_target: "日目标量",
-    th_out: "已发货",
-    th_sisa: "剩余发货",
-    th_assy: "组装入库<br>FSG",
-    btn_cam_on: "打开相机",
+    th_out: "出库量",
+    th_sisa: "剩余发货量",
+    th_assy: "总成入库<br>FSG",
+    btn_cam_on: "启用相机",
     btn_cam_off: "关闭相机",
-    lbl_gun: "扫码枪模式 (批量手推车)",
-    input_gun: "点击并扫描条形码...",
+    lbl_gun: "扫码枪模式（手推车批量）",
+    input_gun: "点击并扫描条码...",
     title_trolley: "手推车列表",
-    lbl_dest: "批量发送目的地",
-    btn_assy: "添加至组装",
+    lbl_dest: "批量发货目的地",
+    btn_assy: "加入总成",
     opt_all: "所有活动",
     btn_export: "导出 Excel",
     th_time: "时间",
     th_type: "类型",
-    th_diff: "差额",
+    th_diff: "差异",
     th_pic: "操作员",
     th_note: "备注",
-    th_item_name: "物品名称",
+    th_item_name: "物料名称",
     th_main_stock: "主库存",
     th_action: "操作",
-    btn_new_item: "新增零件",
+    btn_new_item: "新增物料",
     btn_new_cust: "新增客户",
     btn_new_user: "新增账号",
     th_id_cust: "客户ID",
     th_company: "公司",
     th_address: "地址",
-    th_user: "账号",
-    th_auth: "授权",
+    th_user: "用户名",
+    th_auth: "权限",
   },
 };
+
+let currentLang = localStorage.getItem("sim_lang") || "id";
+
+if (!dict[currentLang]) {
+  currentLang = "id";
+}
 
 function toggleLang() {
   currentLang = currentLang === "id" ? "zh" : "id";
   localStorage.setItem("sim_lang", currentLang);
   applyLang();
-  refreshAllUI();
+
+  if (typeof refreshAllUI === "function") {
+    refreshAllUI();
+  }
 }
 
 function applyLang() {
   const btn = document.getElementById("btnLang");
-  if (btn) btn.innerText = currentLang === "id" ? "中文" : "ID";
+
+  if (btn) {
+    btn.innerText = currentLang === "id" ? "中文" : "ID";
+  }
+
+  const langDict = dict[currentLang] || dict.id;
 
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.getAttribute("data-i18n");
-    if (dict[currentLang][key]) {
-      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
-        el.placeholder = dict[currentLang][key];
-      } else {
-        el.innerHTML = dict[currentLang][key];
-      }
+    const text = langDict[key] || dict.id[key];
+
+    if (!text) return;
+
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+      el.placeholder = text;
+    } else {
+      el.innerHTML = text;
     }
   });
 }
