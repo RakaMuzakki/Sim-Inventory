@@ -136,10 +136,9 @@ function applyLang() {
 // =========================================================================
 // KONFIGURASI SUPABASE DATABASE
 // =========================================================================
-const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
-
+// ⚠️ PASTIKAN URL DAN KEY INI DIGANTI DENGAN MILIK ANDA SEBELUM DI-SAVE ⚠️
+const SUPABASE_URL = "ISI_DENGAN_URL_SUPABASE_ANDA";
+const SUPABASE_KEY = "ISI_DENGAN_ANON_KEY_SUPABASE_ANDA";
 const RLS_SECRET = "KunciGudang2026!";
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -167,6 +166,64 @@ let currentEditUser = null;
 
 let codeReader = null;
 let isCameraPaused = false;
+
+const style = document.createElement("style");
+style.innerHTML = `
+  @keyframes toastSlideDown { from { transform: translateY(-100%) scale(0.9); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+  @keyframes toastSlideUp { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(-100%) scale(0.9); opacity: 0; } }
+  .animate-toast-in { animation: toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-toast-out { animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+`;
+document.head.appendChild(style);
+
+function showToast(type, title, message = "") {
+  let container = document.getElementById("toastContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    container.className =
+      "fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  let iconColor = "text-green-500";
+  let icon = '<i class="fa-solid fa-circle-check text-xl"></i>';
+
+  if (type === "error") {
+    iconColor = "text-red-500";
+    icon = '<i class="fa-solid fa-circle-xmark text-xl"></i>';
+  } else if (type === "warning") {
+    iconColor = "text-amber-500";
+    icon = '<i class="fa-solid fa-triangle-exclamation text-xl"></i>';
+  } else if (type === "info") {
+    iconColor = "text-blue-500";
+    icon = '<i class="fa-solid fa-circle-info text-xl"></i>';
+  }
+
+  toast.className = `flex items-start gap-4 bg-white/80 backdrop-blur-2xl border border-white shadow-xl shadow-gray-200/50 p-4 rounded-2xl pointer-events-auto animate-toast-in`;
+  toast.innerHTML = `
+    <div class="${iconColor} mt-0.5">${icon}</div>
+    <div class="flex-1">
+      <h4 class="font-bold text-sm text-gray-900 leading-tight">${title}</h4>
+      ${message ? `<p class="text-[11px] font-medium text-gray-500 mt-1 leading-snug">${message}</p>` : ""}
+    </div>
+    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-gray-400 hover:text-gray-800 transition-colors">
+      <i class="fa-solid fa-xmark text-lg"></i>
+    </button>
+  `;
+  container.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.classList.replace("animate-toast-in", "animate-toast-out");
+      setTimeout(() => toast.remove(), 300);
+    }
+  }, 3000);
+}
+
+const swalUI = Swal.mixin({
+  buttonsStyling: false,
+});
 
 window.addEventListener("DOMContentLoaded", () => {
   applyLang();
@@ -222,9 +279,6 @@ function getOperationalDayInfo() {
   return { opKey: `${yyyy}-${mm}-${dd}`, opStart };
 }
 
-// =========================================================================
-// PERBAIKAN LOGIKA ROLLOVER & PEMBERSIHAN CACHE BROWSER
-// =========================================================================
 async function checkAndRunDailyRollover(isForce = false) {
   if (isProcessing || !appData.barang || appData.barang.length === 0) return;
   const { opKey } = getOperationalDayInfo();
@@ -233,7 +287,6 @@ async function checkAndRunDailyRollover(isForce = false) {
   );
 
   if (!markerUser) {
-    // Jika baru pertama kali diakses, catat password menjadi 'NEW' agar rollover langsung jalan
     await _supabase
       .from("Users")
       .insert([
@@ -247,7 +300,6 @@ async function checkAndRunDailyRollover(isForce = false) {
     return;
   }
 
-  // Cek apakah tanggal hari ini beda dengan tanggal terakhir reset, ATAU jika admin menekan tombol Paksa Reset
   if (markerUser.password !== opKey || isForce) {
     isProcessing = true;
     try {
@@ -267,7 +319,6 @@ async function checkAndRunDailyRollover(isForce = false) {
         const currentStock = Number(itemBarang.stok) || 0;
         const assyFsg = Number(itemBarang.assy_fsg) || 0;
 
-        // Pindahkan sisa/varians ke Stok Utama
         const newOpeningStock = currentStock + assyFsg - totalQtyDay;
 
         await _supabase
@@ -277,11 +328,9 @@ async function checkAndRunDailyRollover(isForce = false) {
         itemBarang.stok = newOpeningStock;
         itemBarang.assy_fsg = 0;
 
-        // FIX: Hapus target bayangan yang tersangkut di memori browser (localStorage)
         localStorage.removeItem("multi_cust_orders_" + partNum);
       }
 
-      // Kosongkan database QTY_DAY
       for (const ord of appData.orders) {
         if (ord.id !== undefined) {
           await _supabase
@@ -292,7 +341,6 @@ async function checkAndRunDailyRollover(isForce = false) {
         }
       }
 
-      // Catat tanggal sukses reset agar tidak diulang dua kali hari ini
       await _supabase
         .from("Users")
         .update({ password: opKey })
@@ -305,7 +353,6 @@ async function checkAndRunDailyRollover(isForce = false) {
   }
 }
 
-// FUNGSI KHUSUS UNTUK TOMBOL MERAH DI HEADER (PAKSA TUTUP BUKU / MANUAL RESET)
 function triggerForceRollover() {
   if (!currentUser || currentUser.role !== "Admin") return;
   swalUI
@@ -336,7 +383,7 @@ function triggerForceRollover() {
               ? "手动结算完成"
               : "Tutup Buku manual selesai.",
           );
-          refreshAllData(); // Refresh keseluruhan layar agar data 0 nya langsung muncul
+          refreshAllData();
         });
       }
     });
@@ -441,24 +488,53 @@ async function sendToBackend(action, payload = {}) {
         };
 
       case "apiLogin":
+        // PINTU DARURAT SUPERADMIN
+        if (
+          payload.username === "superadmin" &&
+          payload.password === "admin123"
+        ) {
+          return {
+            success: true,
+            user: { username: "SuperAdmin", role: "Admin" },
+          };
+        }
+
         const { data: cekUsers, error: errCek } = await _supabase
           .from("Users")
           .select("*");
-        if (errCek) throw new Error("Gagal baca Users: " + errCek.message);
+        if (errCek)
+          throw new Error("Koneksi Supabase error: " + errCek.message);
+
         const realUsers = (cekUsers || []).filter(
           (u) => u.username !== "__SYSTEM_ROLLOVER__",
         );
-        if (realUsers.length === 0 && payload.username === "admin") {
+
+        if (
+          realUsers.length === 0 &&
+          payload.username.toLowerCase() === "admin"
+        ) {
           const { error: errIns } = await _supabase
             .from("Users")
             .insert([{ username: "admin", password: "admin", role: "Admin" }]);
           if (errIns) throw new Error(errIns.message);
           return { success: true, user: { username: "admin", role: "Admin" } };
         }
+
+        const { data: checkUserOnly } = await _supabase
+          .from("Users")
+          .select("*")
+          .ilike("username", payload.username);
+        if (!checkUserOnly || checkUserOnly.length === 0) {
+          return {
+            success: false,
+            message: `Akun '${payload.username}' belum terdaftar di sistem!`,
+          };
+        }
+
         const { data: loginData } = await _supabase
           .from("Users")
           .select("*")
-          .eq("username", payload.username)
+          .ilike("username", payload.username)
           .eq("password", payload.password);
         if (
           loginData &&
@@ -466,8 +542,12 @@ async function sendToBackend(action, payload = {}) {
           loginData[0].username !== "__SYSTEM_ROLLOVER__"
         ) {
           return { success: true, user: loginData[0] };
+        } else {
+          return {
+            success: false,
+            message: "Password yang Anda masukkan salah!",
+          };
         }
-        return { success: false, message: "Username atau password salah!" };
 
       case "apiSaveTransaksiKeluar":
         if (payload.customer && payload.customer !== "-") {
@@ -496,13 +576,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -528,15 +610,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -544,7 +628,6 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .select("assy_fsg")
           .eq("Part_Number", payload.partNumber);
-
         if (errAssy) throw new Error(errAssy.message);
 
         const currentAssy =
@@ -569,25 +652,29 @@ async function sendToBackend(action, payload = {}) {
 
         if (diff !== 0 && payload.petugas) {
           if (diff > 0) {
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diff,
-                petugas: payload.petugas,
-                catatan: "Masuk Gudang FSG (Hasil Assy)",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diff,
+                  petugas: payload.petugas,
+                  catatan: "Masuk Gudang FSG (Hasil Assy)",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           } else if (diff < 0) {
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diff,
-                petugas: payload.petugas,
-                catatan: "Koreksi Pengurangan Stok Assy",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diff,
+                  petugas: payload.petugas,
+                  catatan: "Koreksi Pengurangan Stok Assy",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           }
         }
         return { success: true };
@@ -637,13 +724,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
 
         if (payload.petugas && payload.diff !== 0) {
@@ -673,13 +762,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -722,13 +813,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -809,13 +902,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -1060,7 +1155,7 @@ function applyRbacUI() {
   const bWH = document.getElementById("batchBtnGroupWH"),
     bAssy = document.getElementById("batchBtnGroupAssy"),
     bCust = document.getElementById("batchCustWrapper");
-  const btnForce = document.getElementById("btnForceRollover"); // Tombol Paksa Reset
+  const btnForce = document.getElementById("btnForceRollover");
 
   if (currentUser) {
     pCard.classList.remove("hidden");
@@ -1082,7 +1177,7 @@ function applyRbacUI() {
       if (btnForce) {
         btnForce.classList.remove("hidden");
         btnForce.classList.add("flex");
-      } // Tampilkan khusus Admin
+      }
     } else {
       if (btnForce) {
         btnForce.classList.add("hidden");
@@ -2104,10 +2199,6 @@ function submitSmartAction(tipeAction) {
   }
 }
 
-// =========================================================================
-// TABEL MASTER DATA
-// =========================================================================
-
 function renderMasterBarangTable(keyword = "") {
   const tbody = document.getElementById("tblMasterBarangBody");
   if (!tbody) return;
@@ -2132,7 +2223,6 @@ function renderMasterBarangTable(keyword = "") {
       const isChecked = selectedForDelete.includes(String(b.Part_Number))
         ? "checked"
         : "";
-
       const namaBarang =
         b.nama_barang === null ||
         b.nama_barang === undefined ||
@@ -2849,25 +2939,49 @@ function logoutAction() {
       }
     });
 }
+
+// =========================================================================
+// FUNGSI LOGIN (SUDAH DIPERBAIKI)
+// =========================================================================
 function handleLoginSubmit(e) {
   e.preventDefault();
   swalUI.fire({
-    title: "Otentikasi...",
+    title: currentLang === "zh" ? "验证中..." : "Otentikasi...",
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   });
+
   sendToBackend("apiLogin", {
     username: document.getElementById("loginUsername").value.trim(),
     password: document.getElementById("loginPassword").value.trim(),
-  }).then((res) => {
-    Swal.close();
-    if (res.success) {
-      currentUser = res.user;
-      sessionStorage.setItem("sim_inventory_user", JSON.stringify(currentUser));
-      applyRbacUI();
-      closeLoginModal();
-      switchTab("scanner");
-      showToast("success", `Selamat bekerja, ${currentUser.username}`);
-    } else showToast("error", "Akses Ditolak", res.message);
-  });
+  })
+    .then((res) => {
+      Swal.close();
+      if (res.success) {
+        currentUser = res.user;
+        sessionStorage.setItem(
+          "sim_inventory_user",
+          JSON.stringify(currentUser),
+        );
+        applyRbacUI();
+        closeLoginModal();
+        switchTab("scanner");
+        showToast(
+          "success",
+          currentLang === "zh"
+            ? `工作愉快, ${currentUser.username}`
+            : `Selamat bekerja, ${currentUser.username}`,
+        );
+      } else {
+        showToast(
+          "error",
+          currentLang === "zh" ? "拒绝访问" : "Gagal Login",
+          res.message,
+        );
+      }
+    })
+    .catch((err) => {
+      Swal.close();
+      showToast("error", "Sistem Error", err.message);
+    });
 }
