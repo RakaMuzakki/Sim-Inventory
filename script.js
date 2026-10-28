@@ -1,9 +1,7 @@
 // =========================================================================
 // FITUR TRANSLATE (INDONESIA - MANDARIN)
 // =========================================================================
-// =========================================================================
-// FITUR TRANSLATE (INDONESIA - MANDARIN)
-// =========================================================================
+let currentLang = localStorage.getItem("sim_lang") || "id";
 
 const dict = {
   id: {
@@ -58,21 +56,20 @@ const dict = {
     th_user: "Username",
     th_auth: "Otorisasi",
   },
-
   zh: {
-    nav_ops: "运营",
-    nav_board: "控制面板",
-    nav_scan: "智能扫码",
-    nav_hist: "交易记录",
-    nav_master: "主数据",
-    nav_item: "物料主数据",
-    nav_cust: "客户主数据",
-    nav_user: "用户管理",
-    btn_login: "登录系统",
-    hdr_overview: "总览",
-    title_board: "座椅总成控制面板",
-    desc_board: "实时库存与发货监控（每日 08:00 重置）",
-    lbl_tot_row: "总行数：",
+    nav_ops: "运营操作",
+    nav_board: "控制面板 (Dashboard)",
+    nav_scan: "智能扫描 (Scanner)",
+    nav_hist: "交易记录 (History)",
+    nav_master: "主数据 (Master Data)",
+    nav_item: "物料数据 (Items)",
+    nav_cust: "客户数据 (Customers)",
+    nav_user: "用户管理 (Users)",
+    btn_login: "登录系统 (Login)",
+    hdr_overview: "总览 (Overview)",
+    title_board: "座椅组装控制面板",
+    desc_board: "实时库存与发货监控 (早上 08:00 结算)",
+    lbl_tot_row: "总行数:",
     search_part: "搜索零件号...",
     search_cust: "搜索客户...",
     search_user: "搜索账号...",
@@ -80,74 +77,58 @@ const dict = {
     th_rak: "货架",
     th_part: "零件号",
     th_stock: "库存",
-    th_del: "发货量",
+    th_del: "发货",
     th_target: "日目标量",
-    th_out: "出库量",
-    th_sisa: "剩余发货量",
-    th_assy: "总成入库<br>FSG",
-    btn_cam_on: "启用相机",
+    th_out: "已发货",
+    th_sisa: "剩余发货",
+    th_assy: "组装入库<br>FSG",
+    btn_cam_on: "打开相机",
     btn_cam_off: "关闭相机",
-    lbl_gun: "扫码枪模式（手推车批量）",
-    input_gun: "点击并扫描条码...",
+    lbl_gun: "扫码枪模式 (批量手推车)",
+    input_gun: "点击并扫描条形码...",
     title_trolley: "手推车列表",
-    lbl_dest: "批量发货目的地",
-    btn_assy: "加入总成",
+    lbl_dest: "批量发送目的地",
+    btn_assy: "添加至组装",
     opt_all: "所有活动",
     btn_export: "导出 Excel",
     th_time: "时间",
     th_type: "类型",
-    th_diff: "差异",
+    th_diff: "差额",
     th_pic: "操作员",
     th_note: "备注",
-    th_item_name: "物料名称",
+    th_item_name: "物品名称",
     th_main_stock: "主库存",
     th_action: "操作",
-    btn_new_item: "新增物料",
+    btn_new_item: "新增零件",
     btn_new_cust: "新增客户",
     btn_new_user: "新增账号",
     th_id_cust: "客户ID",
     th_company: "公司",
     th_address: "地址",
-    th_user: "用户名",
-    th_auth: "权限",
+    th_user: "账号",
+    th_auth: "授权",
   },
 };
-
-let currentLang = localStorage.getItem("sim_lang") || "id";
-
-if (!dict[currentLang]) {
-  currentLang = "id";
-}
 
 function toggleLang() {
   currentLang = currentLang === "id" ? "zh" : "id";
   localStorage.setItem("sim_lang", currentLang);
   applyLang();
-
-  if (typeof refreshAllUI === "function") {
-    refreshAllUI();
-  }
+  refreshAllUI();
 }
 
 function applyLang() {
   const btn = document.getElementById("btnLang");
-
-  if (btn) {
-    btn.innerText = currentLang === "id" ? "中文" : "ID";
-  }
-
-  const langDict = dict[currentLang] || dict.id;
+  if (btn) btn.innerText = currentLang === "id" ? "中文" : "ID";
 
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.getAttribute("data-i18n");
-    const text = langDict[key] || dict.id[key];
-
-    if (!text) return;
-
-    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
-      el.placeholder = text;
-    } else {
-      el.innerHTML = text;
+    if (dict[currentLang][key]) {
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+        el.placeholder = dict[currentLang][key];
+      } else {
+        el.innerHTML = dict[currentLang][key];
+      }
     }
   });
 }
@@ -514,13 +495,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -546,15 +529,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -655,13 +640,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
 
         if (payload.petugas && payload.diff !== 0) {
@@ -691,13 +678,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -740,13 +729,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -827,13 +818,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
