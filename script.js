@@ -1,7 +1,6 @@
 // =========================================================================
 // FITUR TRANSLATE (INDONESIA - MANDARIN)
 // =========================================================================
-
 const dict = {
   id: {
     nav_ops: "Operasional",
@@ -55,7 +54,6 @@ const dict = {
     th_user: "Username",
     th_auth: "Otorisasi",
   },
-
   zh: {
     nav_ops: "运营",
     nav_board: "控制面板",
@@ -506,7 +504,6 @@ async function sendToBackend(action, payload = {}) {
         };
 
       case "apiLogin":
-        // PINTU DARURAT SUPERADMIN
         if (
           payload.username === "superadmin" &&
           payload.password === "admin123"
@@ -594,13 +591,15 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
             }
           }
         }
@@ -626,15 +625,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -666,25 +667,29 @@ async function sendToBackend(action, payload = {}) {
 
         if (diff !== 0 && payload.petugas) {
           if (diff > 0) {
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diff,
-                petugas: payload.petugas,
-                catatan: "Masuk Gudang FSG (Hasil Assy)",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diff,
+                  petugas: payload.petugas,
+                  catatan: "Masuk Gudang FSG (Hasil Assy)",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           } else if (diff < 0) {
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diff,
-                petugas: payload.petugas,
-                catatan: "Koreksi Pengurangan Stok Assy",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diff,
+                  petugas: payload.petugas,
+                  catatan: "Koreksi Pengurangan Stok Assy",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           }
         }
         return { success: true };
@@ -734,13 +739,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
 
         if (payload.petugas && payload.diff !== 0) {
@@ -770,13 +777,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
 
@@ -819,13 +828,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -906,13 +917,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -1143,9 +1156,7 @@ function switchTab(tabId) {
     setTimeout(() => document.getElementById("manualSmartInput")?.focus(), 100);
   }
 
-  if (window.innerWidth < 1024) {
-    closeSidebar();
-  }
+  closeSidebar();
 }
 
 function applyRbacUI() {
@@ -2324,17 +2335,20 @@ function bulkDeleteBarang() {
 
   swalUI
     .fire({
-      title: "Hapus Massal?",
-      html: `Menghapus permanen <b class="text-red-600">${selectedForDelete.length}</b> part terpilih dari database.`,
+      title: currentLang === "zh" ? "批量删除？" : "Hapus Massal?",
+      html:
+        currentLang === "zh"
+          ? `永久删除选定的 <b class="text-red-600">${selectedForDelete.length}</b> 个零件。`
+          : `Menghapus permanen <b class="text-red-600">${selectedForDelete.length}</b> part terpilih dari database.`,
       showCancelButton: true,
-      confirmButtonText: "Ya, Hapus",
-      cancelButtonText: "Batal",
+      confirmButtonText: currentLang === "zh" ? "是的，删除" : "Ya, Hapus",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
     })
     .then((result) => {
       if (result.isConfirmed) {
         isProcessing = true;
         swalUI.fire({
-          title: "Menghapus...",
+          title: currentLang === "zh" ? "删除中..." : "Menghapus...",
           allowOutsideClick: false,
           didOpen: () => Swal.showLoading(),
         });
@@ -2390,7 +2404,7 @@ function renderCustomerTable(keyword = "") {
   }
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400">Tidak ada customer.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="py-12 text-center text-gray-400">${currentLang === "zh" ? "找不到任何客户。" : "Tidak ada customer."}</td></tr>`;
     return;
   }
 
@@ -2429,7 +2443,7 @@ function renderUsersTable(keyword = "") {
   }
 
   if (usersList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3" class="py-12 text-center text-gray-400">Tidak ada pengguna.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="py-12 text-center text-gray-400">${currentLang === "zh" ? "找不到任何用户。" : "Tidak ada pengguna."}</td></tr>`;
     return;
   }
 
@@ -2456,495 +2470,6 @@ function renderUsersTable(keyword = "") {
     .join("");
 }
 
-function renderRiwayatTable() {
-  const tbody = document.getElementById("tblRiwayatBody");
-  if (!tbody) return;
-  const fTipe = document.getElementById("filterRiwayat")?.value || "ALL";
-  const fBulan = document.getElementById("filterBulanRiwayat")?.value || "";
-
-  let logs = [];
-
-  const isMatchMonth = (dateStr) => {
-    if (!fBulan) return true;
-    const d = new Date(dateStr);
-    const ym =
-      d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-    return ym === fBulan;
-  };
-
-  if (fTipe === "ALL" || fTipe === "IN") {
-    appData.masuk.forEach((m) => {
-      if (isMatchMonth(m.tanggal || m.created_at)) {
-        logs.push({
-          waktu: new Date(m.tanggal || m.created_at),
-          tipe: "IN",
-          part: m.Part_Number,
-          qty: m.qty,
-          petugas: m.petugas,
-          catatan: m.catatan,
-        });
-      }
-    });
-  }
-  if (fTipe === "ALL" || fTipe === "OUT") {
-    appData.keluar.forEach((k) => {
-      if (isMatchMonth(k.tanggal || k.created_at)) {
-        logs.push({
-          waktu: new Date(k.tanggal || k.created_at),
-          tipe: "OUT",
-          part: k.Part_Number,
-          qty: k.qty,
-          petugas: k.petugas,
-          catatan: k.catatan,
-        });
-      }
-    });
-  }
-  logs.sort((a, b) => b.waktu - a.waktu);
-
-  tbody.innerHTML =
-    logs.length === 0
-      ? `<tr><td colspan="6" class="py-12 text-center text-gray-400" id="txtMemuatRiwayat">${currentLang === "zh" ? "找不到任何交易记录。" : "Belum ada riwayat transaksi."}</td></tr>`
-      : logs
-          .map((r) => {
-            let isTarget = r.catatan && String(r.catatan).includes("QTY/DAY");
-            let displayQty = r.qty;
-            let color = "text-gray-900";
-            let bgTipe = "bg-black/5 text-gray-600";
-
-            if (isTarget) {
-              displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
-              color =
-                r.qty > 0
-                  ? "text-blue-500 font-bold text-base"
-                  : "text-amber-500 font-bold text-base";
-              bgTipe = "bg-blue-500/10 text-blue-700 border border-blue-500/20";
-            } else if (r.tipe === "IN") {
-              displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
-              color = r.qty > 0 ? "text-green-500" : "text-red-500";
-              bgTipe =
-                "bg-green-500/10 text-green-700 border border-green-500/20";
-            } else {
-              displayQty = r.qty > 0 ? `-${r.qty}` : `+${Math.abs(r.qty)}`;
-              color = r.qty > 0 ? "text-red-500" : "text-green-500";
-              bgTipe = "bg-red-500/10 text-red-700 border border-red-500/20";
-            }
-
-            return `<tr class="hover:bg-black/5 transition-colors bg-white/40">
-      <td class="text-xs font-medium text-gray-500">${r.waktu.toLocaleString("id-ID", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
-      <td class="text-center"><span class="px-2.5 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase ${bgTipe}">${isTarget ? "TARGET" : r.tipe}</span></td>
-      <td class="font-bold text-gray-900">${r.part}</td>
-      <td class="text-center font-bold text-base ${color}">${displayQty}</td>
-      <td class="text-xs font-medium uppercase text-gray-600">${r.petugas || "-"}</td>
-      <td class="text-xs font-medium text-gray-500">${r.catatan || "-"}</td>
-    </tr>`;
-          })
-          .join("");
-}
-
-function toggleFullScreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch((err) => {
-      showToast(
-        "error",
-        "Gagal",
-        "Fitur fullscreen tidak didukung browser ini.",
-      );
-    });
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    }
-  }
-}
-
-document.addEventListener("fullscreenchange", () => {
-  const btn = document.getElementById("btnFullscreen");
-  const topHeader = document.getElementById("mainTopHeader");
-
-  if (document.fullscreenElement) {
-    if (btn) btn.innerHTML = '<i class="fa-solid fa-compress text-sm"></i>';
-    if (topHeader) topHeader.classList.add("hidden");
-  } else {
-    if (btn) btn.innerHTML = '<i class="fa-solid fa-expand text-sm"></i>';
-    if (topHeader) topHeader.classList.remove("hidden");
-  }
-});
-
-function exportToExcel(tipe) {
-  if (typeof XLSX === "undefined") {
-    return showToast(
-      "error",
-      "Library Excel Belum Siap",
-      "Silakan tunggu sebentar lalu coba lagi.",
-    );
-  }
-
-  let dataToExport = [];
-  let filename = "";
-  const dateStr = new Date().toISOString().split("T")[0];
-
-  if (tipe === "PapanKontrol") {
-    const keyword =
-      document.getElementById("globalSearchInput")?.value.toLowerCase() || "";
-    let dataset = appData.seatAssyControl || [];
-    if (keyword) {
-      dataset = dataset.filter(
-        (d) =>
-          String(d.Part_Number).toLowerCase().includes(keyword) ||
-          String(d.No_Rel).toLowerCase().includes(keyword) ||
-          String(d.Customer).toLowerCase().includes(keyword),
-      );
-    }
-
-    dataset.sort((a, b) => {
-      if (a.Customer < b.Customer) return -1;
-      if (a.Customer > b.Customer) return 1;
-      if (a.No_Rel < b.No_Rel) return -1;
-      if (a.No_Rel > b.No_Rel) return 1;
-      return 0;
-    });
-
-    dataToExport = dataset.map((item) => ({
-      Customer: item.Customer,
-      "No Rel Rak": item.No_Rel,
-      "Part Number": item.Part_Number,
-      "Nama Barang": item.nama_barang,
-      "Stock Master (Pcs)": item.stock,
-      "Target Qty/Day (Pcs)": item.qty_day,
-      "Terkirim Qty/Out (Pcs)": item.qty_out,
-      "Sisa Delivery (Pcs)": item.sisa_del,
-      "Stok Assy / FSG (Pcs)": item.assy_fsg,
-      "Varians Status": item.variance,
-    }));
-    filename = "Laporan_Papan_Kontrol_" + dateStr + ".xlsx";
-  } else if (tipe === "Riwayat") {
-    const filterTipe = document.getElementById("filterRiwayat")?.value || "ALL";
-    const filterBulan =
-      document.getElementById("filterBulanRiwayat")?.value || "";
-
-    const isMatchMonth = (dateString) => {
-      if (!filterBulan) return true;
-      const d = new Date(dateString);
-      const ym =
-        d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-      return ym === filterBulan;
-    };
-
-    let logs = [];
-    if (filterTipe === "ALL" || filterTipe === "IN") {
-      appData.masuk.forEach((m) => {
-        if (isMatchMonth(m.tanggal || m.created_at)) {
-          logs.push({
-            Waktu: new Date(m.tanggal || m.created_at),
-            Tipe: "MASUK (IN)",
-            Part_Number: m.Part_Number,
-            Qty: m.qty,
-            Petugas: m.petugas,
-            Catatan: m.catatan,
-          });
-        }
-      });
-    }
-    if (filterTipe === "ALL" || filterTipe === "OUT") {
-      appData.keluar.forEach((k) => {
-        if (isMatchMonth(k.tanggal || k.created_at)) {
-          logs.push({
-            Waktu: new Date(k.tanggal || k.created_at),
-            Tipe: "KELUAR (OUT)",
-            Part_Number: k.Part_Number,
-            Qty: k.qty,
-            Petugas: k.petugas,
-            Catatan: k.catatan,
-          });
-        }
-      });
-    }
-    logs.sort((a, b) => b.Waktu - a.Waktu);
-
-    dataToExport = logs.map((r) => ({
-      "Waktu Transaksi": r.Waktu.toLocaleString("id-ID"),
-      "Tipe Transaksi": r.Tipe,
-      "Part Number": r.Part_Number,
-      "Qty (Pcs)": r.Qty,
-      Petugas: r.Petugas,
-      "Keterangan / Tujuan": r.Catatan || "-",
-    }));
-
-    let monthLabel = filterBulan ? filterBulan : dateStr;
-    filename = "Laporan_Riwayat_Transaksi_" + monthLabel + ".xlsx";
-  }
-
-  if (dataToExport.length === 0) {
-    return showToast(
-      "warning",
-      "Data Kosong",
-      "Tidak ada data untuk diekspor.",
-    );
-  }
-
-  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-
-  XLSX.writeFile(workbook, filename);
-  showToast("success", "Diunduh", filename);
-}
-
-function openModalBarang() {
-  currentEditPart = null;
-  populateCustomerDropdown(document.getElementById("mbCustomer"), "-");
-  const partInput = document.getElementById("mbPartNumber");
-  partInput.readOnly = false;
-  document.getElementById("modalMasterBarangTitle").innerText =
-    currentLang === "zh" ? "新增零件" : "Part Baru";
-  document.getElementById("formMasterBarang").reset();
-  document.getElementById("modalMasterBarang").classList.remove("hidden");
-}
-
-function closeModalBarang() {
-  document.getElementById("modalMasterBarang").classList.add("hidden");
-  document.getElementById("formMasterBarang").reset();
-  currentEditPart = null;
-}
-
-function editBarang(partNum) {
-  const barang = appData.barang.find(
-    (b) => String(b.Part_Number) === String(partNum),
-  );
-  if (!barang) return showToast("error", "Data tidak ditemukan");
-  currentEditPart = partNum;
-
-  document.getElementById("modalMasterBarangTitle").innerText =
-    currentLang === "zh" ? "编辑零件" : "Edit Part";
-  document.getElementById("mbPartNumber").value = barang.Part_Number;
-  document.getElementById("mbNamaBarang").value = barang.nama_barang || "";
-  document.getElementById("mbKategori").value = barang.kategori || "";
-  document.getElementById("mbSatuan").value = barang.satuan || "Pcs";
-  document.getElementById("mbStdPack").value = barang.standar_packing || 1;
-  document.getElementById("mbStok").value = barang.stok || 0;
-  document.getElementById("mbStokMin").value = barang.stok_minimum || 10;
-  document.getElementById("mbNoRel").value = barang.No_Rel || "";
-
-  const relatedOrders = appData.orders.filter(
-    (o) => String(o.Part_Number).trim() === String(partNum),
-  );
-  let custRaw = "-";
-  if (
-    relatedOrders.length > 0 &&
-    relatedOrders[0].id_customer &&
-    String(relatedOrders[0].id_customer) !== "undefined"
-  ) {
-    custRaw = relatedOrders[0].id_customer;
-  } else if (barang.id_customer) {
-    custRaw = barang.id_customer;
-  } else if (localStorage.getItem("cust_map_" + partNum)) {
-    custRaw = localStorage.getItem("cust_map_" + partNum);
-  }
-
-  populateCustomerDropdown(
-    document.getElementById("mbCustomer"),
-    resolveCustomerDisplay(custRaw),
-  );
-  document.getElementById("modalMasterBarang").classList.remove("hidden");
-}
-
-function handleSaveBarang(e) {
-  e.preventDefault();
-  if (isProcessing) return;
-  isProcessing = true;
-
-  const selectedCust = document.getElementById("mbCustomer")?.value || "-";
-  const payload = {
-    isEdit: currentEditPart !== null,
-    oldPartNumber: currentEditPart,
-    customer: selectedCust,
-    item: {
-      Part_Number: document.getElementById("mbPartNumber").value.trim(),
-      nama_barang: document.getElementById("mbNamaBarang").value.trim(),
-      kategori: document.getElementById("mbKategori").value.trim(),
-      satuan: document.getElementById("mbSatuan").value.trim(),
-      standar_packing: document.getElementById("mbStdPack").value,
-      stok: document.getElementById("mbStok").value,
-      stok_minimum: document.getElementById("mbStokMin").value,
-      No_Rel: document.getElementById("mbNoRel").value.trim(),
-    },
-  };
-
-  swalUI.fire({
-    title: "Menyimpan...",
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading(),
-  });
-  sendToBackend("apiSaveBarang", payload).then((res) => {
-    isProcessing = false;
-    Swal.close();
-    if (res.success) {
-      closeModalBarang();
-      refreshAllData();
-      showToast("success", res.message);
-    } else showToast("error", "Gagal Menyimpan", res.message);
-  });
-}
-
-function openModalCustomer() {
-  currentEditCustomer = null;
-  const idInput = document.getElementById("mcId");
-  idInput.readOnly = false;
-  document.getElementById("modalMasterCustomerTitle").innerText =
-    currentLang === "zh" ? "新增客户" : "Customer Baru";
-  document.getElementById("formMasterCustomer").reset();
-  document.getElementById("modalMasterCustomer").classList.remove("hidden");
-}
-
-function closeModalCustomer() {
-  document.getElementById("modalMasterCustomer").classList.add("hidden");
-  document.getElementById("formMasterCustomer").reset();
-  currentEditCustomer = null;
-}
-
-function editCustomer(idCust) {
-  const cust = appData.customer.find(
-    (c) => String(c.id_customer) === String(idCust),
-  );
-  if (!cust) return showToast("error", "Data tidak ditemukan");
-  currentEditCustomer = idCust;
-
-  document.getElementById("modalMasterCustomerTitle").innerText =
-    currentLang === "zh" ? "编辑客户" : "Edit Customer";
-  document.getElementById("mcId").value = cust.id_customer;
-  document.getElementById("mcId").readOnly = true;
-  document.getElementById("mcNama").value = cust.nama_customer || "";
-  document.getElementById("mcKontak").value = cust.kontak || "";
-  document.getElementById("mcAlamat").value = cust.alamat || "";
-
-  document.getElementById("modalMasterCustomer").classList.remove("hidden");
-}
-
-function handleSaveCustomer(e) {
-  e.preventDefault();
-  if (isProcessing) return;
-  isProcessing = true;
-
-  const payload = {
-    isEdit: currentEditCustomer !== null,
-    oldIdCustomer: currentEditCustomer,
-    cust: {
-      id_customer: document.getElementById("mcId").value.trim(),
-      nama_customer: document.getElementById("mcNama").value.trim(),
-      kontak: document.getElementById("mcKontak").value.trim(),
-      alamat: document.getElementById("mcAlamat").value.trim(),
-    },
-  };
-
-  swalUI.fire({
-    title: "Menyimpan...",
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading(),
-  });
-  sendToBackend("apiSaveCustomer", payload).then((res) => {
-    isProcessing = false;
-    Swal.close();
-    if (res.success) {
-      closeModalCustomer();
-      refreshAllData();
-      showToast("success", res.message);
-    } else showToast("error", "Gagal Menyimpan", res.message);
-  });
-}
-
-function openModalUser() {
-  currentEditUser = null;
-  const usernameInput = document.getElementById("muUsername");
-  usernameInput.readOnly = false;
-  document.getElementById("modalMasterUserTitle").innerText =
-    currentLang === "zh" ? "新增账号" : "Akun Baru";
-  document.getElementById("formMasterUser").reset();
-  document.getElementById("modalMasterUser").classList.remove("hidden");
-}
-
-function closeModalUser() {
-  document.getElementById("modalMasterUser").classList.add("hidden");
-  document.getElementById("formMasterUser").reset();
-  currentEditUser = null;
-}
-
-function editUser(username) {
-  const usr = appData.users.find(
-    (u) => String(u.username) === String(username),
-  );
-  if (!usr) return showToast("error", "User tidak ditemukan");
-  currentEditUser = username;
-
-  document.getElementById("modalMasterUserTitle").innerText =
-    currentLang === "zh" ? "编辑账号" : "Edit Akun";
-  document.getElementById("muUsername").value = usr.username;
-  document.getElementById("muUsername").readOnly = true;
-  document.getElementById("muPassword").value = usr.password || "";
-  document.getElementById("muRole").value = usr.role || "Warehouse";
-
-  document.getElementById("modalMasterUser").classList.remove("hidden");
-}
-
-function handleSaveUser(e) {
-  e.preventDefault();
-  if (isProcessing) return;
-  isProcessing = true;
-
-  const payload = {
-    isEdit: currentEditUser !== null,
-    oldUsername: currentEditUser,
-    userData: {
-      username: document.getElementById("muUsername").value.trim(),
-      password: document.getElementById("muPassword").value.trim(),
-      role: document.getElementById("muRole").value,
-    },
-  };
-
-  swalUI.fire({
-    title: "Menyimpan...",
-    allowOutsideClick: false,
-    didOpen: () => Swal.showLoading(),
-  });
-  sendToBackend("apiSaveUser", payload).then((res) => {
-    isProcessing = false;
-    Swal.close();
-    if (res.success) {
-      closeModalUser();
-      refreshAllData();
-      showToast("success", res.message);
-    } else showToast("error", "Gagal Menyimpan", res.message);
-  });
-}
-
-function openLoginModal() {
-  document.getElementById("modalLogin").classList.remove("hidden");
-}
-function closeLoginModal() {
-  document.getElementById("modalLogin").classList.add("hidden");
-}
-function logoutAction() {
-  swalUI
-    .fire({
-      title: currentLang === "zh" ? "退出工作区？" : "Keluar Workspace?",
-      showCancelButton: true,
-      confirmButtonText: currentLang === "zh" ? "退出" : "Keluar",
-      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
-    })
-    .then((res) => {
-      if (res.isConfirmed) {
-        currentUser = null;
-        sessionStorage.removeItem("sim_inventory_user");
-        applyRbacUI();
-        switchTab("overview");
-        showToast("info", "Sesi Berakhir");
-      }
-    });
-}
-
-// =========================================================================
-// FUNGSI LOGIN (SUDAH DIPERBAIKI)
-// =========================================================================
 function handleLoginSubmit(e) {
   e.preventDefault();
   swalUI.fire({
