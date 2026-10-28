@@ -136,12 +136,13 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       }
 
+      /* FIX GRID TABEL: Garis dipertebal menjadi 2px dan warnanya dipertegas */
       .glass-table {
         border-collapse: collapse;
       }
       .glass-table th,
       .glass-table td {
-        border: 1px solid rgba(0, 0, 0, 0.12) !important;
+        border: 2px solid rgba(0, 0, 0, 0.25) !important;
       }
       .glass-table th {
         padding: 14px 16px;
@@ -1004,8 +1005,6 @@
       </div>
     </main>
 
-    <!-- (Modals disembunyikan agar HTML tidak terlalu panjang, logika terjemahan JS akan menangani sisa elemen dinamis) -->
-
     <!-- MODAL POPUP SCANNER -->
     <div
       id="modalSmartAction"
@@ -1189,6 +1188,6 @@
 
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=force_rollover_update"></script>
+    <script src="script.js?v=glass_table_thick"></script>
   </body>
 </html>
