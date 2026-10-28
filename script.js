@@ -1,19 +1,166 @@
 // =========================================================================
+// FITUR TRANSLATE (INDONESIA - MANDARIN)
+// =========================================================================
+// =========================================================================
+// FITUR TRANSLATE (INDONESIA - MANDARIN)
+// =========================================================================
+
+const dict = {
+  id: {
+    nav_ops: "Operasional",
+    nav_board: "Papan Kontrol",
+    nav_scan: "Smart Scanner",
+    nav_hist: "Riwayat Transaksi",
+    nav_master: "Master Data",
+    nav_item: "Master Barang",
+    nav_cust: "Master Customer",
+    nav_user: "Kelola Pengguna",
+    btn_login: "Masuk Sistem",
+    hdr_overview: "Overview",
+    title_board: "Papan Kontrol Seat Assy",
+    desc_board: "Monitoring Live Stok & Delivery (Rollover 08:00)",
+    lbl_tot_row: "Total Baris:",
+    search_part: "Cari Part Number...",
+    search_cust: "Cari customer...",
+    search_user: "Cari akun...",
+    th_cust: "Cust",
+    th_rak: "Rak",
+    th_part: "Part Number",
+    th_stock: "Stock",
+    th_del: "Delivery",
+    th_target: "QTY/DAY",
+    th_out: "QTY/OUT",
+    th_sisa: "SISA DEL",
+    th_assy: "Assy In<br>FSG",
+    btn_cam_on: "Aktifkan Kamera",
+    btn_cam_off: "Matikan Kamera",
+    lbl_gun: "Mode Gun Scanner (Batch Troli)",
+    input_gun: "Klik & Scan barcode...",
+    title_trolley: "Daftar Troli",
+    lbl_dest: "Tujuan Pengiriman Massal",
+    btn_assy: "Tambah ke Assy",
+    opt_all: "Semua Aktivitas",
+    btn_export: "Ekspor",
+    th_time: "Waktu",
+    th_type: "Tipe",
+    th_diff: "Selisih",
+    th_pic: "Petugas",
+    th_note: "Catatan",
+    th_item_name: "Nama Barang",
+    th_main_stock: "Stok Utama",
+    th_action: "Aksi",
+    btn_new_item: "Part Baru",
+    btn_new_cust: "Customer Baru",
+    btn_new_user: "Akun Baru",
+    th_id_cust: "ID Customer",
+    th_company: "Perusahaan",
+    th_address: "Alamat",
+    th_user: "Username",
+    th_auth: "Otorisasi",
+  },
+
+  zh: {
+    nav_ops: "运营",
+    nav_board: "控制面板",
+    nav_scan: "智能扫码",
+    nav_hist: "交易记录",
+    nav_master: "主数据",
+    nav_item: "物料主数据",
+    nav_cust: "客户主数据",
+    nav_user: "用户管理",
+    btn_login: "登录系统",
+    hdr_overview: "总览",
+    title_board: "座椅总成控制面板",
+    desc_board: "实时库存与发货监控（每日 08:00 重置）",
+    lbl_tot_row: "总行数：",
+    search_part: "搜索零件号...",
+    search_cust: "搜索客户...",
+    search_user: "搜索账号...",
+    th_cust: "客户",
+    th_rak: "货架",
+    th_part: "零件号",
+    th_stock: "库存",
+    th_del: "发货量",
+    th_target: "日目标量",
+    th_out: "出库量",
+    th_sisa: "剩余发货量",
+    th_assy: "总成入库<br>FSG",
+    btn_cam_on: "启用相机",
+    btn_cam_off: "关闭相机",
+    lbl_gun: "扫码枪模式（手推车批量）",
+    input_gun: "点击并扫描条码...",
+    title_trolley: "手推车列表",
+    lbl_dest: "批量发货目的地",
+    btn_assy: "加入总成",
+    opt_all: "所有活动",
+    btn_export: "导出 Excel",
+    th_time: "时间",
+    th_type: "类型",
+    th_diff: "差异",
+    th_pic: "操作员",
+    th_note: "备注",
+    th_item_name: "物料名称",
+    th_main_stock: "主库存",
+    th_action: "操作",
+    btn_new_item: "新增物料",
+    btn_new_cust: "新增客户",
+    btn_new_user: "新增账号",
+    th_id_cust: "客户ID",
+    th_company: "公司",
+    th_address: "地址",
+    th_user: "用户名",
+    th_auth: "权限",
+  },
+};
+
+let currentLang = localStorage.getItem("sim_lang") || "id";
+
+if (!dict[currentLang]) {
+  currentLang = "id";
+}
+
+function toggleLang() {
+  currentLang = currentLang === "id" ? "zh" : "id";
+  localStorage.setItem("sim_lang", currentLang);
+  applyLang();
+
+  if (typeof refreshAllUI === "function") {
+    refreshAllUI();
+  }
+}
+
+function applyLang() {
+  const btn = document.getElementById("btnLang");
+
+  if (btn) {
+    btn.innerText = currentLang === "id" ? "中文" : "ID";
+  }
+
+  const langDict = dict[currentLang] || dict.id;
+
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    const text = langDict[key] || dict.id[key];
+
+    if (!text) return;
+
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+      el.placeholder = text;
+    } else {
+      el.innerHTML = text;
+    }
+  });
+}
+// =========================================================================
 // KONFIGURASI SUPABASE DATABASE (DENGAN RLS CUSTOM HEADER)
 // =========================================================================
-// ⚠️ GANTI DENGAN URL & KEY SUPABASE MILIK ANDA! ⚠️
 const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
 const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
-
 const RLS_SECRET = "KunciGudang2026!";
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  global: {
-    headers: {
-      "x-sim-secret": RLS_SECRET,
-    },
-  },
+  global: { headers: { "x-sim-secret": RLS_SECRET } },
 });
 
 let currentUser = null;
@@ -38,127 +185,8 @@ let currentEditUser = null;
 let codeReader = null;
 let isCameraPaused = false;
 
-// =========================================================================
-// GAYA VISUAL APPLE GLASSMORPHISM (TOAST)
-// =========================================================================
-const style = document.createElement("style");
-style.innerHTML = `
-  @keyframes toastSlideDown { from { transform: translateY(-100%) scale(0.9); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-  @keyframes toastSlideUp { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(-100%) scale(0.9); opacity: 0; } }
-  .animate-toast-in { animation: toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-  .animate-toast-out { animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-`;
-document.head.appendChild(style);
-
-function showToast(type, title, message = "") {
-  let container = document.getElementById("toastContainer");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "toastContainer";
-    container.className =
-      "fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-[90%] max-w-sm";
-    document.body.appendChild(container);
-  }
-
-  const toast = document.createElement("div");
-  let iconColor = "text-green-500";
-  let icon = '<i class="fa-solid fa-circle-check text-xl"></i>';
-
-  if (type === "error") {
-    iconColor = "text-red-500";
-    icon = '<i class="fa-solid fa-circle-xmark text-xl"></i>';
-  } else if (type === "warning") {
-    iconColor = "text-amber-500";
-    icon = '<i class="fa-solid fa-triangle-exclamation text-xl"></i>';
-  } else if (type === "info") {
-    iconColor = "text-blue-500";
-    icon = '<i class="fa-solid fa-circle-info text-xl"></i>';
-  }
-
-  toast.className = `flex items-start gap-4 bg-white/80 backdrop-blur-2xl border border-white shadow-xl shadow-gray-200/50 p-4 rounded-2xl pointer-events-auto animate-toast-in`;
-  toast.innerHTML = `
-    <div class="${iconColor} mt-0.5">${icon}</div>
-    <div class="flex-1">
-      <h4 class="font-bold text-sm text-gray-900 leading-tight">${title}</h4>
-      ${message ? `<p class="text-[11px] font-medium text-gray-500 mt-1 leading-snug">${message}</p>` : ""}
-    </div>
-    <button onclick="this.parentElement.classList.replace('animate-toast-in', 'animate-toast-out'); setTimeout(() => this.parentElement.remove(), 300)" class="text-gray-400 hover:text-gray-800 transition-colors">
-      <i class="fa-solid fa-xmark text-lg"></i>
-    </button>
-  `;
-  container.appendChild(toast);
-  setTimeout(() => {
-    if (toast.parentElement) {
-      toast.classList.replace("animate-toast-in", "animate-toast-out");
-      setTimeout(() => toast.remove(), 300);
-    }
-  }, 3000);
-}
-
-// Menonaktifkan gaya bawaan agar style CSS index.html bisa mengambil alih 100%
-const swalUI = Swal.mixin({
-  buttonsStyling: false,
-});
-
-// =========================================================================
-// PENERJEMAH BARCODE CERDAS
-// =========================================================================
-function parseYimmBarcode(rawCode) {
-  let result = {
-    partNumberClean: rawCode.replace(/[^a-zA-Z0-9]/g, "").toUpperCase(),
-    original: rawCode,
-    qty: 1,
-  };
-  if (rawCode.startsWith("[)>")) {
-    let partMatch = rawCode.match(/P([A-Z0-9]+)V/);
-    if (partMatch && partMatch[1]) result.partNumberClean = partMatch[1];
-    else {
-      let fallbackPart = rawCode.match(/P([A-Z0-9]{10,15})/);
-      if (fallbackPart) result.partNumberClean = fallbackPart[1];
-    }
-    let qtyMatch = rawCode.match(/Q(\d{6})/);
-    if (qtyMatch && qtyMatch[1]) result.qty = parseInt(qtyMatch[1], 10);
-    return result;
-  }
-  if (rawCode.includes("|")) {
-    let segment1 = rawCode.split("|")[0];
-    let parts = segment1.split("-");
-    if (parts.length > 1) {
-      let possibleQty = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(possibleQty)) {
-        result.qty = possibleQty;
-        parts.pop();
-      }
-      result.partNumberClean = parts
-        .join("")
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .toUpperCase();
-    } else {
-      result.partNumberClean = segment1
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .toUpperCase();
-    }
-  }
-  return result;
-}
-
-// =========================================================================
-// LOGIKA ROLLOVER JAM 08:00 PAGI
-// =========================================================================
-function getOperationalDayInfo() {
-  const now = new Date();
-  const opStart = new Date(now);
-  opStart.setHours(8, 0, 0, 0);
-  if (now < opStart) {
-    opStart.setDate(opStart.getDate() - 1);
-  }
-  const yyyy = opStart.getFullYear();
-  const mm = String(opStart.getMonth() + 1).padStart(2, "0");
-  const dd = String(opStart.getDate()).padStart(2, "0");
-  return { opKey: `${yyyy}-${mm}-${dd}`, opStart };
-}
-
 window.addEventListener("DOMContentLoaded", () => {
+  applyLang(); // Terapkan bahasa saat halaman dimuat
   startLiveClock();
   const savedUser = sessionStorage.getItem("sim_inventory_user");
   if (savedUser) currentUser = JSON.parse(savedUser);
@@ -197,6 +225,19 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }, 3000);
 });
+
+function getOperationalDayInfo() {
+  const now = new Date();
+  const opStart = new Date(now);
+  opStart.setHours(8, 0, 0, 0);
+  if (now < opStart) {
+    opStart.setDate(opStart.getDate() - 1);
+  }
+  const yyyy = opStart.getFullYear();
+  const mm = String(opStart.getMonth() + 1).padStart(2, "0");
+  const dd = String(opStart.getDate()).padStart(2, "0");
+  return { opKey: `${yyyy}-${mm}-${dd}`, opStart };
+}
 
 async function checkAndRunDailyRollover() {
   if (isProcessing || !appData.barang || appData.barang.length === 0) return;
@@ -265,9 +306,6 @@ async function checkAndRunDailyRollover() {
   }
 }
 
-// =========================================================================
-// HELPER MULTI-CUSTOMER
-// =========================================================================
 function resolveCustomerDisplay(custCode) {
   if (
     !custCode ||
@@ -334,9 +372,6 @@ function removeLocalMultiCustTarget(partNum, customerName) {
   localStorage.setItem("multi_cust_orders_" + partNum, JSON.stringify(map));
 }
 
-// =========================================================================
-// CORE ENGINE: KOMUNIKASI KE SUPABASE
-// =========================================================================
 async function sendToBackend(action, payload = {}) {
   try {
     switch (action) {
@@ -581,7 +616,6 @@ async function sendToBackend(action, payload = {}) {
             ]);
         }
 
-        // FIX: Mencatat SELISIH (delta) target ke Riwayat Transaksi agar terlihat pergerakannya
         if (payload.petugas && payload.diff !== 0) {
           await _supabase.from("Transaksi_Masuk").insert([
             {
@@ -1215,9 +1249,6 @@ function buildSeatAssyControlDataset() {
   appData.seatAssyControl = list;
 }
 
-// =========================================================================
-// FUNGSI POPUP INTERAKTIF (DASHBOARD)
-// =========================================================================
 function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
   if (isProcessing) return;
   if (!appData.customer || appData.customer.length === 0)
@@ -1345,7 +1376,6 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
   if (!currentUser) return openLoginModal();
   if (isProcessing) return;
 
-  // FIX: Memperbarui Pop-up agar memperingatkan pengguna bahwa sistem akan menghitung selisihnya otomatis
   swalUI
     .fire({
       title: "Set Target Harian",
@@ -1380,7 +1410,6 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
           didOpen: () => Swal.showLoading(),
         });
 
-        // Mengirim nilai diff (selisih) ke backend untuk dicatat
         sendToBackend("apiUpdateQtyDay", {
           partNumber: partNumber,
           qty: newTotal,
@@ -1464,9 +1493,6 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
     });
 }
 
-// =========================================================================
-// PAPAN KONTROL (UKURAN NORMAL / LAPTOP)
-// =========================================================================
 function renderSeatAssyControlBoard(filterKeyword = "") {
   const tbody = document.getElementById("tblSeatAssyControlBody");
   if (!tbody) return;
@@ -1484,7 +1510,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="py-12 text-center text-gray-400">Memuat data ruang kerja...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-12 text-center text-gray-400">${currentLang === "zh" ? "加载数据中..." : "Memuat data ruang kerja..."}</td></tr>`;
     return;
   }
 
@@ -1496,7 +1522,6 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     return 0;
   });
 
-  // FIX: SEMUA USER BISA EDIT TARGET ASALKAN SUDAH LOGIN
   const canEditTarget = currentUser !== null;
   const canEditCust =
     currentUser &&
@@ -1588,9 +1613,6 @@ function handleGlobalSearch(kw) {
   renderSeatAssyControlBoard(kw);
 }
 
-// =========================================================================
-// SCANNER SMART YIMM PARSING
-// =========================================================================
 function triggerManualGunButton() {
   handleScannerGun({ key: "Enter", preventDefault: () => {} });
 }
@@ -1673,7 +1695,7 @@ function updateBatchTrolleyUI() {
   const container = document.getElementById("batchTrolleyInlineList");
   if (!container) return;
   if (batchTrolley.length === 0) {
-    container.innerHTML = `<div class="py-12 text-center text-gray-400 font-medium text-sm bg-white/40 rounded-2xl border border-white border-dashed">Troli masih kosong.</div>`;
+    container.innerHTML = `<div class="py-12 text-center text-gray-400 font-medium text-sm bg-white/40 rounded-2xl border border-white border-dashed" id="txtTroliKosong">${currentLang === "zh" ? "手推车是空的。" : "Troli masih kosong."}</div>`;
     return;
   }
 
@@ -2047,10 +2069,6 @@ function submitSmartAction(tipeAction) {
   }
 }
 
-// =========================================================================
-// TABEL MASTER DATA
-// =========================================================================
-
 function renderMasterBarangTable(keyword = "") {
   const tbody = document.getElementById("tblMasterBarangBody");
   if (!tbody) return;
@@ -2066,7 +2084,7 @@ function renderMasterBarangTable(keyword = "") {
   }
 
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-gray-400">Tidak ada barang ditemukan.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-gray-400" id="txtMemuatMaster">${currentLang === "zh" ? "找不到任何物品。" : "Tidak ada barang ditemukan."}</td></tr>`;
     return;
   }
 
@@ -2075,8 +2093,6 @@ function renderMasterBarangTable(keyword = "") {
       const isChecked = selectedForDelete.includes(String(b.Part_Number))
         ? "checked"
         : "";
-
-      // Membersihkan kata "null"
       const namaBarang =
         b.nama_barang === null ||
         b.nama_barang === undefined ||
@@ -2308,7 +2324,6 @@ function renderUsersTable(keyword = "") {
     .join("");
 }
 
-// FIX: Menyesuaikan tampilan di Riwayat agar memperlihatkan nilai selisih [ +/- ] saat Target diubah
 function renderRiwayatTable() {
   const tbody = document.getElementById("tblRiwayatBody");
   if (!tbody) return;
@@ -2357,7 +2372,7 @@ function renderRiwayatTable() {
 
   tbody.innerHTML =
     logs.length === 0
-      ? `<tr><td colspan="6" class="py-12 text-center text-gray-400">Belum ada riwayat transaksi.</td></tr>`
+      ? `<tr><td colspan="6" class="py-12 text-center text-gray-400" id="txtMemuatRiwayat">${currentLang === "zh" ? "找不到任何交易记录。" : "Belum ada riwayat transaksi."}</td></tr>`
       : logs
           .map((r) => {
             let isTarget = r.catatan && String(r.catatan).includes("QTY/DAY");
@@ -2366,7 +2381,6 @@ function renderRiwayatTable() {
             let bgTipe = "bg-black/5 text-gray-600";
 
             if (isTarget) {
-              // Tampilan khusus jika log ini adalah log perubahan QTY/DAY Target
               displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
               color =
                 r.qty > 0
