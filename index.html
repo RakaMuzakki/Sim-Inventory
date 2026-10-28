@@ -419,6 +419,16 @@
             中文
           </button>
 
+          <!-- TOMBOL MANUAL RESET (KHUSUS ADMIN) -->
+          <button
+            onclick="triggerForceRollover()"
+            id="btnForceRollover"
+            class="hidden w-10 h-10 rounded-full glass-btn text-red-500 hover:bg-red-50 items-center justify-center shadow-sm transition-colors"
+            title="Tutup Buku Manual / 手动结算"
+          >
+            <i class="fa-solid fa-power-off text-sm"></i>
+          </button>
+
           <div
             class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full glass-input font-medium text-xs text-gray-600"
           >
@@ -1179,6 +1189,6 @@
 
     <canvas id="hiddenBarcodeCanvas" style="display: none"></canvas>
 
-    <script src="script.js?v=multilang_support"></script>
+    <script src="script.js?v=force_rollover_update"></script>
   </body>
 </html>

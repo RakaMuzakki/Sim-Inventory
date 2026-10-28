@@ -151,8 +151,9 @@ function applyLang() {
     }
   });
 }
+
 // =========================================================================
-// KONFIGURASI SUPABASE DATABASE (DENGAN RLS CUSTOM HEADER)
+// KONFIGURASI SUPABASE DATABASE
 // =========================================================================
 const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
 const SUPABASE_KEY =
@@ -186,7 +187,7 @@ let codeReader = null;
 let isCameraPaused = false;
 
 window.addEventListener("DOMContentLoaded", () => {
-  applyLang(); // Terapkan bahasa saat halaman dimuat
+  applyLang();
   startLiveClock();
   const savedUser = sessionStorage.getItem("sim_inventory_user");
   if (savedUser) currentUser = JSON.parse(savedUser);
@@ -239,7 +240,10 @@ function getOperationalDayInfo() {
   return { opKey: `${yyyy}-${mm}-${dd}`, opStart };
 }
 
-async function checkAndRunDailyRollover() {
+// =========================================================================
+// PERBAIKAN LOGIKA ROLLOVER & PEMBERSIHAN CACHE BROWSER
+// =========================================================================
+async function checkAndRunDailyRollover(isForce = false) {
   if (isProcessing || !appData.barang || appData.barang.length === 0) return;
   const { opKey } = getOperationalDayInfo();
   const markerUser = (appData.users || []).find(
@@ -247,27 +251,27 @@ async function checkAndRunDailyRollover() {
   );
 
   if (!markerUser) {
+    // Jika baru pertama kali diakses, catat password menjadi 'NEW' agar rollover langsung jalan
     await _supabase
       .from("Users")
       .insert([
-        { username: "__SYSTEM_ROLLOVER__", password: opKey, role: "SYSTEM" },
+        { username: "__SYSTEM_ROLLOVER__", password: "NEW", role: "SYSTEM" },
       ]);
     appData.users.push({
       username: "__SYSTEM_ROLLOVER__",
-      password: opKey,
+      password: "NEW",
       role: "SYSTEM",
     });
     return;
   }
 
-  if (markerUser.password !== opKey) {
+  // Cek apakah tanggal hari ini beda dengan tanggal terakhir reset, ATAU jika admin menekan tombol Paksa Reset
+  if (markerUser.password !== opKey || isForce) {
     isProcessing = true;
     try {
-      await _supabase
-        .from("Users")
-        .update({ password: opKey })
-        .eq("username", "__SYSTEM_ROLLOVER__");
-      markerUser.password = opKey;
+      if (isForce) {
+        showToast("info", "Memproses...", "Melakukan tutup buku manual");
+      }
 
       for (const itemBarang of appData.barang) {
         const partNum = String(itemBarang.Part_Number).trim();
@@ -280,6 +284,8 @@ async function checkAndRunDailyRollover() {
         );
         const currentStock = Number(itemBarang.stok) || 0;
         const assyFsg = Number(itemBarang.assy_fsg) || 0;
+
+        // Pindahkan sisa/varians ke Stok Utama
         const newOpeningStock = currentStock + assyFsg - totalQtyDay;
 
         await _supabase
@@ -288,8 +294,12 @@ async function checkAndRunDailyRollover() {
           .eq("Part_Number", itemBarang.Part_Number);
         itemBarang.stok = newOpeningStock;
         itemBarang.assy_fsg = 0;
+
+        // FIX: Hapus target bayangan yang tersangkut di memori browser (localStorage)
+        localStorage.removeItem("multi_cust_orders_" + partNum);
       }
 
+      // Kosongkan database QTY_DAY
       for (const ord of appData.orders) {
         if (ord.id !== undefined) {
           await _supabase
@@ -299,11 +309,55 @@ async function checkAndRunDailyRollover() {
           ord.qty_order = 0;
         }
       }
+
+      // Catat tanggal sukses reset agar tidak diulang dua kali hari ini
+      await _supabase
+        .from("Users")
+        .update({ password: opKey })
+        .eq("username", "__SYSTEM_ROLLOVER__");
+      markerUser.password = opKey;
     } catch (e) {
       console.error("Rollover error:", e);
     }
     isProcessing = false;
   }
+}
+
+// FUNGSI KHUSUS UNTUK TOMBOL MERAH DI HEADER (PAKSA TUTUP BUKU / MANUAL RESET)
+function triggerForceRollover() {
+  if (!currentUser || currentUser.role !== "Admin") return;
+  swalUI
+    .fire({
+      title: currentLang === "zh" ? "手动结算?" : "Paksa Tutup Buku?",
+      html:
+        currentLang === "zh"
+          ? "这会强制将当天的组装数据合并到总库存并清空目标量。"
+          : "Tindakan ini akan mereset Target dan memindahkan Stok Assy ke Stok Utama sekarang juga.",
+      showCancelButton: true,
+      confirmButtonText:
+        currentLang === "zh" ? "是的，立即重置" : "Ya, Reset Sekarang",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
+    })
+    .then((res) => {
+      if (res.isConfirmed) {
+        swalUI.fire({
+          title: currentLang === "zh" ? "处理中..." : "Memproses...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        checkAndRunDailyRollover(true).then(() => {
+          Swal.close();
+          showToast(
+            "success",
+            currentLang === "zh" ? "成功" : "Berhasil",
+            currentLang === "zh"
+              ? "手动结算完成"
+              : "Tutup Buku manual selesai.",
+          );
+          refreshAllData(); // Refresh keseluruhan layar agar data 0 nya langsung muncul
+        });
+      }
+    });
 }
 
 function resolveCustomerDisplay(custCode) {
@@ -460,15 +514,13 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             } else {
-              await _supabase
-                .from("List_Order")
-                .insert([
-                  {
-                    Part_Number: payload.partNumber,
-                    qty_order: 0,
-                    id_customer: cleanCust,
-                  },
-                ]);
+              await _supabase.from("List_Order").insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty_order: 0,
+                  id_customer: cleanCust,
+                },
+              ]);
             }
           }
         }
@@ -494,17 +546,15 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: newStokIn })
           .eq("Part_Number", payload.partNumber);
-        await _supabase
-          .from("Transaksi_Masuk")
-          .insert([
-            {
-              Part_Number: payload.partNumber,
-              qty: payload.qty,
-              petugas: payload.petugas,
-              catatan: payload.catatan,
-              tanggal: new Date().toISOString(),
-            },
-          ]);
+        await _supabase.from("Transaksi_Masuk").insert([
+          {
+            Part_Number: payload.partNumber,
+            qty: payload.qty,
+            petugas: payload.petugas,
+            catatan: payload.catatan,
+            tanggal: new Date().toISOString(),
+          },
+        ]);
         return { success: true };
 
       case "apiUpdateAssyFsg":
@@ -605,15 +655,13 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: payload.qty,
-                id_customer: custTarget !== "-" ? custTarget : null,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: payload.qty,
+              id_customer: custTarget !== "-" ? custTarget : null,
+            },
+          ]);
         }
 
         if (payload.petugas && payload.diff !== 0) {
@@ -643,15 +691,13 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: Number(payload.qtyOrder) || 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: Number(payload.qtyOrder) || 0,
+              id_customer: newCustClean,
+            },
+          ]);
           return { success: true };
         }
 
@@ -694,15 +740,13 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: 0,
+              id_customer: newCustClean,
+            },
+          ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -783,15 +827,13 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0) {
-            await _supabase
-              .from("List_Order")
-              .insert([
-                {
-                  Part_Number: payload.item.Part_Number,
-                  qty_order: 0,
-                  id_customer: cClean,
-                },
-              ]);
+            await _supabase.from("List_Order").insert([
+              {
+                Part_Number: payload.item.Part_Number,
+                qty_order: 0,
+                id_customer: cClean,
+              },
+            ]);
           } else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -956,9 +998,6 @@ async function sendToBackend(action, payload = {}) {
   }
 }
 
-// =========================================================================
-// UI & NAVIGASI
-// =========================================================================
 function startLiveClock() {
   setInterval(() => {
     const el = document.getElementById("liveClock");
@@ -1039,6 +1078,7 @@ function applyRbacUI() {
   const bWH = document.getElementById("batchBtnGroupWH"),
     bAssy = document.getElementById("batchBtnGroupAssy"),
     bCust = document.getElementById("batchCustWrapper");
+  const btnForce = document.getElementById("btnForceRollover"); // Tombol Paksa Reset
 
   if (currentUser) {
     pCard.classList.remove("hidden");
@@ -1052,10 +1092,21 @@ function applyRbacUI() {
     document
       .querySelectorAll(".role-auth")
       .forEach((el) => el.classList.remove("hidden"));
-    if (currentUser.role === "Admin")
+
+    if (currentUser.role === "Admin") {
       document
         .querySelectorAll(".role-admin")
         .forEach((el) => el.classList.remove("hidden"));
+      if (btnForce) {
+        btnForce.classList.remove("hidden");
+        btnForce.classList.add("flex");
+      } // Tampilkan khusus Admin
+    } else {
+      if (btnForce) {
+        btnForce.classList.add("hidden");
+        btnForce.classList.remove("flex");
+      }
+    }
 
     if (bWH && bAssy && bCust) {
       if (currentUser.role === "Admin") {
@@ -1076,12 +1127,13 @@ function applyRbacUI() {
     pCard.classList.add("hidden");
     pCard.classList.remove("flex");
     gPrompt.classList.remove("hidden");
+    if (btnForce) {
+      btnForce.classList.add("hidden");
+      btnForce.classList.remove("flex");
+    }
   }
 }
 
-// =========================================================================
-// DASHBOARD LOGIC
-// =========================================================================
 function showSyncSpinner(show) {
   const s = document.getElementById("syncSpinner");
   if (s) s.classList.toggle("animate-spin", show);
@@ -1262,20 +1314,20 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
 
   swalUI
     .fire({
-      title: "Pilih Customer Tujuan",
+      title: currentLang === "zh" ? "选择目标客户" : "Pilih Customer Tujuan",
       html: `<div class="text-left"><p class="text-sm font-bold text-gray-800 border-b border-gray-200 pb-2 mb-3">${partNumber}</p>
-      <div class="mb-3"><label class="block text-xs font-medium text-gray-500 mb-1">Customer:</label><select id="swalSelectCust" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">${optionsHtml}</select></div>
-      <div><label class="block text-xs font-medium text-gray-500 mb-1">Tindakan:</label>
+      <div class="mb-3"><label class="block text-xs font-medium text-gray-500 mb-1">${currentLang === "zh" ? "客户:" : "Customer:"}</label><select id="swalSelectCust" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">${optionsHtml}</select></div>
+      <div><label class="block text-xs font-medium text-gray-500 mb-1">${currentLang === "zh" ? "操作:" : "Tindakan:"}</label>
         <select id="swalModeCust" onchange="document.getElementById('swalWrapQtyBaru').classList.toggle('hidden', this.value !== 'ADD_NEW')" class="swal2-select w-full rounded-xl px-4 py-3 text-sm">
-          <option value="UPDATE">Ubah Baris Ini Saja</option><option value="ADD_NEW">+ Tambah Tujuan Baru (Part Sama)</option>
-          ${custCount > 1 ? `<option value="DELETE_ROW">Hapus Baris Ini</option>` : ""}
+          <option value="UPDATE">${currentLang === "zh" ? "仅修改此行" : "Ubah Baris Ini Saja"}</option><option value="ADD_NEW">${currentLang === "zh" ? "+ 添加新目标 (相同零件)" : "+ Tambah Tujuan Baru (Part Sama)"}</option>
+          ${custCount > 1 ? `<option value="DELETE_ROW">${currentLang === "zh" ? "删除此行" : "Hapus Baris Ini"}</option>` : ""}
         </select>
       </div>
-      <div id="swalWrapQtyBaru" class="hidden mt-3"><label class="block text-xs font-medium text-gray-500 mb-1">Target Pengiriman (Pcs):</label><input type="number" id="swalQtyOrderBaru" value="100" class="swal2-input" /></div>
+      <div id="swalWrapQtyBaru" class="hidden mt-3"><label class="block text-xs font-medium text-gray-500 mb-1">${currentLang === "zh" ? "新的发货目标 (Pcs):" : "Target Pengiriman (Pcs):"}</label><input type="number" id="swalQtyOrderBaru" value="100" class="swal2-input" /></div>
     </div>`,
       showCancelButton: true,
-      confirmButtonText: "Simpan",
-      cancelButtonText: "Batal",
+      confirmButtonText: currentLang === "zh" ? "保存" : "Simpan",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
       preConfirm: () => ({
         customer: document.getElementById("swalSelectCust").value,
         mode: document.getElementById("swalModeCust").value,
@@ -1323,16 +1375,16 @@ function promptUpdateAssyFsg(partNumber, currentQty) {
 
   swalUI
     .fire({
-      title: "Update Stok Assy",
+      title: currentLang === "zh" ? "更新组装库存" : "Update Stok Assy",
       html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
-           <p class="text-xs text-purple-600 font-medium mb-3">Tercatat saat ini: <b>${currentQty}</b> Pcs</p>
-           <p class="text-[11px] text-gray-500">Masukkan <b>Total Akhir</b>. Sistem akan otomatis menghitung selisihnya dan mencatat ke Riwayat Transaksi.</p>`,
+           <p class="text-xs text-purple-600 font-medium mb-3">${currentLang === "zh" ? "当前记录:" : "Tercatat saat ini:"} <b>${currentQty}</b> Pcs</p>
+           <p class="text-[11px] text-gray-500">${currentLang === "zh" ? "输入 <b>总数</b>。系统将自动计算差额并记录到交易历史中。" : "Masukkan <b>Total Akhir</b>. Sistem akan otomatis menghitung selisihnya dan mencatat ke Riwayat Transaksi."}</p>`,
       input: "number",
       inputValue: currentQty,
       inputAttributes: { min: 0 },
       showCancelButton: true,
-      confirmButtonText: "Simpan Total",
-      cancelButtonText: "Batal",
+      confirmButtonText: currentLang === "zh" ? "保存总数" : "Simpan Total",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
@@ -1378,16 +1430,17 @@ function promptUpdateQtyDay(partNumber, currentQty, customerName = "-") {
 
   swalUI
     .fire({
-      title: "Set Target Harian",
+      title:
+        currentLang === "zh" ? "设置每日目标 (QTY/DAY)" : "Set Target Harian",
       html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
-           <p class="text-xs text-gray-600 font-medium mb-1">Tujuan: ${customerName}</p>
-           <p class="text-xs text-apple-blue font-medium mb-3">Target saat ini: <b>${currentQty}</b> Pcs</p>
-           <p class="text-[11px] text-gray-500">Masukkan <b>Total Akhir Target</b>. Sistem akan otomatis menghitung selisih perubahannya dan mencatatnya ke Riwayat Transaksi.</p>`,
+           <p class="text-xs text-gray-600 font-medium mb-1">${currentLang === "zh" ? "目的:" : "Tujuan:"} ${customerName}</p>
+           <p class="text-xs text-apple-blue font-medium mb-3">${currentLang === "zh" ? "当前目标:" : "Target saat ini:"} <b>${currentQty}</b> Pcs</p>
+           <p class="text-[11px] text-gray-500">${currentLang === "zh" ? "输入 <b>最终目标总数</b>。系统将自动计算差额并将其记录在历史记录中。" : "Masukkan <b>Total Akhir Target</b>. Sistem akan otomatis menghitung selisih perubahannya dan mencatatnya ke Riwayat Transaksi."}</p>`,
       input: "number",
       inputValue: currentQty > 0 ? currentQty : "",
       showCancelButton: true,
-      confirmButtonText: "Simpan Target",
-      cancelButtonText: "Batal",
+      confirmButtonText: currentLang === "zh" ? "保存目标" : "Simpan Target",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
@@ -1436,17 +1489,17 @@ function promptUpdateQtyOut(partNumber, customerName, currentQtyOut) {
 
   swalUI
     .fire({
-      title: "Update Pengiriman",
+      title: currentLang === "zh" ? "更新发货 (OUT)" : "Update Pengiriman",
       html: `<p class="text-sm font-bold text-gray-800 mb-1">${partNumber}</p>
-           <p class="text-xs text-gray-600 font-medium mb-1">Tujuan: ${customerName}</p>
-           <p class="text-xs text-red-500 font-medium mb-3">Terkirim saat ini: <b>${currentQtyOut}</b> Pcs</p>
-           <p class="text-[11px] text-gray-500">Masukkan <b>Total Akhir</b> pengiriman. Sistem otomatis menghitung selisih dan mencatatnya ke Riwayat (OUT).</p>`,
+           <p class="text-xs text-gray-600 font-medium mb-1">${currentLang === "zh" ? "目的:" : "Tujuan:"} ${customerName}</p>
+           <p class="text-xs text-red-500 font-medium mb-3">${currentLang === "zh" ? "当前已发送:" : "Terkirim saat ini:"} <b>${currentQtyOut}</b> Pcs</p>
+           <p class="text-[11px] text-gray-500">${currentLang === "zh" ? "输入交货的 <b>最终总数</b>。系统将自动计算差额并将其记录在历史记录中 (OUT)。" : "Masukkan <b>Total Akhir</b> pengiriman. Sistem otomatis menghitung selisih dan mencatatnya ke Riwayat (OUT)."}</p>`,
       input: "number",
       inputValue: currentQtyOut,
       inputAttributes: { min: 0 },
       showCancelButton: true,
-      confirmButtonText: "Simpan Total",
-      cancelButtonText: "Batal",
+      confirmButtonText: currentLang === "zh" ? "保存总数" : "Simpan Total",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
@@ -1510,7 +1563,7 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
 
   document.getElementById("cntTotalSeatAssy").innerText = dataset.length;
   if (dataset.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="py-12 text-center text-gray-400">${currentLang === "zh" ? "加载数据中..." : "Memuat data ruang kerja..."}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="py-12 text-center text-gray-400" id="txtMemuatPapan">${currentLang === "zh" ? "加载工作区数据..." : "Memuat data ruang kerja..."}</td></tr>`;
     return;
   }
 
@@ -2069,6 +2122,10 @@ function submitSmartAction(tipeAction) {
   }
 }
 
+// =========================================================================
+// TABEL MASTER DATA
+// =========================================================================
+
 function renderMasterBarangTable(keyword = "") {
   const tbody = document.getElementById("tblMasterBarangBody");
   if (!tbody) return;
@@ -2093,6 +2150,7 @@ function renderMasterBarangTable(keyword = "") {
       const isChecked = selectedForDelete.includes(String(b.Part_Number))
         ? "checked"
         : "";
+
       const namaBarang =
         b.nama_barang === null ||
         b.nama_barang === undefined ||
@@ -2410,9 +2468,6 @@ function renderRiwayatTable() {
           .join("");
 }
 
-// =========================================================================
-// FUNGSI FULLSCREEN
-// =========================================================================
 function toggleFullScreen() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch((err) => {
@@ -2442,9 +2497,6 @@ document.addEventListener("fullscreenchange", () => {
   }
 });
 
-// =========================================================================
-// FUNGSI EKSPOR EXCEL (.XLSX)
-// =========================================================================
 function exportToExcel(tipe) {
   if (typeof XLSX === "undefined") {
     return showToast(
@@ -2565,15 +2617,13 @@ function exportToExcel(tipe) {
   showToast("success", "Diunduh", filename);
 }
 
-// =========================================================================
-// MODAL FORMS: BARANG, CUSTOMER, USER, AUTH
-// =========================================================================
 function openModalBarang() {
   currentEditPart = null;
   populateCustomerDropdown(document.getElementById("mbCustomer"), "-");
   const partInput = document.getElementById("mbPartNumber");
   partInput.readOnly = false;
-  document.getElementById("modalMasterBarangTitle").innerText = "Part Baru";
+  document.getElementById("modalMasterBarangTitle").innerText =
+    currentLang === "zh" ? "新增零件" : "Part Baru";
   document.getElementById("formMasterBarang").reset();
   document.getElementById("modalMasterBarang").classList.remove("hidden");
 }
@@ -2591,7 +2641,8 @@ function editBarang(partNum) {
   if (!barang) return showToast("error", "Data tidak ditemukan");
   currentEditPart = partNum;
 
-  document.getElementById("modalMasterBarangTitle").innerText = "Edit Part";
+  document.getElementById("modalMasterBarangTitle").innerText =
+    currentLang === "zh" ? "编辑零件" : "Edit Part";
   document.getElementById("mbPartNumber").value = barang.Part_Number;
   document.getElementById("mbNamaBarang").value = barang.nama_barang || "";
   document.getElementById("mbKategori").value = barang.kategori || "";
@@ -2667,7 +2718,7 @@ function openModalCustomer() {
   const idInput = document.getElementById("mcId");
   idInput.readOnly = false;
   document.getElementById("modalMasterCustomerTitle").innerText =
-    "Customer Baru";
+    currentLang === "zh" ? "新增客户" : "Customer Baru";
   document.getElementById("formMasterCustomer").reset();
   document.getElementById("modalMasterCustomer").classList.remove("hidden");
 }
@@ -2686,7 +2737,7 @@ function editCustomer(idCust) {
   currentEditCustomer = idCust;
 
   document.getElementById("modalMasterCustomerTitle").innerText =
-    "Edit Customer";
+    currentLang === "zh" ? "编辑客户" : "Edit Customer";
   document.getElementById("mcId").value = cust.id_customer;
   document.getElementById("mcId").readOnly = true;
   document.getElementById("mcNama").value = cust.nama_customer || "";
@@ -2732,7 +2783,8 @@ function openModalUser() {
   currentEditUser = null;
   const usernameInput = document.getElementById("muUsername");
   usernameInput.readOnly = false;
-  document.getElementById("modalMasterUserTitle").innerText = "Akun Baru";
+  document.getElementById("modalMasterUserTitle").innerText =
+    currentLang === "zh" ? "新增账号" : "Akun Baru";
   document.getElementById("formMasterUser").reset();
   document.getElementById("modalMasterUser").classList.remove("hidden");
 }
@@ -2750,7 +2802,8 @@ function editUser(username) {
   if (!usr) return showToast("error", "User tidak ditemukan");
   currentEditUser = username;
 
-  document.getElementById("modalMasterUserTitle").innerText = "Edit Akun";
+  document.getElementById("modalMasterUserTitle").innerText =
+    currentLang === "zh" ? "编辑账号" : "Edit Akun";
   document.getElementById("muUsername").value = usr.username;
   document.getElementById("muUsername").readOnly = true;
   document.getElementById("muPassword").value = usr.password || "";
@@ -2799,10 +2852,10 @@ function closeLoginModal() {
 function logoutAction() {
   swalUI
     .fire({
-      title: "Keluar Workspace?",
+      title: currentLang === "zh" ? "退出工作区？" : "Keluar Workspace?",
       showCancelButton: true,
-      confirmButtonText: "Keluar",
-      cancelButtonText: "Batal",
+      confirmButtonText: currentLang === "zh" ? "退出" : "Keluar",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
     })
     .then((res) => {
       if (res.isConfirmed) {
