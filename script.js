@@ -136,8 +136,10 @@ function applyLang() {
 // KONFIGURASI SUPABASE DATABASE
 // =========================================================================
 // ⚠️ PASTIKAN URL DAN KEY INI DIGANTI DENGAN MILIK ANDA ⚠️
-const SUPABASE_URL = "ISI_DENGAN_URL_SUPABASE_ANDA";
-const SUPABASE_KEY = "ISI_DENGAN_ANON_KEY_SUPABASE_ANDA";
+const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
+
 const RLS_SECRET = "KunciGudang2026!";
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -549,28 +551,24 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             else
-              await _supabase
-                .from("List_Order")
-                .insert([
-                  {
-                    Part_Number: payload.partNumber,
-                    qty_order: 0,
-                    id_customer: cleanCust,
-                  },
-                ]);
+              await _supabase.from("List_Order").insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty_order: 0,
+                  id_customer: cleanCust,
+                },
+              ]);
           }
         }
-        await _supabase
-          .from("Transaksi_Keluar")
-          .insert([
-            {
-              Part_Number: payload.partNumber,
-              qty: payload.qty,
-              petugas: payload.petugas,
-              catatan: payload.catatan,
-              tanggal: new Date().toISOString(),
-            },
-          ]);
+        await _supabase.from("Transaksi_Keluar").insert([
+          {
+            Part_Number: payload.partNumber,
+            qty: payload.qty,
+            petugas: payload.petugas,
+            catatan: payload.catatan,
+            tanggal: new Date().toISOString(),
+          },
+        ]);
         return { success: true };
 
       case "apiSaveTransaksiMasuk":
@@ -583,17 +581,15 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: (Number(bIn?.stok) || 0) + Number(payload.qty) })
           .eq("Part_Number", payload.partNumber);
-        await _supabase
-          .from("Transaksi_Masuk")
-          .insert([
-            {
-              Part_Number: payload.partNumber,
-              qty: payload.qty,
-              petugas: payload.petugas,
-              catatan: payload.catatan,
-              tanggal: new Date().toISOString(),
-            },
-          ]);
+        await _supabase.from("Transaksi_Masuk").insert([
+          {
+            Part_Number: payload.partNumber,
+            qty: payload.qty,
+            petugas: payload.petugas,
+            catatan: payload.catatan,
+            tanggal: new Date().toISOString(),
+          },
+        ]);
         return { success: true };
 
       case "apiUpdateStokUtama":
@@ -612,29 +608,25 @@ async function sendToBackend(action, payload = {}) {
           .eq("Part_Number", payload.partNumber);
         if (diffStok !== 0 && payload.petugas) {
           if (diffStok > 0) {
-            await _supabase
-              .from("Transaksi_Masuk")
-              .insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty: diffStok,
-                  petugas: payload.petugas,
-                  catatan: "Koreksi Manual Stok Utama (Penambahan)",
-                  tanggal: new Date().toISOString(),
-                },
-              ]);
+            await _supabase.from("Transaksi_Masuk").insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: diffStok,
+                petugas: payload.petugas,
+                catatan: "Koreksi Manual Stok Utama (Penambahan)",
+                tanggal: new Date().toISOString(),
+              },
+            ]);
           } else {
-            await _supabase
-              .from("Transaksi_Masuk")
-              .insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty: diffStok,
-                  petugas: payload.petugas,
-                  catatan: "Koreksi Manual Stok Utama (Pengurangan)",
-                  tanggal: new Date().toISOString(),
-                },
-              ]);
+            await _supabase.from("Transaksi_Masuk").insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: diffStok,
+                petugas: payload.petugas,
+                catatan: "Koreksi Manual Stok Utama (Pengurangan)",
+                tanggal: new Date().toISOString(),
+              },
+            ]);
           }
         }
         return { success: true };
@@ -663,29 +655,25 @@ async function sendToBackend(action, payload = {}) {
           .eq("Part_Number", payload.partNumber);
         if (diffAssy !== 0 && payload.petugas) {
           if (diffAssy > 0)
-            await _supabase
-              .from("Transaksi_Masuk")
-              .insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty: diffAssy,
-                  petugas: payload.petugas,
-                  catatan: "Masuk Gudang FSG (Hasil Assy)",
-                  tanggal: new Date().toISOString(),
-                },
-              ]);
+            await _supabase.from("Transaksi_Masuk").insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: diffAssy,
+                petugas: payload.petugas,
+                catatan: "Masuk Gudang FSG (Hasil Assy)",
+                tanggal: new Date().toISOString(),
+              },
+            ]);
           else if (diffAssy < 0)
-            await _supabase
-              .from("Transaksi_Masuk")
-              .insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty: diffAssy,
-                  petugas: payload.petugas,
-                  catatan: "Koreksi Pengurangan Stok Assy",
-                  tanggal: new Date().toISOString(),
-                },
-              ]);
+            await _supabase.from("Transaksi_Masuk").insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: diffAssy,
+                petugas: payload.petugas,
+                catatan: "Koreksi Pengurangan Stok Assy",
+                tanggal: new Date().toISOString(),
+              },
+            ]);
         }
         return { success: true };
 
@@ -733,29 +721,25 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: payload.qty,
-                id_customer: custTarget !== "-" ? custTarget : null,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: payload.qty,
+              id_customer: custTarget !== "-" ? custTarget : null,
+            },
+          ]);
         }
 
         if (payload.petugas && payload.diff !== 0) {
-          await _supabase
-            .from("Transaksi_Masuk")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: payload.diff,
-                petugas: payload.petugas,
-                catatan: `Update Target QTY/DAY (${custTarget})`,
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+          await _supabase.from("Transaksi_Masuk").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.diff,
+              petugas: payload.petugas,
+              catatan: `Update Target QTY/DAY (${custTarget})`,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         }
         return { success: true };
 
@@ -772,15 +756,13 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: Number(payload.qtyOrder) || 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: Number(payload.qtyOrder) || 0,
+              id_customer: newCustClean,
+            },
+          ]);
           return { success: true };
         }
         if (payload.mode === "DELETE_ROW") {
@@ -821,15 +803,13 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase
-            .from("List_Order")
-            .insert([
-              {
-                Part_Number: payload.partNumber,
-                qty_order: 0,
-                id_customer: newCustClean,
-              },
-            ]);
+          await _supabase.from("List_Order").insert([
+            {
+              Part_Number: payload.partNumber,
+              qty_order: 0,
+              id_customer: newCustClean,
+            },
+          ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -880,15 +860,13 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0)
-            await _supabase
-              .from("List_Order")
-              .insert([
-                {
-                  Part_Number: payload.item.Part_Number,
-                  qty_order: 0,
-                  id_customer: cClean,
-                },
-              ]);
+            await _supabase.from("List_Order").insert([
+              {
+                Part_Number: payload.item.Part_Number,
+                qty_order: 0,
+                id_customer: cClean,
+              },
+            ]);
           else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
