@@ -135,9 +135,9 @@ function applyLang() {
 // =========================================================================
 // KONFIGURASI SUPABASE DATABASE
 // =========================================================================
-const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
+// ⚠️ PASTIKAN URL DAN KEY INI DIGANTI DENGAN MILIK ANDA ⚠️
+const SUPABASE_URL = "ISI_DENGAN_URL_SUPABASE_ANDA";
+const SUPABASE_KEY = "ISI_DENGAN_ANON_KEY_SUPABASE_ANDA";
 const RLS_SECRET = "KunciGudang2026!";
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -549,24 +549,28 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             else
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
           }
         }
-        await _supabase.from("Transaksi_Keluar").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Keluar")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiSaveTransaksiMasuk":
@@ -579,15 +583,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: (Number(bIn?.stok) || 0) + Number(payload.qty) })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateStokUtama":
@@ -600,33 +606,35 @@ async function sendToBackend(action, payload = {}) {
             ? Number(bStokUtama[0].stok) || 0
             : 0;
         let diffStok = Number(payload.qty) - currentStok;
-
         await _supabase
           .from("Master_Barang")
           .update({ stok: payload.qty })
           .eq("Part_Number", payload.partNumber);
-
         if (diffStok !== 0 && payload.petugas) {
           if (diffStok > 0) {
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diffStok,
-                petugas: payload.petugas,
-                catatan: "Koreksi Manual Stok Utama (Penambahan)",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diffStok,
+                  petugas: payload.petugas,
+                  catatan: "Koreksi Manual Stok Utama (Penambahan)",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           } else {
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diffStok,
-                petugas: payload.petugas,
-                catatan: "Koreksi Manual Stok Utama (Pengurangan)",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diffStok,
+                  petugas: payload.petugas,
+                  catatan: "Koreksi Manual Stok Utama (Pengurangan)",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           }
         }
         return { success: true };
@@ -655,25 +663,29 @@ async function sendToBackend(action, payload = {}) {
           .eq("Part_Number", payload.partNumber);
         if (diffAssy !== 0 && payload.petugas) {
           if (diffAssy > 0)
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diffAssy,
-                petugas: payload.petugas,
-                catatan: "Masuk Gudang FSG (Hasil Assy)",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diffAssy,
+                  petugas: payload.petugas,
+                  catatan: "Masuk Gudang FSG (Hasil Assy)",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           else if (diffAssy < 0)
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diffAssy,
-                petugas: payload.petugas,
-                catatan: "Koreksi Pengurangan Stok Assy",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diffAssy,
+                  petugas: payload.petugas,
+                  catatan: "Koreksi Pengurangan Stok Assy",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
         }
         return { success: true };
 
@@ -721,25 +733,29 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
 
         if (payload.petugas && payload.diff !== 0) {
-          await _supabase.from("Transaksi_Masuk").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty: payload.diff,
-              petugas: payload.petugas,
-              catatan: `Update Target QTY/DAY (${custTarget})`,
-              tanggal: new Date().toISOString(),
-            },
-          ]);
+          await _supabase
+            .from("Transaksi_Masuk")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: payload.diff,
+                petugas: payload.petugas,
+                catatan: `Update Target QTY/DAY (${custTarget})`,
+                tanggal: new Date().toISOString(),
+              },
+            ]);
         }
         return { success: true };
 
@@ -756,13 +772,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
         if (payload.mode === "DELETE_ROW") {
@@ -803,13 +821,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -860,13 +880,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0)
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -1363,7 +1385,6 @@ function promptUpdateCustomerPart(partNumber, currentCust, custCount = 1) {
     });
 }
 
-// 🆕 FITUR BARU: UPDATE STOK UTAMA (MANUAL)
 function promptUpdateStokUtama(partNumber, currentQty) {
   if (!currentUser) return openLoginModal();
   if (isProcessing) return;
@@ -1604,12 +1625,9 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
   const canEditAssy =
     currentUser &&
     (currentUser.role === "Admin" || currentUser.role === "Produksi");
-
-  // HANYA Admin dan Warehouse yang boleh adjust manual Stok Utama lewat Papan Kontrol
   const canEditStokUtama =
     currentUser &&
     (currentUser.role === "Admin" || currentUser.role === "Warehouse");
-
   let html = "";
 
   for (let i = 0; i < dataset.length; i++) {
@@ -1633,15 +1651,12 @@ function renderSeatAssyControlBoard(filterKeyword = "") {
     const custAction = canEditCust
       ? `onclick="promptUpdateCustomerPart('${row.Part_Number}', '${row.Customer}', ${row.CustomerCount || 1})"`
       : "";
-
-    // SETUP KLIK UNTUK STOK UTAMA
     const stokUtamaClass = canEditStokUtama
       ? "cursor-pointer hover:bg-blue-50 hover:text-blue-700 transition-colors rounded-full block py-1.5"
       : "";
     const stokUtamaAction = canEditStokUtama
       ? `onclick="promptUpdateStokUtama('${row.Part_Number}', ${row.stock})"`
       : "";
-
     const qtyDayClass = canEditTarget
       ? "cursor-pointer hover:bg-black/5 transition-colors rounded-full block py-1.5"
       : "";
@@ -1693,9 +1708,6 @@ function handleGlobalSearch(kw) {
   renderSeatAssyControlBoard(kw);
 }
 
-// =========================================================================
-// SCANNER SMART YIMM PARSING
-// =========================================================================
 function triggerManualGunButton() {
   handleScannerGun({ key: "Enter", preventDefault: () => {} });
 }
@@ -2110,7 +2122,7 @@ function submitSmartAction(tipeAction) {
 }
 
 // =========================================================================
-// TABEL MASTER DATA & MODALS
+// RENDER TABEL & MODAL LAINNYA
 // =========================================================================
 function renderMasterBarangTable(keyword = "") {
   const tbody = document.getElementById("tblMasterBarangBody");
@@ -2318,22 +2330,19 @@ function renderUsersTable(keyword = "") {
     .join("");
 }
 
-// =========================================================================
-// RENDER RIWAYAT & EKSPOR
-// =========================================================================
 function renderRiwayatTable() {
   const tbody = document.getElementById("tblRiwayatBody");
   if (!tbody) return;
   const fTipe = document.getElementById("filterRiwayat")?.value || "ALL";
   const fBulan = document.getElementById("filterBulanRiwayat")?.value || "";
-
   let logs = [];
   const isMatchMonth = (dateStr) => {
     if (!fBulan) return true;
     const d = new Date(dateStr);
-    const ym =
-      d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-    return ym === fBulan;
+    return (
+      d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") ===
+      fBulan
+    );
   };
 
   if (fTipe === "ALL" || fTipe === "IN") {
@@ -2375,7 +2384,6 @@ function renderRiwayatTable() {
             let displayQty = r.qty,
               color = "text-gray-900",
               bgTipe = "bg-black/5 text-gray-600";
-
             if (isTarget) {
               displayQty = r.qty > 0 ? `+${r.qty}` : `${r.qty}`;
               color =
@@ -2406,6 +2414,29 @@ function renderRiwayatTable() {
           .join("");
 }
 
+function toggleFullScreen() {
+  if (!document.fullscreenElement)
+    document.documentElement.requestFullscreen().catch((err) => {
+      showToast(
+        "error",
+        "Gagal",
+        "Fitur fullscreen tidak didukung browser ini.",
+      );
+    });
+  else if (document.exitFullscreen) document.exitFullscreen();
+}
+document.addEventListener("fullscreenchange", () => {
+  const btn = document.getElementById("btnFullscreen"),
+    topHeader = document.getElementById("mainTopHeader");
+  if (document.fullscreenElement) {
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-compress text-sm"></i>';
+    if (topHeader) topHeader.classList.add("hidden");
+  } else {
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-expand text-sm"></i>';
+    if (topHeader) topHeader.classList.remove("hidden");
+  }
+});
+
 function exportToExcel(tipe) {
   if (typeof XLSX === "undefined")
     return showToast(
@@ -2416,7 +2447,6 @@ function exportToExcel(tipe) {
   let dataToExport = [],
     filename = "";
   const dateStr = new Date().toISOString().split("T")[0];
-
   if (tipe === "PapanKontrol") {
     const keyword =
       document.getElementById("globalSearchInput")?.value.toLowerCase() || "";
@@ -2511,7 +2541,6 @@ function exportToExcel(tipe) {
   showToast("success", "Diunduh", filename);
 }
 
-// CRUD Modals
 function openModalBarang() {
   currentEditPart = null;
   populateCustomerDropdown(document.getElementById("mbCustomer"), "-");
