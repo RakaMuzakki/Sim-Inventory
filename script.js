@@ -136,10 +136,8 @@ function applyLang() {
 // KONFIGURASI SUPABASE DATABASE
 // =========================================================================
 // ⚠️ PASTIKAN URL DAN KEY INI DIGANTI DENGAN MILIK ANDA ⚠️
-const SUPABASE_URL = "https://qvvpfsndszxdjtgpudfp.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2dnBmc25kc3p4ZGp0Z3B1ZGZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNTExMTksImV4cCI6MjEwNjkyNzExOX0.VuvLwmjVTpdl9vgwaZcWqvWIk_C8PacK5h1M4m6E2mg";
-
+const SUPABASE_URL = "ISI_DENGAN_URL_SUPABASE_ANDA";
+const SUPABASE_KEY = "ISI_DENGAN_ANON_KEY_SUPABASE_ANDA";
 const RLS_SECRET = "KunciGudang2026!";
 
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -551,24 +549,28 @@ async function sendToBackend(action, payload = {}) {
                 .update({ id_customer: cleanCust })
                 .eq("id", emptySlot.id);
             else
-              await _supabase.from("List_Order").insert([
-                {
-                  Part_Number: payload.partNumber,
-                  qty_order: 0,
-                  id_customer: cleanCust,
-                },
-              ]);
+              await _supabase
+                .from("List_Order")
+                .insert([
+                  {
+                    Part_Number: payload.partNumber,
+                    qty_order: 0,
+                    id_customer: cleanCust,
+                  },
+                ]);
           }
         }
-        await _supabase.from("Transaksi_Keluar").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Keluar")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiSaveTransaksiMasuk":
@@ -581,15 +583,17 @@ async function sendToBackend(action, payload = {}) {
           .from("Master_Barang")
           .update({ stok: (Number(bIn?.stok) || 0) + Number(payload.qty) })
           .eq("Part_Number", payload.partNumber);
-        await _supabase.from("Transaksi_Masuk").insert([
-          {
-            Part_Number: payload.partNumber,
-            qty: payload.qty,
-            petugas: payload.petugas,
-            catatan: payload.catatan,
-            tanggal: new Date().toISOString(),
-          },
-        ]);
+        await _supabase
+          .from("Transaksi_Masuk")
+          .insert([
+            {
+              Part_Number: payload.partNumber,
+              qty: payload.qty,
+              petugas: payload.petugas,
+              catatan: payload.catatan,
+              tanggal: new Date().toISOString(),
+            },
+          ]);
         return { success: true };
 
       case "apiUpdateStokUtama":
@@ -608,25 +612,29 @@ async function sendToBackend(action, payload = {}) {
           .eq("Part_Number", payload.partNumber);
         if (diffStok !== 0 && payload.petugas) {
           if (diffStok > 0) {
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diffStok,
-                petugas: payload.petugas,
-                catatan: "Koreksi Manual Stok Utama (Penambahan)",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diffStok,
+                  petugas: payload.petugas,
+                  catatan: "Koreksi Manual Stok Utama (Penambahan)",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           } else {
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diffStok,
-                petugas: payload.petugas,
-                catatan: "Koreksi Manual Stok Utama (Pengurangan)",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diffStok,
+                  petugas: payload.petugas,
+                  catatan: "Koreksi Manual Stok Utama (Pengurangan)",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           }
         }
         return { success: true };
@@ -655,25 +663,29 @@ async function sendToBackend(action, payload = {}) {
           .eq("Part_Number", payload.partNumber);
         if (diffAssy !== 0 && payload.petugas) {
           if (diffAssy > 0)
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diffAssy,
-                petugas: payload.petugas,
-                catatan: "Masuk Gudang FSG (Hasil Assy)",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diffAssy,
+                  petugas: payload.petugas,
+                  catatan: "Masuk Gudang FSG (Hasil Assy)",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
           else if (diffAssy < 0)
-            await _supabase.from("Transaksi_Masuk").insert([
-              {
-                Part_Number: payload.partNumber,
-                qty: diffAssy,
-                petugas: payload.petugas,
-                catatan: "Koreksi Pengurangan Stok Assy",
-                tanggal: new Date().toISOString(),
-              },
-            ]);
+            await _supabase
+              .from("Transaksi_Masuk")
+              .insert([
+                {
+                  Part_Number: payload.partNumber,
+                  qty: diffAssy,
+                  petugas: payload.petugas,
+                  catatan: "Koreksi Pengurangan Stok Assy",
+                  tanggal: new Date().toISOString(),
+                },
+              ]);
         }
         return { success: true };
 
@@ -721,25 +733,29 @@ async function sendToBackend(action, payload = {}) {
               .update({ qty_order: payload.qty })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: payload.qty,
-              id_customer: custTarget !== "-" ? custTarget : null,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: payload.qty,
+                id_customer: custTarget !== "-" ? custTarget : null,
+              },
+            ]);
         }
 
         if (payload.petugas && payload.diff !== 0) {
-          await _supabase.from("Transaksi_Masuk").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty: payload.diff,
-              petugas: payload.petugas,
-              catatan: `Update Target QTY/DAY (${custTarget})`,
-              tanggal: new Date().toISOString(),
-            },
-          ]);
+          await _supabase
+            .from("Transaksi_Masuk")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty: payload.diff,
+                petugas: payload.petugas,
+                catatan: `Update Target QTY/DAY (${custTarget})`,
+                tanggal: new Date().toISOString(),
+              },
+            ]);
         }
         return { success: true };
 
@@ -756,13 +772,15 @@ async function sendToBackend(action, payload = {}) {
             newCustClean,
             Number(payload.qtyOrder) || 0,
           );
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: Number(payload.qtyOrder) || 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: Number(payload.qtyOrder) || 0,
+                id_customer: newCustClean,
+              },
+            ]);
           return { success: true };
         }
         if (payload.mode === "DELETE_ROW") {
@@ -803,13 +821,15 @@ async function sendToBackend(action, payload = {}) {
               .update({ id_customer: newCustClean })
               .eq("Part_Number", payload.partNumber);
         } else {
-          await _supabase.from("List_Order").insert([
-            {
-              Part_Number: payload.partNumber,
-              qty_order: 0,
-              id_customer: newCustClean,
-            },
-          ]);
+          await _supabase
+            .from("List_Order")
+            .insert([
+              {
+                Part_Number: payload.partNumber,
+                qty_order: 0,
+                id_customer: newCustClean,
+              },
+            ]);
         }
         localStorage.setItem("cust_map_" + payload.partNumber, newCustClean);
         return { success: true };
@@ -860,13 +880,15 @@ async function sendToBackend(action, payload = {}) {
             .select("*")
             .eq("Part_Number", payload.item.Part_Number);
           if (!checkOrdB || checkOrdB.length === 0)
-            await _supabase.from("List_Order").insert([
-              {
-                Part_Number: payload.item.Part_Number,
-                qty_order: 0,
-                id_customer: cClean,
-              },
-            ]);
+            await _supabase
+              .from("List_Order")
+              .insert([
+                {
+                  Part_Number: payload.item.Part_Number,
+                  qty_order: 0,
+                  id_customer: cClean,
+                },
+              ]);
           else if (payload.isEdit) {
             if (checkOrdB[0].id !== undefined)
               await _supabase
@@ -2099,9 +2121,6 @@ function submitSmartAction(tipeAction) {
   }
 }
 
-// =========================================================================
-// RENDER TABEL & MODAL LAINNYA
-// =========================================================================
 function renderMasterBarangTable(keyword = "") {
   const tbody = document.getElementById("tblMasterBarangBody");
   if (!tbody) return;
@@ -2780,5 +2799,121 @@ function handleLoginSubmit(e) {
     .catch((err) => {
       Swal.close();
       showToast("error", "Sistem Error", err.message);
+    });
+}
+
+function deleteBarang(partNumber, namaBarang) {
+  swalUI
+    .fire({
+      title: currentLang === "zh" ? "确认删除？" : "Hapus Barang?",
+      html:
+        currentLang === "zh"
+          ? `永久删除零件 <b>${partNumber}</b>。`
+          : `Menghapus permanen part <b>${partNumber}</b> dari database.`,
+      showCancelButton: true,
+      confirmButtonText: currentLang === "zh" ? "是的，删除" : "Ya, Hapus",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: currentLang === "zh" ? "删除中..." : "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiDeleteBarang", { partNumber: partNumber }).then(
+          (res) => {
+            isProcessing = false;
+            Swal.close();
+            if (res.success) {
+              showToast("success", "Berhasil Dihapus!");
+              refreshAllData();
+            } else {
+              showToast("error", "Gagal", res.message);
+            }
+          },
+        );
+      }
+    });
+}
+
+function deleteCustomer(idCust, namaCust) {
+  swalUI
+    .fire({
+      title: currentLang === "zh" ? "确认删除？" : "Hapus Customer?",
+      html:
+        currentLang === "zh"
+          ? `永久删除客户 <b>${idCust}</b>。`
+          : `Menghapus permanen customer <b>${idCust}</b> dari database.`,
+      showCancelButton: true,
+      confirmButtonText: currentLang === "zh" ? "是的，删除" : "Ya, Hapus",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: currentLang === "zh" ? "删除中..." : "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiDeleteCustomer", { id_customer: idCust }).then(
+          (res) => {
+            isProcessing = false;
+            Swal.close();
+            if (res.success) {
+              showToast("success", "Berhasil Dihapus!");
+              refreshAllData();
+            } else {
+              showToast("error", "Gagal", res.message);
+            }
+          },
+        );
+      }
+    });
+}
+
+function deleteUser(username) {
+  if (currentUser && currentUser.username === username)
+    return showToast(
+      "warning",
+      "Ditolak",
+      currentLang === "zh"
+        ? "无法删除当前登录的账号。"
+        : "Tidak bisa menghapus akun yang sedang digunakan.",
+    );
+  swalUI
+    .fire({
+      title: currentLang === "zh" ? "确认删除？" : "Hapus Akun?",
+      html:
+        currentLang === "zh"
+          ? `永久删除账号 <b>${username}</b>。`
+          : `Menghapus permanen akun <b>${username}</b> dari database.`,
+      showCancelButton: true,
+      confirmButtonText: currentLang === "zh" ? "是的，删除" : "Ya, Hapus",
+      cancelButtonText: currentLang === "zh" ? "取消" : "Batal",
+    })
+    .then((result) => {
+      if (result.isConfirmed) {
+        isProcessing = true;
+        swalUI.fire({
+          title: currentLang === "zh" ? "删除中..." : "Menghapus...",
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading(),
+        });
+        sendToBackend("apiDeleteUser", { usernameTarget: username }).then(
+          (res) => {
+            isProcessing = false;
+            Swal.close();
+            if (res.success) {
+              showToast("success", "Berhasil Dihapus!");
+              refreshAllData();
+            } else {
+              showToast("error", "Gagal", res.message);
+            }
+          },
+        );
+      }
     });
 }
